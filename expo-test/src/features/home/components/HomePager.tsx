@@ -1,0 +1,150 @@
+import type { RefObject } from "react";
+import { ScrollView, View } from "react-native";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
+
+import { BillsScreen } from "@/features/bills/BillsScreen";
+import { DashboardScreen } from "@/features/dashboard/DashboardScreen";
+import { ImportReviewSection } from "@/features/import/ImportReviewSection";
+import { PaychecksScreen } from "@/features/paychecks/PaychecksScreen";
+import { PurchasesScreen } from "@/features/purchases/PurchasesScreen";
+import { SettingsScreen } from "@/features/settings/SettingsScreen";
+import { createEmptySafeToSpendBreakdown } from "@/features/dashboard/services";
+import { settingsMoneyAccessoryId } from "@/shared/ui/keyboard";
+import { styles } from "@/shared/ui/styles";
+import type { Screen } from "@/shared/ui/types";
+
+import type { HomeScreenController } from "../useHomeScreenController";
+
+const emptySafeToSpendBreakdown = createEmptySafeToSpendBreakdown();
+
+type HomePagerProps = {
+  controller: HomeScreenController;
+  onChangeScreen: (screen: Screen) => void;
+  onScrollEnd: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  pagerRef: RefObject<ScrollView | null>;
+  width: number;
+};
+
+export function HomePager({
+  controller,
+  onChangeScreen,
+  onScrollEnd,
+  pagerRef,
+  width,
+}: HomePagerProps) {
+  return (
+    <ScrollView
+      ref={pagerRef}
+      horizontal
+      pagingEnabled
+      bounces={false}
+      scrollEventThrottle={16}
+      showsHorizontalScrollIndicator={false}
+      style={styles.screenPane}
+      onMomentumScrollEnd={onScrollEnd}
+    >
+      <View style={[styles.pagerPage, { width }]}>
+        <DashboardScreen
+          nextPaycheckLabel={controller.dashboardTotals.nextPaycheckLabel}
+          reserveCents={controller.dashboardTotals.reserveCents}
+          safeToSpendBreakdown={
+            controller.dashboardSnapshot?.safeToSpend ?? emptySafeToSpendBreakdown
+          }
+          unpaidBills={controller.dashboardTotals.unpaidBills}
+          unpaidBillCount={controller.dashboardTotals.unpaidBillCount}
+          purchaseTotal={controller.dashboardTotals.purchaseTotal}
+          safeToSpend={controller.dashboardTotals.safeToSpend}
+          upcomingBills={controller.dashboardUpcomingBills}
+          upcomingPaychecks={controller.visiblePaychecks}
+          isLoading={controller.dashboardLoading}
+          onOpenPaychecks={() => onChangeScreen("Paychecks")}
+        />
+      </View>
+
+      <View style={[styles.pagerPage, { width }]}>
+        <PurchasesScreen
+          purchases={controller.visiblePurchases ?? []}
+          activeCyclePaycheckId={controller.purchaseCycleContext.activeCyclePaycheckId}
+          activeCycleStartDate={controller.purchaseCycleContext.activeCycleStartDate}
+          activeCycleEndDate={controller.purchaseCycleContext.activeCycleEndDate}
+          paychecks={controller.purchaseCycleContext.paychecks ?? []}
+          onDeletePurchase={controller.deletePurchase}
+          onEditPurchase={controller.openPurchaseEdit}
+          onMarkCharged={controller.markPurchaseCharged}
+          onMarkPending={controller.markPurchasePending}
+        />
+      </View>
+
+      <View style={[styles.pagerPage, { width }]}>
+        <BillsScreen
+          bills={controller.visibleBills}
+          cycleLabel={controller.billCycleLabel}
+          onAddBill={controller.openAddBill}
+          onDeleteBill={controller.deleteBill}
+          onEditBill={controller.openBillEdit}
+          onMarkPaid={controller.markBillPaid}
+          onMarkUnpaid={controller.markBillUnpaid}
+          onConfirmBill={controller.openBillConfirmation}
+          onToggleBillPaused={controller.toggleBillPaused}
+        />
+      </View>
+
+      <View style={[styles.pagerPage, { width }]}>
+        <PaychecksScreen
+          nextCyclePreview={controller.nextCyclePreview}
+          paycheckBillCoverage={controller.paycheckBillCoverage}
+          paychecks={controller.visiblePaychecks}
+          onAddPaycheck={controller.openAddPaycheck}
+          onConfirmPaycheck={controller.confirmPaycheck}
+          onDeletePaycheck={controller.deletePaycheck}
+          onEditPaycheck={controller.openPaycheckEdit}
+          onMarkPaycheckUnreceived={controller.markPaycheckUnreceived}
+        />
+      </View>
+
+      <View style={[styles.pagerPage, { width }]}>
+        <SettingsScreen
+          key={controller.dashboardSnapshot?.profile?.id ?? "profile"}
+          backupExportError={controller.backupExportError}
+          backupExportMessage={controller.backupExportMessage}
+          reserveCents={controller.dashboardTotals.reserveCents}
+          isBackupExporting={controller.isBackupExporting}
+          isNotificationSaving={controller.isNotificationSaving}
+          isSettingsReady={
+            !controller.dashboardLoading && controller.dashboardSnapshot != null
+          }
+          notificationError={controller.notificationError}
+          notificationsEnabled={
+            controller.notificationSettings?.notificationsEnabled ?? null
+          }
+          moneyInputAccessoryId={settingsMoneyAccessoryId}
+          onBackupExport={controller.exportBackup}
+          onNotificationsToggle={controller.toggleNotifications}
+          onReserveChange={controller.updateReserve}
+          afterContent={<SettingsImportReview controller={controller} />}
+        />
+      </View>
+    </ScrollView>
+  );
+}
+
+function SettingsImportReview({
+  controller,
+}: {
+  controller: HomeScreenController;
+}) {
+  return (
+    <ImportReviewSection
+      error={controller.importReview.error}
+      importMessage={controller.importReview.importMessage}
+      isClearing={controller.importReview.isClearing}
+      isImporting={controller.importReview.isImporting}
+      isLoading={controller.importReview.isLoading}
+      onClearSuggestions={controller.importReview.clearSuggestions}
+      onImportFile={controller.importReview.importFile}
+      onConfirmSuggestion={controller.importReview.openConfirmSuggestion}
+      suggestions={controller.importReview.suggestions}
+      onRejectSuggestion={controller.importReview.rejectSuggestion}
+    />
+  );
+}

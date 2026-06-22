@@ -1,0 +1,136 @@
+import { useEffect, useState } from "react";
+
+import type { NotificationSettings } from "@/database/repositories/types";
+import { getAppRuntime } from "@/shared/services/appRuntime";
+
+import { getOrCreateActiveProfile } from "@/features/app/homeData";
+
+type UseSettingsActionsInput = {
+  onSettingsChanged?: () => void | Promise<void>;
+  profileId?: string;
+  setReserveCents: (reserveCents: number) => void;
+};
+
+export function useSettingsActions({
+  onSettingsChanged,
+  profileId,
+  setReserveCents,
+}: UseSettingsActionsInput) {
+  const [backupExportError, setBackupExportError] = useState("");
+  const [backupExportMessage, setBackupExportMessage] = useState("");
+  const [isBackupExporting, setIsBackupExporting] = useState(false);
+  const [notificationError, setNotificationError] = useState("");
+  const [notificationSettings, setNotificationSettings] =
+    useState<NotificationSettings | null>(null);
+  const [isNotificationSaving, setIsNotificationSaving] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadNotificationSettings() {
+      if (!profileId) {
+        setNotificationSettings(null);
+        setNotificationError("");
+        return;
+      }
+
+      try {
+        const runtime = await getAppRuntime();
+        const settings =
+          await runtime.services.settingsService.getOrCreateNotificationSettings(
+            profileId
+          );
+
+        if (isActive) {
+          setNotificationSettings(settings);
+          setNotificationError("");
+        }
+      } catch {
+        if (isActive) {
+          setNotificationError("Notification settings could not be loaded.");
+        }
+      }
+    }
+
+    loadNotificationSettings();
+
+    return () => {
+      isActive = false;
+    };
+  }, [profileId]);
+
+  async function updateReserve(nextReserveCents: number) {
+    const runtime = await getAppRuntime();
+    const profile = await getOrCreateActiveProfile(runtime);
+
+    await runtime.services.settingsService.updateEssentialReserve(
+      profile.id,
+      nextReserveCents
+    );
+    setReserveCents(nextReserveCents);
+    await onSettingsChanged?.();
+  }
+
+  async function toggleNotifications() {
+    const runtime = await getAppRuntime();
+    const profile = await getOrCreateActiveProfile(runtime);
+    const currentSettings =
+      notificationSettings ??
+      (await runtime.services.settingsService.getOrCreateNotificationSettings(
+        profile.id
+      ));
+
+    try {
+      setIsNotificationSaving(true);
+      const updatedSettings =
+        await runtime.services.settingsService.updateNotificationSettings(
+          profile.id,
+          {
+            notificationsEnabled: !currentSettings.notificationsEnabled,
+          }
+        );
+
+      setNotificationSettings(updatedSettings);
+      setNotificationError("");
+    } catch {
+      setNotificationError("Notification settings could not be saved.");
+    } finally {
+      setIsNotificationSaving(false);
+    }
+  }
+
+  async function exportBackup() {
+    try {
+      setIsBackupExporting(true);
+      setBackupExportError("");
+      setBackupExportMessage("");
+
+      const runtime = await getAppRuntime();
+      const result = await runtime.services.backupService.exportToDevice();
+
+      setBackupExportMessage(
+        result.shared
+          ? `Exported ${result.fileName} with ${result.recordCount} records.`
+          : `Saved ${result.fileName} locally with ${result.recordCount} records. Rebuild the iPhone app to enable the share sheet.`
+      );
+    } catch {
+      setBackupExportError(
+        "Backup could not be exported. Reload the app and try again."
+      );
+    } finally {
+      setIsBackupExporting(false);
+    }
+  }
+
+  return {
+    backupExportError,
+    backupExportMessage,
+    exportBackup,
+    isBackupExporting,
+    isNotificationSaving,
+    notificationError,
+    notificationSettings,
+    toggleNotifications,
+    updateReserve,
+  };
+}
