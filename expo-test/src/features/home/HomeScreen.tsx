@@ -6,6 +6,11 @@ import { KeyboardDoneAccessory } from "@/shared/ui/components";
 import { settingsMoneyAccessoryId } from "@/shared/ui/keyboard";
 import { spacing, styles } from "@/shared/ui/styles";
 
+import {
+  useNotificationNavigation,
+  useReminderNotifications,
+} from "@/features/notifications/hooks";
+
 import { HomeFloatingActionButton } from "./components/HomeFloatingActionButton";
 import { HomeHeader } from "./components/HomeHeader";
 import { HomeModals } from "./components/HomeModals";
@@ -22,13 +27,23 @@ export function HomeScreen({ controller }: { controller: HomeScreenController })
     screen,
     width,
   } = useHomePager();
+  const { clearNotificationTarget, notificationTarget } =
+    useNotificationNavigation(changeScreen);
+
+  useReminderNotifications({
+    dashboardSnapshot: controller.dashboardSnapshot,
+    notificationsEnabled:
+      controller.notificationSettings?.notificationsEnabled,
+  });
 
   return (
     <View style={[styles.page, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
       <HomeHeader />
       <HomePager
         controller={controller}
+        notificationTarget={notificationTarget}
         onChangeScreen={changeScreen}
+        onClearNotificationTarget={clearNotificationTarget}
         onScrollEnd={handlePagerScrollEnd}
         pagerRef={pagerRef}
         width={width}

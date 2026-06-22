@@ -13,13 +13,17 @@ import { settingsMoneyAccessoryId } from "@/shared/ui/keyboard";
 import { styles } from "@/shared/ui/styles";
 import type { Screen } from "@/shared/ui/types";
 
+import type { NotificationTarget } from "@/features/notifications/types";
+
 import type { HomeScreenController } from "../useHomeScreenController";
 
 const emptySafeToSpendBreakdown = createEmptySafeToSpendBreakdown();
 
 type HomePagerProps = {
   controller: HomeScreenController;
+  notificationTarget: NotificationTarget;
   onChangeScreen: (screen: Screen) => void;
+  onClearNotificationTarget: () => void;
   onScrollEnd: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   pagerRef: RefObject<ScrollView | null>;
   width: number;
@@ -27,7 +31,9 @@ type HomePagerProps = {
 
 export function HomePager({
   controller,
+  notificationTarget,
   onChangeScreen,
+  onClearNotificationTarget,
   onScrollEnd,
   pagerRef,
   width,
@@ -55,7 +61,7 @@ export function HomePager({
           purchaseTotal={controller.dashboardTotals.purchaseTotal}
           safeToSpend={controller.dashboardTotals.safeToSpend}
           upcomingBills={controller.dashboardUpcomingBills}
-          upcomingPaychecks={controller.visiblePaychecks}
+          upcomingPaychecks={controller.dashboardUpcomingPaychecks}
           isLoading={controller.dashboardLoading}
           onOpenPaychecks={() => onChangeScreen("Paychecks")}
         />
@@ -79,7 +85,13 @@ export function HomePager({
         <BillsScreen
           bills={controller.visibleBills}
           cycleLabel={controller.billCycleLabel}
+          openActionMenuForBillId={
+            notificationTarget?.screen === "Bills"
+              ? notificationTarget.entityId
+              : null
+          }
           onAddBill={controller.openAddBill}
+          onClearOpenActionMenuTarget={onClearNotificationTarget}
           onDeleteBill={controller.deleteBill}
           onEditBill={controller.openBillEdit}
           onMarkPaid={controller.markBillPaid}
@@ -92,9 +104,15 @@ export function HomePager({
       <View style={[styles.pagerPage, { width }]}>
         <PaychecksScreen
           nextCyclePreview={controller.nextCyclePreview}
+          openActionMenuForPaycheckId={
+            notificationTarget?.screen === "Paychecks"
+              ? notificationTarget.entityId
+              : null
+          }
           paycheckBillCoverage={controller.paycheckBillCoverage}
           paychecks={controller.visiblePaychecks}
           onAddPaycheck={controller.openAddPaycheck}
+          onClearOpenActionMenuTarget={onClearNotificationTarget}
           onConfirmPaycheck={controller.confirmPaycheck}
           onDeletePaycheck={controller.deletePaycheck}
           onEditPaycheck={controller.openPaycheckEdit}

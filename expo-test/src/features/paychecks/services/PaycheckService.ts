@@ -314,8 +314,12 @@ export class PaycheckService {
     isPrimary: boolean;
     label: string | null;
     profileId: string;
-    recurrenceInterval: PaycheckRecurrenceInterval;
+    recurrenceInterval: PaycheckRecurrenceInterval | null;
   }) {
+    if (!paycheck.recurrenceInterval) {
+      return [];
+    }
+
     const paychecks =
       (await this.paycheckRepository.findAll(paycheck.profileId)) ?? [];
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { ImportSuggestion } from "@/database/repositories/types";
+import type { BillType, ImportSuggestion } from "@/database/repositories/types";
 import type { DashboardSnapshot } from "@/features/dashboard/services";
 import {
   pickStatementFileFromDevice,
@@ -9,6 +9,7 @@ import {
 import { processPickedStatementFile } from "@/features/import/services/processPickedStatementFile";
 import {
   createOverlayDismissalWaiter,
+  waitForModalPresentationReady,
   waitForNextReactFrame,
 } from "@/features/import/services/waitForOverlayDismissal";
 import { parseDollarInputToNonNegativeCents } from "@/shared/currency";
@@ -43,6 +44,7 @@ export function useImportReviewController({
   const [confirmRecurrence, setConfirmRecurrence] =
     useState<PaycheckRecurrence>("none");
   const [confirmIsPrimary, setConfirmIsPrimary] = useState(true);
+  const [confirmBillType, setConfirmBillType] = useState<BillType>("fixed");
   const [confirmingSuggestion, setConfirmingSuggestion] =
     useState<ImportSuggestion | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -152,12 +154,17 @@ export function useImportReviewController({
     }
 
     try {
-      setIsFilePickerActive(true);
       setIsImporting(true);
       setError("");
+      onboardingOverlayDismissalRef.current.reset();
+      await waitForNextReactFrame();
+      setIsFilePickerActive(true);
       await waitForNextReactFrame();
       await onboardingOverlayDismissalRef.current.waitForDismissal();
+      await waitForModalPresentationReady();
+
       const pickedFile = await pickStatementFileFromDevice();
+      setIsFilePickerActive(false);
 
       if (pickedFile.canceled) {
         return;
@@ -205,6 +212,7 @@ export function useImportReviewController({
         ? inferDefaultIncomeIsPrimary(suggestion)
         : true
     );
+    setConfirmBillType("fixed");
     setConfirmError("");
   }
 
@@ -213,6 +221,7 @@ export function useImportReviewController({
     setConfirmError("");
     setConfirmRecurrence("none");
     setConfirmIsPrimary(true);
+    setConfirmBillType("fixed");
   }
 
   async function saveConfirmedSuggestion() {
@@ -259,6 +268,7 @@ export function useImportReviewController({
         await runtime.services.importService.confirmSuggestionAsBill(
           confirmingSuggestion.id,
           {
+            billType: confirmBillType,
             cycle: getImportBillCycle(dashboardSnapshot),
             dueDateAbsolute: confirmDueDate,
             name: normalizedName,
@@ -337,6 +347,7 @@ export function useImportReviewController({
   return {
     confirmSuggestion: {
       amount: confirmAmount,
+      billType: confirmBillType,
       close: closeConfirmSuggestion,
       dueDate: confirmDueDate,
       error: confirmError,
@@ -348,6 +359,7 @@ export function useImportReviewController({
       reject: rejectConfirmingSuggestion,
       save: saveConfirmedSuggestion,
       setAmount: setConfirmAmount,
+      setBillType: setConfirmBillType,
       setDueDate: setConfirmDueDate,
       setIsPrimary: setConfirmIsPrimary,
       setName: setConfirmName,

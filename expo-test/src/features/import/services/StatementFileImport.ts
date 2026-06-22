@@ -87,16 +87,24 @@ async function readPickedPdfFile(file: PickedFile) {
     };
   }
 
-  const ocrResult = await recognizePdfTextWithNativeOcr(file.uri);
+  try {
+    const ocrResult = await recognizePdfTextWithNativeOcr(file.uri);
 
-  return {
-    extractionMethod: "ocr" as const,
-    fileName: file.name,
-    ocrPageCount: ocrResult.pageCount,
-    ocrRecognizedPageCount: ocrResult.recognizedPageCount,
-    pdfText: ocrResult.text.trim(),
-    uri: file.uri,
-  };
+    return {
+      extractionMethod: "ocr" as const,
+      fileName: file.name,
+      ocrPageCount: ocrResult.pageCount,
+      ocrRecognizedPageCount: ocrResult.recognizedPageCount,
+      pdfText: ocrResult.text.trim(),
+      uri: file.uri,
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "This PDF could not be read. Try exporting the statement as CSV or a text-based PDF."
+    );
+  }
 }
 
 async function tryRecognizePdfText(fileUri: string) {

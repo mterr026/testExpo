@@ -14,6 +14,7 @@ import {
   buildDashboardTotalsFromSnapshot,
   buildLocalFallbackTotals,
   buildDashboardUpcomingBills,
+  buildDashboardUpcomingPaychecks,
   buildPaycheckBillCoverage,
   buildVisibleBills,
   resolveActiveDashboardSnapshot,
@@ -307,6 +308,7 @@ describe("buildDashboardUpcomingBills", () => {
     const dashboardBills = buildDashboardUpcomingBills(
       {
         ...createSnapshot(),
+        activeCycleEndDate: "2026-06-15",
         billInstances: [paidInstance],
         allBillInstances: [paidInstance],
       },
@@ -359,6 +361,93 @@ describe("buildDashboardUpcomingBills", () => {
     );
 
     expect(dashboardBillTotal).toBe(snapshot.safeToSpend.unpaidBillsCents);
+  });
+
+  it("excludes_bill_instances_outside_the_active_paycheck_cycle_window", () => {
+    const currentCycleInstance = billInstance;
+    const nextCycleInstance: BillCycleInstance = {
+      ...billInstance,
+      id: "instance-next-cycle",
+      dueDate: "2026-07-02",
+      paycheckCycleId: "paycheck-next",
+    };
+    const dashboardBills = buildDashboardUpcomingBills(
+      {
+        ...createSnapshot(),
+        activeCycleEndDate: "2026-06-15",
+        billInstances: [currentCycleInstance, nextCycleInstance],
+        allBillInstances: [currentCycleInstance, nextCycleInstance],
+      },
+      []
+    );
+
+    expect(dashboardBills.map((bill) => bill.dueDate)).toEqual(["2026-06-05"]);
+  });
+});
+
+describe("buildDashboardUpcomingPaychecks", () => {
+  it("excludes_paychecks_outside_the_active_paycheck_cycle_window", () => {
+    const cycleStartPaycheck: Paycheck = {
+      ...currentPaycheck,
+      id: "paycheck-jul-15",
+      expectedDate: "2026-07-15",
+      isReceived: true,
+      receivedAt: "2026-07-15T12:00:00.000Z",
+    };
+    const inCyclePaycheck: Paycheck = {
+      ...currentPaycheck,
+      id: "paycheck-jul-20",
+      label: "Bonus",
+      expectedDate: "2026-07-20",
+      isReceived: false,
+      receivedAt: null,
+    };
+    const cycleEndPaycheck: Paycheck = {
+      ...currentPaycheck,
+      id: "paycheck-jul-29",
+      expectedDate: "2026-07-29",
+      isReceived: false,
+      receivedAt: null,
+    };
+    const laterCyclePaycheck: Paycheck = {
+      ...currentPaycheck,
+      id: "paycheck-aug-12",
+      expectedDate: "2026-08-12",
+      isReceived: false,
+      receivedAt: null,
+    };
+    const upcomingPaychecks = buildDashboardUpcomingPaychecks({
+      ...createSnapshot(),
+      activeCyclePaycheckId: "paycheck-jul-15",
+      activeCycleStartDate: "2026-07-15",
+      activeCycleEndDate: "2026-07-29",
+      currentCycleAnchor: cycleStartPaycheck,
+      nextCycleAnchor: cycleEndPaycheck,
+      paychecks: [
+        cycleStartPaycheck,
+        inCyclePaycheck,
+        cycleEndPaycheck,
+        laterCyclePaycheck,
+      ],
+      billInstances: [],
+      allBillInstances: [],
+      safeToSpend: calculateSafeToSpend({
+        paychecks: [
+          cycleStartPaycheck,
+          inCyclePaycheck,
+          cycleEndPaycheck,
+          laterCyclePaycheck,
+        ],
+        purchases: [],
+        billInstances: [],
+        balanceAdjustments: [],
+        essentialReserveCents: 0,
+      }),
+    });
+
+    expect(upcomingPaychecks.map((paycheck) => paycheck.expectedDate)).toEqual([
+      "2026-07-20",
+    ]);
   });
 });
 

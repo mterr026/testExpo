@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import {
@@ -26,9 +26,11 @@ import {
 
 type PaychecksScreenProps = {
   nextCyclePreview: NextCyclePreview;
+  openActionMenuForPaycheckId?: string | null;
   paycheckBillCoverage: PaycheckBillCoverage[];
   paychecks: PaycheckListItem[];
   onAddPaycheck: () => void;
+  onClearOpenActionMenuTarget?: () => void;
   onConfirmPaycheck: (id: string) => void | Promise<void>;
   onDeletePaycheck: (id: string) => void | Promise<void>;
   onEditPaycheck: (paycheck: PaycheckListItem) => void;
@@ -36,9 +38,11 @@ type PaychecksScreenProps = {
 };
 
 export function PaychecksScreen({
+  openActionMenuForPaycheckId,
   paycheckBillCoverage,
   paychecks,
   onAddPaycheck,
+  onClearOpenActionMenuTarget,
   onConfirmPaycheck,
   onDeletePaycheck,
   onEditPaycheck,
@@ -68,6 +72,24 @@ export function PaychecksScreen({
   );
   const [selectedPaycheck, setSelectedPaycheck] =
     useState<PaycheckListItem | null>(null);
+
+  useEffect(() => {
+    if (!openActionMenuForPaycheckId) {
+      return;
+    }
+
+    const paycheck = paychecks.find(
+      (candidate) => candidate.id === openActionMenuForPaycheckId
+    );
+
+    if (!paycheck) {
+      return;
+    }
+
+    setSelectedPaycheck(paycheck);
+    onClearOpenActionMenuTarget?.();
+  }, [onClearOpenActionMenuTarget, openActionMenuForPaycheckId, paychecks]);
+
   const paycheckActions = selectedPaycheck
     ? getPaycheckActions({
         onConfirmPaycheck,

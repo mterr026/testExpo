@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import {
@@ -17,7 +17,9 @@ import type { Bill } from "@/shared/ui/types";
 export function BillsScreen({
   bills,
   cycleLabel,
+  openActionMenuForBillId,
   onAddBill,
+  onClearOpenActionMenuTarget,
   onDeleteBill,
   onEditBill,
   onMarkPaid,
@@ -27,7 +29,9 @@ export function BillsScreen({
 }: {
   bills: Bill[];
   cycleLabel: string;
+  openActionMenuForBillId?: string | null;
   onAddBill: () => void;
+  onClearOpenActionMenuTarget?: () => void;
   onDeleteBill: (bill: Bill) => void;
   onEditBill: (bill: Bill) => void;
   onMarkPaid: (bill: Bill) => void | Promise<void>;
@@ -42,6 +46,22 @@ export function BillsScreen({
   const scheduledBills = bills.filter((bill) => bill.status === "Scheduled");
   const [showPaidBills, setShowPaidBills] = useState(false);
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+
+  useEffect(() => {
+    if (!openActionMenuForBillId) {
+      return;
+    }
+
+    const bill = bills.find((candidate) => candidate.id === openActionMenuForBillId);
+
+    if (!bill) {
+      return;
+    }
+
+    setSelectedBill(bill);
+    onClearOpenActionMenuTarget?.();
+  }, [bills, onClearOpenActionMenuTarget, openActionMenuForBillId]);
+
   const billActions = selectedBill
     ? getBillActions({
         bill: selectedBill,
@@ -55,6 +75,7 @@ export function BillsScreen({
     : [];
 
   return (
+    <>
     <ScrollView
       style={styles.content}
       contentContainerStyle={styles.contentInner}
@@ -146,14 +167,15 @@ export function BillsScreen({
           )}
         </View>
       )}
-      <ActionMenu
-        header={selectedBill ? getBillActionHeader(selectedBill) : undefined}
-        title={selectedBill?.name ?? "Bill"}
-        visible={!!selectedBill}
-        actions={billActions}
-        onClose={() => setSelectedBill(null)}
-      />
     </ScrollView>
+    <ActionMenu
+      header={selectedBill ? getBillActionHeader(selectedBill) : undefined}
+      title={selectedBill?.name ?? "Bill"}
+      visible={!!selectedBill}
+      actions={billActions}
+      onClose={() => setSelectedBill(null)}
+    />
+    </>
   );
 }
 
@@ -246,6 +268,7 @@ function getBillActions({
     primaryActions.push({
       icon: "$",
       label: "Confirm amount",
+      closeBeforeAction: true,
       onPress: () => onConfirmBill(bill),
     });
   }
@@ -257,7 +280,10 @@ function getBillActions({
     primaryActions.push({
       icon: "✓",
       label: "Mark paid",
-      onPress: () => onMarkPaid(bill),
+      closeBeforeAction: true,
+      onPress: () => {
+        void onMarkPaid(bill);
+      },
     });
   }
 
@@ -265,7 +291,10 @@ function getBillActions({
     primaryActions.push({
       icon: "↩",
       label: "Mark unpaid",
-      onPress: () => onMarkUnpaid(bill),
+      closeBeforeAction: true,
+      onPress: () => {
+        void onMarkUnpaid(bill);
+      },
     });
   }
 
@@ -274,18 +303,31 @@ function getBillActions({
     {
       icon: "✏️",
       label: "Edit Bill",
+      closeBeforeAction: true,
       onPress: () => onEditBill(bill),
     },
-    {
-      icon: bill.isPaused ? "▶️" : "⏸",
-      label: bill.isPaused ? "Resume Recurring Bill" : "Pause Recurring Bill",
-      onPress: () => onToggleBillPaused(bill),
-    },
+    ...(bill.billId
+      ? [
+          {
+            icon: bill.isPaused ? "▶️" : "⏸",
+            label: bill.isPaused
+              ? "Resume Recurring Bill"
+              : "Pause Recurring Bill",
+            closeBeforeAction: true,
+            onPress: () => {
+              void onToggleBillPaused(bill);
+            },
+          } as ActionMenuItem,
+        ]
+      : []),
     {
       icon: "🗑",
       label: "Delete Bill",
       destructive: true,
-      onPress: () => onDeleteBill(bill),
+      closeBeforeAction: true,
+      onPress: () => {
+        void onDeleteBill(bill);
+      },
     },
   ];
 }

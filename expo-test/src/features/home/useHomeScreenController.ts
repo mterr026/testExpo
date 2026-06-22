@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { useProfile } from "@/context/ProfileContext";
 import { useFinancialState } from "@/context/FinancialStateContext";
 import type { Bill } from "@/shared/ui/types";
 
@@ -20,9 +21,11 @@ export function useHomeScreenController() {
     dashboardSnapshot,
     refreshDashboardSnapshot,
   } = useFinancialState();
+  const { profile } = useProfile();
   const {
     billCycleLabel,
     dashboardUpcomingBills,
+    dashboardUpcomingPaychecks,
     dashboardTotals,
     nextCyclePreview,
     paycheckBillCoverage,
@@ -41,7 +44,7 @@ export function useHomeScreenController() {
   const importReview = useImportReviewController({
     dashboardSnapshot,
     onFinancialDataChanged: refreshDashboardSnapshot,
-    profileId: dashboardSnapshot?.profile?.id,
+    profileId: profile?.id ?? dashboardSnapshot?.profile?.id,
   });
   const { onboarding } = useOnboardingController({
     onOnboardingComplete: refreshDashboardSnapshot,
@@ -100,6 +103,7 @@ export function useHomeScreenController() {
     dashboardSnapshot,
     dashboardTotals,
     dashboardUpcomingBills,
+    dashboardUpcomingPaychecks,
     importReview,
     onboarding,
     deletePurchase,

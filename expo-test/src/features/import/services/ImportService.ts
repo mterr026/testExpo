@@ -130,6 +130,7 @@ export class ImportService {
   async confirmSuggestionAsBill(
     id: string,
     billDetails: {
+      billType?: NewBill["billType"];
       cycle?: BillCycleWindow | null;
       dueDateAbsolute?: string | null;
       dueDayOfCycle?: number | null;
@@ -143,6 +144,7 @@ export class ImportService {
   async confirmSuggestionAsBill(
     id: string,
     billDetails: {
+      billType?: NewBill["billType"];
       cycle?: BillCycleWindow | null;
       dueDateAbsolute?: string | null;
       dueDayOfCycle?: number | null;
@@ -166,7 +168,7 @@ export class ImportService {
     const newBill: NewBill = {
       profileId: suggestion.profileId,
       name: billDetails.name?.trim() || suggestion.suggestedName,
-      billType: "fixed",
+      billType: billDetails.billType ?? "fixed",
       defaultAmountCents:
         billDetails.suggestedAmountCents ?? suggestion.suggestedAmountCents,
       recurrenceInterval: mapSuggestionIntervalToBillInterval(

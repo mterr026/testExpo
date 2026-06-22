@@ -35,25 +35,11 @@ export function HomeModals({ controller }: HomeModalsProps) {
         step={controller.onboarding.step}
         balanceAmount={controller.onboarding.balanceAmount}
         reserveAmount={controller.onboarding.reserveAmount}
-        paycheckLabel={controller.onboarding.paycheckLabel}
-        paycheckAmount={controller.onboarding.paycheckAmount}
-        paycheckExpectedDate={controller.onboarding.paycheckExpectedDate}
-        paycheckRecurrence={controller.onboarding.paycheckRecurrence}
-        billName={controller.onboarding.billName}
-        billAmount={controller.onboarding.billAmount}
-        billDueDate={controller.onboarding.billDueDate}
         error={controller.onboarding.error}
         isSaving={controller.onboarding.isSaving}
         amountAccessoryId={openingBalanceAmountAccessoryId}
         onBalanceAmountChange={controller.onboarding.setBalanceAmount}
         onReserveAmountChange={controller.onboarding.setReserveAmount}
-        onPaycheckLabelChange={controller.onboarding.setPaycheckLabel}
-        onPaycheckAmountChange={controller.onboarding.setPaycheckAmount}
-        onPaycheckExpectedDateChange={controller.onboarding.setPaycheckExpectedDate}
-        onPaycheckRecurrenceChange={controller.onboarding.setPaycheckRecurrence}
-        onBillNameChange={controller.onboarding.setBillName}
-        onBillAmountChange={controller.onboarding.setBillAmount}
-        onBillDueDateChange={controller.onboarding.setBillDueDate}
         onContinue={controller.onboarding.continueOnboarding}
         onSkip={controller.onboarding.skipOnboarding}
         onDismiss={
@@ -76,6 +62,7 @@ export function HomeModals({ controller }: HomeModalsProps) {
         confirmSuggestion={{
           amount: controller.importReview.confirmSuggestion.amount,
           amountAccessoryId: settingsMoneyAccessoryId,
+          billType: controller.importReview.confirmSuggestion.billType,
           dueDate: controller.importReview.confirmSuggestion.dueDate,
           error: controller.importReview.confirmSuggestion.error,
           incomeRole: controller.importReview.confirmSuggestion.isPrimary
@@ -87,6 +74,7 @@ export function HomeModals({ controller }: HomeModalsProps) {
           suggestionKind: controller.importReview.confirmSuggestion.suggestionKind,
           visible: controller.importReview.confirmSuggestion.visible,
           onAmountChange: controller.importReview.confirmSuggestion.setAmount,
+          onBillTypeChange: controller.importReview.confirmSuggestion.setBillType,
           onClose: controller.importReview.confirmSuggestion.close,
           onDueDateChange: controller.importReview.confirmSuggestion.setDueDate,
           onIncomeRoleChange: (role) =>
@@ -172,6 +160,7 @@ export function HomeModals({ controller }: HomeModalsProps) {
         }
         name={controller.importReview.confirmSuggestion.name}
         amount={controller.importReview.confirmSuggestion.amount}
+        billType={controller.importReview.confirmSuggestion.billType}
         dueDate={controller.importReview.confirmSuggestion.dueDate}
         error={controller.importReview.confirmSuggestion.error}
         incomeRole={
@@ -185,6 +174,7 @@ export function HomeModals({ controller }: HomeModalsProps) {
         amountAccessoryId={settingsMoneyAccessoryId}
         onNameChange={controller.importReview.confirmSuggestion.setName}
         onAmountChange={controller.importReview.confirmSuggestion.setAmount}
+        onBillTypeChange={controller.importReview.confirmSuggestion.setBillType}
         onDueDateChange={controller.importReview.confirmSuggestion.setDueDate}
         onIncomeRoleChange={(role) =>
           controller.importReview.confirmSuggestion.setIsPrimary(

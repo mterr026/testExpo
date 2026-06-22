@@ -14,13 +14,14 @@ import {
   KeyboardDoneAccessory,
 } from "@/shared/ui/components";
 import { styles } from "@/shared/ui/styles";
-import type { ImportSuggestionKind } from "@/database/repositories/types";
+import type { BillType, ImportSuggestionKind } from "@/database/repositories/types";
 import type { PaycheckIncomeRole, PaycheckRecurrence } from "@/shared/ui/types";
 
 export type ImportSuggestionConfirmFormProps = {
   amount: string;
   amountAccessoryId: string;
   backLabel?: string;
+  billType: BillType;
   dueDate: string;
   error: string;
   incomeRole: PaycheckIncomeRole;
@@ -29,6 +30,7 @@ export type ImportSuggestionConfirmFormProps = {
   recurrence: PaycheckRecurrence;
   suggestionKind: ImportSuggestionKind;
   onAmountChange: (text: string) => void;
+  onBillTypeChange: (billType: BillType) => void;
   onClose: () => void;
   onDueDateChange: (text: string) => void;
   onIncomeRoleChange: (role: PaycheckIncomeRole) => void;
@@ -46,6 +48,7 @@ export function ImportSuggestionConfirmForm({
   amount,
   amountAccessoryId,
   backLabel = "Review Later",
+  billType,
   dueDate,
   error,
   incomeRole,
@@ -54,6 +57,7 @@ export function ImportSuggestionConfirmForm({
   recurrence,
   suggestionKind,
   onAmountChange,
+  onBillTypeChange,
   onClose,
   onDueDateChange,
   onIncomeRoleChange,
@@ -102,6 +106,49 @@ export function ImportSuggestionConfirmForm({
         value={dueDate}
         onChange={onDueDateChange}
       />
+
+      {!isIncome && (
+        <>
+          <Text style={styles.inputLabel}>Type</Text>
+          <View style={styles.segmentedControl}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.segmentedControlOption,
+                billType === "fixed" && styles.segmentedControlOptionActive,
+                pressed && styles.pressed,
+              ]}
+              onPress={() => onBillTypeChange("fixed")}
+            >
+              <Text
+                style={[
+                  styles.segmentedControlText,
+                  billType === "fixed" && styles.segmentedControlTextActive,
+                ]}
+              >
+                Fixed
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.segmentedControlOption,
+                billType === "variable" && styles.segmentedControlOptionActive,
+                pressed && styles.pressed,
+              ]}
+              onPress={() => onBillTypeChange("variable")}
+            >
+              <Text
+                style={[
+                  styles.segmentedControlText,
+                  billType === "variable" && styles.segmentedControlTextActive,
+                ]}
+              >
+                Variable
+              </Text>
+            </Pressable>
+          </View>
+        </>
+      )}
 
       {isIncome && (
         <>

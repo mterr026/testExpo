@@ -19,6 +19,7 @@ import { ImportService } from "@/features/import/services";
 import { PaycheckService } from "@/features/paychecks/services";
 import { PurchaseService } from "@/features/purchases/services";
 import { SettingsService } from "@/features/settings/services";
+import { NotificationService } from "@/features/notifications/services";
 import { OnboardingService } from "@/features/onboarding/services/OnboardingService";
 import type { FinancialEventBus } from "@/shared/events/financialEvents";
 
@@ -43,6 +44,7 @@ export type AppServices = {
   billService: BillService;
   dashboardService: DashboardService;
   importService: ImportService;
+  notificationService: NotificationService;
   onboardingService: OnboardingService;
   paycheckService: PaycheckService;
   purchaseService: PurchaseService;
@@ -103,6 +105,7 @@ export function createAppServices(
           createImportSessionId: createLocalId,
         }
       ),
+      notificationService: new NotificationService(),
       onboardingService: new OnboardingService(
         repositories.profileRepository,
         eventBus

@@ -139,7 +139,12 @@ export function ActionMenu({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.actionMenuOverlay}>
         <Pressable style={styles.modalBackdrop} onPress={onClose} />
         <View style={styles.actionMenuSheet}>

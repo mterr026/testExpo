@@ -202,6 +202,10 @@ export function useHomeDerivedData({
     return buildDashboardUpcomingBills(activeSnapshot, bills);
   }, [activeSnapshot, bills]);
 
+  const dashboardUpcomingPaychecks = useMemo(() => {
+    return buildDashboardUpcomingPaychecks(activeSnapshot);
+  }, [activeSnapshot]);
+
   const billCycleLabel = useMemo(() => {
     if (!activeSnapshot?.activeCycleStartDate || !activeSnapshot.activeCycleEndDate) {
       return "No active paycheck cycle";
@@ -297,11 +301,23 @@ export function useHomeDerivedData({
     nextCyclePreview,
     paycheckBillCoverage,
     dashboardUpcomingBills,
+    dashboardUpcomingPaychecks,
     visibleBills,
     visiblePaychecks,
     visiblePurchases,
     purchaseCycleContext,
   };
+}
+
+export function isDateInActivePaycheckCycle(
+  date: string,
+  startDate: string,
+  endDate: string
+) {
+  return (
+    date >= startDate &&
+    (endDate === OPEN_ENDED_PAYCHECK_CYCLE_DATE || date < endDate)
+  );
 }
 
 export function buildDashboardUpcomingBills(
@@ -310,14 +326,6 @@ export function buildDashboardUpcomingBills(
 ): Bill[] {
   if (!dashboardSnapshot) {
     return fallbackBills;
-  }
-
-  if (dashboardSnapshot.billInstances.length > 0) {
-    return dashboardSnapshot.billInstances
-      .filter((billInstance) => !billInstance.isPaid)
-      .map((billInstance) =>
-        mapRepositoryBillInstanceToPrototype(billInstance, dashboardSnapshot.bills)
-      );
   }
 
   if (
@@ -330,11 +338,18 @@ export function buildDashboardUpcomingBills(
 
   const activeCycleStartDate = dashboardSnapshot.activeCycleStartDate;
   const activeCycleEndDate = dashboardSnapshot.activeCycleEndDate;
-  const activeCycleExistingInstances = dashboardSnapshot.allBillInstances.filter(
+  const dedupedBillInstances = mergeBillInstancesForDisplay(
+    dashboardSnapshot.billInstances,
+    dashboardSnapshot.allBillInstances
+  );
+  const activeCycleExistingInstances = dedupedBillInstances.filter(
     (billInstance) =>
       !billInstance.isPaid &&
-      activeCycleStartDate <= billInstance.dueDate &&
-      billInstance.dueDate < activeCycleEndDate
+      isDateInActivePaycheckCycle(
+        billInstance.dueDate,
+        activeCycleStartDate,
+        activeCycleEndDate
+      )
   );
 
   if (activeCycleExistingInstances.length > 0) {
@@ -359,6 +374,34 @@ export function buildDashboardUpcomingBills(
   );
 
   return generatedBills.length > 0 ? generatedBills : [];
+}
+
+export function buildDashboardUpcomingPaychecks(
+  dashboardSnapshot: DashboardSnapshot | null
+) {
+  if (!dashboardSnapshot) {
+    return [];
+  }
+
+  const unreceivedPaychecks = dashboardSnapshot.paychecks
+    .map(mapRepositoryPaycheckToListItem)
+    .filter((paycheck) => !paycheck.isReceived);
+
+  if (
+    !dashboardSnapshot.activeCyclePaycheckId ||
+    !dashboardSnapshot.activeCycleStartDate ||
+    !dashboardSnapshot.activeCycleEndDate
+  ) {
+    return unreceivedPaychecks;
+  }
+
+  return unreceivedPaychecks.filter((paycheck) =>
+    isDateInActivePaycheckCycle(
+      paycheck.expectedDate,
+      dashboardSnapshot.activeCycleStartDate!,
+      dashboardSnapshot.activeCycleEndDate!
+    )
+  );
 }
 
 function mapSavedBillsForDashboard(

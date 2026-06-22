@@ -378,6 +378,43 @@ describe("ImportService", () => {
     expect(result.suggestion.status).toBe("confirmed");
   });
 
+  it("confirms_pending_suggestion_as_a_variable_bill_when_requested", async () => {
+    const suggestion = importSuggestion();
+    const bill = {
+      ...billRecord(),
+      billType: "variable" as const,
+    };
+    const repository = {
+      findById: vi.fn().mockResolvedValue(suggestion),
+      confirm: vi.fn().mockResolvedValue({
+        ...suggestion,
+        confirmedBillId: bill.id,
+        status: "confirmed",
+      }),
+    };
+    const billService = {
+      createBill: vi.fn().mockResolvedValue(bill),
+    };
+    const service = new ImportService(
+      repository as unknown as ImportSuggestionRepository,
+      billService as unknown as BillService,
+      {
+        createImportSessionId: () => "import-session-1",
+      }
+    );
+
+    await service.confirmSuggestionAsBill("suggestion-1", {
+      billType: "variable",
+      dueDateAbsolute: "2026-07-05",
+    });
+
+    expect(billService.createBill).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billType: "variable",
+      })
+    );
+  });
+
   it("confirms_pending_suggestion_into_the_current_bill_cycle_when_cycle_is_available", async () => {
     const suggestion = importSuggestion();
     const bill = billRecord();

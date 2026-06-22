@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("react-native", () => ({
+  InteractionManager: {
+    runAfterInteractions: (callback: () => void) => {
+      callback();
+    },
+  },
+}));
+
 import {
   createOverlayDismissalWaiter,
 } from "./waitForOverlayDismissal";

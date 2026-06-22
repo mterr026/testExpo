@@ -278,20 +278,13 @@ function logDashboardBillDiagnostics({
   if (
     process.env.NODE_ENV === "test" ||
     bills.length === 0 ||
-    billInstances.length > 0
+    billInstances.length > 0 ||
+    !cycle
   ) {
     return;
   }
 
   const diagnostics = bills.map((bill) => {
-    if (!cycle) {
-      return {
-        billId: bill.id,
-        name: bill.name,
-        reason: "No active paycheck cycle",
-      };
-    }
-
     try {
       const dueDate = calculateBillDueDateForCycle(bill, {
         paycheckCycleId: cycle.paycheckCycleId,

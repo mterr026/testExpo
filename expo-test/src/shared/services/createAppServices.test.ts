@@ -17,6 +17,7 @@ import { BackupService } from "@/features/backup/services";
 import { BillService } from "@/features/bills/services";
 import { DashboardService } from "@/features/dashboard/services";
 import { ImportService } from "@/features/import/services";
+import { NotificationService } from "@/features/notifications/services";
 import { OnboardingService } from "@/features/onboarding/services/OnboardingService";
 import { PaycheckService } from "@/features/paychecks/services";
 import { PurchaseService } from "@/features/purchases/services";
@@ -68,6 +69,9 @@ describe("createAppServices", () => {
     expect(container.services.billService).toBeInstanceOf(BillService);
     expect(container.services.dashboardService).toBeInstanceOf(DashboardService);
     expect(container.services.importService).toBeInstanceOf(ImportService);
+    expect(container.services.notificationService).toBeInstanceOf(
+      NotificationService
+    );
     expect(container.services.onboardingService).toBeInstanceOf(OnboardingService);
     expect(container.services.paycheckService).toBeInstanceOf(PaycheckService);
     expect(container.services.purchaseService).toBeInstanceOf(PurchaseService);

@@ -79,19 +79,42 @@ export function useSettingsActions({
       (await runtime.services.settingsService.getOrCreateNotificationSettings(
         profile.id
       ));
+    const turningOn = !currentSettings.notificationsEnabled;
 
     try {
       setIsNotificationSaving(true);
+      setNotificationError("");
+
+      if (turningOn) {
+        const permission =
+          await runtime.services.notificationService.requestNotificationPermission();
+
+        if (permission === "unavailable") {
+          setNotificationError(
+            "Notifications are not available in this build. Rebuild the app with npx expo run:ios, then try again."
+          );
+          return;
+        }
+
+        if (permission === "denied") {
+          setNotificationError(
+            "Notifications are blocked. Open iOS Settings → Notifications → expo-test and allow alerts."
+          );
+          return;
+        }
+      }
+
       const updatedSettings =
         await runtime.services.settingsService.updateNotificationSettings(
           profile.id,
           {
-            notificationsEnabled: !currentSettings.notificationsEnabled,
+            notificationsEnabled: turningOn,
           }
         );
 
       setNotificationSettings(updatedSettings);
       setNotificationError("");
+      await onSettingsChanged?.();
     } catch {
       setNotificationError("Notification settings could not be saved.");
     } finally {
