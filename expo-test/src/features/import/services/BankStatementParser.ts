@@ -953,9 +953,18 @@ function attachDetachedAmountLine(
     return { parts, skipLines: 0 };
   }
 
+  let startOffset = 0;
+
+  if (
+    fromIndex < annotatedLines.length &&
+    isStatementDateLine(annotatedLines[fromIndex].line)
+  ) {
+    startOffset = 1;
+  }
+
   for (
-    let offset = 0;
-    offset < 12 && fromIndex + offset < annotatedLines.length;
+    let offset = startOffset;
+    offset < 80 && fromIndex + offset < annotatedLines.length;
     offset += 1
   ) {
     const candidateLine = annotatedLines[fromIndex + offset].line;
@@ -966,7 +975,8 @@ function attachDetachedAmountLine(
 
     if (
       isStatementTableHeader(candidateLine) ||
-      isIgnoredStatementLine(candidateLine)
+      isIgnoredStatementLine(candidateLine) ||
+      isStatementSectionBoundaryLine(candidateLine)
     ) {
       continue;
     }
@@ -976,6 +986,10 @@ function attachDetachedAmountLine(
         parts: [...parts, candidateLine],
         skipLines: offset + 1,
       };
+    }
+
+    if (!isStandaloneAmountBlockNoiseLine(candidateLine)) {
+      break;
     }
   }
 

@@ -130,7 +130,7 @@ describe("statementImportAccuracy", () => {
     ).toBe(true);
     expect(
       suggestionNames.some((name) =>
-        /GEICO|PARAMOUNT|YOUTUBE|FLEXJOBS|AFFIRM/.test(name)
+        /GEICO|PARAMOUNT|YOUTUBE|FLEXJOBS|AFFIRM|NETFLIX|FPL/.test(name)
       )
     ).toBe(true);
     expect(
