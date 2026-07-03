@@ -22,6 +22,17 @@ export function isProjectedBillCycleInstance(instance: {
   return instance.id === projectedBillCycleInstanceId(instance.billId, instance.dueDate);
 }
 
+export function isProjectedBillListItem(item: {
+  billId?: string;
+  dueDate: string;
+  id: string;
+}) {
+  return (
+    !!item.billId &&
+    item.id === projectedBillCycleInstanceId(item.billId, item.dueDate)
+  );
+}
+
 export function generateBillCycleInstances({
   bills,
   cycle,

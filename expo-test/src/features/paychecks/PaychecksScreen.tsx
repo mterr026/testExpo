@@ -23,6 +23,8 @@ import {
   getPrimaryPaychecks,
   splitPaycheckSchedule,
 } from "./paycheckSchedule";
+import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
+import { useTutorialScrollView } from "@/features/tutorial/hooks";
 
 type PaychecksScreenProps = {
   nextCyclePreview: NextCyclePreview;
@@ -72,6 +74,7 @@ export function PaychecksScreen({
   );
   const [selectedPaycheck, setSelectedPaycheck] =
     useState<PaycheckListItem | null>(null);
+  const { onTutorialScroll, tutorialScrollRef } = useTutorialScrollView("Paychecks");
 
   useEffect(() => {
     if (!openActionMenuForPaycheckId) {
@@ -115,16 +118,20 @@ export function PaychecksScreen({
 
   return (
     <ScrollView
+      ref={tutorialScrollRef}
       style={styles.content}
       contentContainerStyle={styles.contentInner}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
+      scrollEventThrottle={16}
+      onScroll={onTutorialScroll}
     >
       <View style={styles.screenHeaderRow}>
         <View style={styles.itemCopy}>
           <Text style={styles.sectionTitle}>Paychecks</Text>
           <Text style={styles.helpText}>Plan each paycheck cycle.</Text>
         </View>
+        <TutorialTarget id="paychecks-add">
         <Pressable
           style={({ pressed }) => [
             styles.inlinePrimaryButton,
@@ -134,10 +141,12 @@ export function PaychecksScreen({
         >
           <Text style={styles.inlinePrimaryButtonText}>+ Add</Text>
         </Pressable>
+        </TutorialTarget>
       </View>
 
       <Text style={styles.settingsGroupTitle}>Paycheck Schedule</Text>
 
+      <TutorialTarget id="paychecks-summary">
       <View style={styles.paycheckSummaryPanel}>
         <View style={styles.paycheckSummaryStrip}>
           <PaycheckSummaryMetric
@@ -160,13 +169,17 @@ export function PaychecksScreen({
           />
         </View>
       </View>
+      </TutorialTarget>
 
       {paychecks.length === 0 ? (
+        <TutorialTarget id="paychecks-schedule">
         <EmptyState
           title="No paychecks yet"
           body="Add an expected paycheck to start building pay cycles."
         />
+        </TutorialTarget>
       ) : (
+        <TutorialTarget id="paychecks-schedule">
         <>
           <PaycheckScheduleGroup
             coverageByPaycheckId={coverageByPaycheckId}
@@ -197,6 +210,7 @@ export function PaychecksScreen({
             paychecks={previousPrimaryPaychecks}
           />
         </>
+        </TutorialTarget>
       )}
       <ActionMenu
         header={

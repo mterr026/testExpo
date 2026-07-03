@@ -1,4 +1,4 @@
-export const DATABASE_VERSION = 5;
+export const DATABASE_VERSION = 6;
 
 export const schemaV2 = `
 CREATE UNIQUE INDEX IF NOT EXISTS idx_bill_instances_uniqueness ON bill_cycle_instances(bill_id, paycheck_cycle_id, due_date) WHERE deleted_at IS NULL;
@@ -17,6 +17,11 @@ export const schemaV5 = `
 ALTER TABLE paychecks ADD COLUMN is_primary INTEGER NOT NULL DEFAULT 1 CHECK (is_primary IN (0, 1));
 `;
 
+export const schemaV6 = `
+ALTER TABLE profiles ADD COLUMN tutorial_complete INTEGER NOT NULL DEFAULT 0 CHECK (tutorial_complete IN (0, 1));
+UPDATE profiles SET tutorial_complete = 1 WHERE onboarding_complete = 1;
+`;
+
 export const schemaV1 = `
 PRAGMA foreign_keys = ON;
 
@@ -27,6 +32,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   currency_code TEXT NOT NULL DEFAULT 'USD',
   onboarding_complete INTEGER NOT NULL DEFAULT 0 CHECK (onboarding_complete IN (0, 1)),
   opening_balance_cents INTEGER NOT NULL DEFAULT 0,
+  tutorial_complete INTEGER NOT NULL DEFAULT 0 CHECK (tutorial_complete IN (0, 1)),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   deleted_at TEXT,

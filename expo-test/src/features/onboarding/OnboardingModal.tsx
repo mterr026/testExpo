@@ -17,6 +17,7 @@ import {
   type ImportSuggestionConfirmFormProps,
 } from "@/features/import/ImportSuggestionConfirmModal";
 import { ImportReviewSection } from "@/features/import/ImportReviewSection";
+import type { ImportPhase } from "@/features/import/importLoadingStatus";
 import {
   KeyboardDoneAccessory,
 } from "@/shared/ui/components";
@@ -29,11 +30,13 @@ type OnboardingImportReviewProps = {
   importMessage: string;
   isClearing: boolean;
   isImporting: boolean;
+  importPhase: ImportPhase | null;
   isLoading: boolean;
   onClearSuggestions: () => void | Promise<void>;
   onImportFile: () => void | Promise<void>;
   onConfirmSuggestion: (suggestion: ImportSuggestion) => void;
   suggestions: ImportSuggestion[];
+  onRejectAllSuggestions: () => void | Promise<void>;
   onRejectSuggestion: (id: string) => void | Promise<void>;
 };
 
@@ -168,15 +171,18 @@ export function OnboardingModal({
               <ImportReviewSection
                 title="Import a statement"
                 helpText="Optional. Choose a CSV or PDF bank statement, then confirm each detected paycheck and bill — check the amount, date, and whether it repeats weekly, biweekly, or monthly. Finish setup once all suggestions are reviewed or ignored."
+                privacyNote="Your statement is scanned once to find bills and paychecks, then deleted from the app. Nothing is uploaded."
                 emptyBody="Choose a statement file to scan for paychecks and bills."
                 error={importReview.error}
                 importMessage={importReview.importMessage}
                 isClearing={importReview.isClearing}
                 isImporting={importReview.isImporting}
+                importPhase={importReview.importPhase}
                 isLoading={importReview.isLoading}
                 onClearSuggestions={importReview.onClearSuggestions}
                 onImportFile={importReview.onImportFile}
                 onConfirmSuggestion={importReview.onConfirmSuggestion}
+                onRejectAllSuggestions={importReview.onRejectAllSuggestions}
                 suggestions={importReview.suggestions}
                 onRejectSuggestion={importReview.onRejectSuggestion}
               />

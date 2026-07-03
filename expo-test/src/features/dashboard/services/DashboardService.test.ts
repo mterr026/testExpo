@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type {
+  BalanceAdjustmentRepository,
   BillCycleInstanceRepository,
   BillRepository,
   PaycheckRepository,
@@ -10,6 +11,7 @@ import type {
 import type {
   Bill,
   BillCycleInstance,
+  BalanceAdjustment,
   Paycheck,
   Profile,
   Purchase,
@@ -24,6 +26,7 @@ const profile: Profile = {
   currencyCode: "USD",
   onboardingComplete: true,
   openingBalanceCents: 0,
+  tutorialComplete: true,
   createdAt: "2026-06-01T12:00:00.000Z",
   updatedAt: "2026-06-01T12:00:00.000Z",
   deletedAt: null,
@@ -116,6 +119,9 @@ function createMocks() {
       findByProfile: vi.fn().mockResolvedValue([]),
       create: vi.fn(),
     },
+    balanceAdjustmentRepository: {
+      findAll: vi.fn().mockResolvedValue([]),
+    },
   };
 }
 
@@ -125,7 +131,8 @@ function createService(mocks: ReturnType<typeof createMocks>) {
     mocks.paycheckRepository as unknown as PaycheckRepository,
     mocks.purchaseRepository as unknown as PurchaseRepository,
     mocks.billRepository as unknown as BillRepository,
-    mocks.billCycleInstanceRepository as unknown as BillCycleInstanceRepository
+    mocks.billCycleInstanceRepository as unknown as BillCycleInstanceRepository,
+    mocks.balanceAdjustmentRepository as unknown as BalanceAdjustmentRepository
   );
 }
 
@@ -214,6 +221,38 @@ describe("DashboardService", () => {
     expect(snapshot.safeToSpend.openingBalanceCents).toBe(75000);
     expect(snapshot.safeToSpend.runningBalanceCents).toBe(275000);
     expect(snapshot.safeToSpend.safeToSpendCents).toBe(265000);
+  });
+
+  it("loadDashboardSnapshot_includes_balance_adjustments_in_safe_to_spend", async () => {
+    const mocks = createMocks();
+    const balanceAdjustments: BalanceAdjustment[] = [
+      {
+        id: "adjustment-1",
+        profileId: "profile-1",
+        previousBalanceCents: 197500,
+        adjustedBalanceCents: 200000,
+        deltaCents: 2500,
+        reason: null,
+        createdAt: "2026-06-02T12:00:00.000Z",
+        deletedAt: null,
+        syncStatus: "local",
+      },
+    ];
+
+    mocks.profileRepository.findActive.mockResolvedValue(profile);
+    mocks.paycheckRepository.findAll.mockResolvedValue([paycheck]);
+    mocks.billRepository.findAll.mockResolvedValue([bill]);
+    mocks.purchaseRepository.findAll.mockResolvedValue([purchase]);
+    mocks.balanceAdjustmentRepository.findAll.mockResolvedValue(balanceAdjustments);
+    mocks.billCycleInstanceRepository.findByCycle.mockResolvedValue([billInstance]);
+    const service = createService(mocks);
+
+    const snapshot = await service.loadDashboardSnapshot("2026-06-03");
+
+    expect(mocks.balanceAdjustmentRepository.findAll).toHaveBeenCalledWith("profile-1");
+    expect(snapshot.safeToSpend.balanceAdjustmentsCents).toBe(2500);
+    expect(snapshot.safeToSpend.runningBalanceCents).toBe(200000);
+    expect(snapshot.safeToSpend.safeToSpendCents).toBe(140000);
   });
 
   it("loadDashboardSnapshot_never_persists_bill_instances_on_read", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DATABASE_VERSION, schemaV1, schemaV2, schemaV3, schemaV4, schemaV5 } from "./schemaV1";
+import { DATABASE_VERSION, schemaV1, schemaV2, schemaV3, schemaV4, schemaV5, schemaV6 } from "./schemaV1";
 
 const expectedTables = [
   "profiles",
@@ -18,7 +18,7 @@ const expectedTables = [
 
 describe("database schema contract", () => {
   it("tracks_the_latest_schema_version", () => {
-    expect(DATABASE_VERSION).toBe(5);
+    expect(DATABASE_VERSION).toBe(6);
   });
 
   it("creates_all_sprint_1_tables", () => {
@@ -93,6 +93,16 @@ describe("database schema contract", () => {
     expect(schemaV5).toContain("ADD COLUMN is_primary");
     expect(schemaV1).toContain(
       "is_primary INTEGER NOT NULL DEFAULT 1 CHECK (is_primary IN (0, 1))"
+    );
+  });
+
+  it("adds_tutorial_complete_in_v6", () => {
+    expect(schemaV6).toContain("ADD COLUMN tutorial_complete");
+    expect(schemaV6).toContain(
+      "UPDATE profiles SET tutorial_complete = 1 WHERE onboarding_complete = 1"
+    );
+    expect(schemaV1).toContain(
+      "tutorial_complete INTEGER NOT NULL DEFAULT 0 CHECK (tutorial_complete IN (0, 1))"
     );
   });
 });

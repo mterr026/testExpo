@@ -83,8 +83,10 @@ export function HomePager({
 
       <View style={[styles.pagerPage, { width }]}>
         <BillsScreen
+          actionError={controller.billEntry.error}
           bills={controller.visibleBills}
           cycleLabel={controller.billCycleLabel}
+          dueThisCycleBills={controller.dashboardUpcomingBills}
           openActionMenuForBillId={
             notificationTarget?.screen === "Bills"
               ? notificationTarget.entityId
@@ -125,6 +127,7 @@ export function HomePager({
           key={controller.dashboardSnapshot?.profile?.id ?? "profile"}
           backupExportError={controller.backupExportError}
           backupExportMessage={controller.backupExportMessage}
+          balanceCents={controller.dashboardTotals.runningBalanceCents}
           reserveCents={controller.dashboardTotals.reserveCents}
           isBackupExporting={controller.isBackupExporting}
           isNotificationSaving={controller.isNotificationSaving}
@@ -137,6 +140,7 @@ export function HomePager({
           }
           moneyInputAccessoryId={settingsMoneyAccessoryId}
           onBackupExport={controller.exportBackup}
+          onBalanceChange={controller.updateBalance}
           onNotificationsToggle={controller.toggleNotifications}
           onReserveChange={controller.updateReserve}
           afterContent={<SettingsImportReview controller={controller} />}
@@ -157,10 +161,12 @@ function SettingsImportReview({
       importMessage={controller.importReview.importMessage}
       isClearing={controller.importReview.isClearing}
       isImporting={controller.importReview.isImporting}
+      importPhase={controller.importReview.importPhase}
       isLoading={controller.importReview.isLoading}
       onClearSuggestions={controller.importReview.clearSuggestions}
       onImportFile={controller.importReview.importFile}
       onConfirmSuggestion={controller.importReview.openConfirmSuggestion}
+      onRejectAllSuggestions={controller.importReview.rejectAllPendingSuggestions}
       suggestions={controller.importReview.suggestions}
       onRejectSuggestion={controller.importReview.rejectSuggestion}
     />

@@ -8,11 +8,19 @@ import { useBillEntryController } from "@/features/bills/hooks";
 import { useHomeDerivedData } from "@/features/dashboard/hooks/useHomeDerivedData";
 import { useImportReviewController } from "@/features/import/hooks";
 import { useOnboardingController } from "@/features/onboarding/hooks";
+import { useTutorialController } from "@/features/tutorial/hooks";
 import { usePaycheckEntryController } from "@/features/paychecks/hooks";
 import { usePurchaseEntryController } from "@/features/purchases/hooks";
 import { useSettingsActions } from "@/features/settings/hooks";
+import type { Screen } from "@/shared/ui/types";
 
-export function useHomeScreenController() {
+type UseHomeScreenControllerInput = {
+  changeScreen?: (screen: Screen) => void;
+};
+
+export function useHomeScreenController({
+  changeScreen,
+}: UseHomeScreenControllerInput = {}) {
   const [balanceCents, setBalanceCents] = useState(0);
   const [reserveCents, setReserveCents] = useState(0);
   const [bills, setBills] = useState<Bill[]>([]);
@@ -50,6 +58,10 @@ export function useHomeScreenController() {
     onOnboardingComplete: refreshDashboardSnapshot,
     clearImportSuggestions: importReview.clearSuggestions,
     getPendingImportSuggestionCount: () => importReview.suggestions.length,
+  });
+  const { tutorial } = useTutorialController({
+    changeScreen,
+    onTutorialComplete: refreshDashboardSnapshot,
   });
   const {
     deletePurchase,
@@ -90,6 +102,7 @@ export function useHomeScreenController() {
   const settingsActions = useSettingsActions({
     onSettingsChanged: refreshDashboardSnapshot,
     profileId: dashboardSnapshot?.profile?.id,
+    setBalanceCents,
     setReserveCents,
   });
 
@@ -106,6 +119,7 @@ export function useHomeScreenController() {
     dashboardUpcomingPaychecks,
     importReview,
     onboarding,
+    tutorial,
     deletePurchase,
     deleteBill,
     markPurchaseCharged,
@@ -133,6 +147,7 @@ export function useHomeScreenController() {
     notificationError: settingsActions.notificationError,
     notificationSettings: settingsActions.notificationSettings,
     toggleNotifications: settingsActions.toggleNotifications,
+    updateBalance: settingsActions.updateBalance,
     updateReserve: settingsActions.updateReserve,
     visibleBills,
     visiblePaychecks,

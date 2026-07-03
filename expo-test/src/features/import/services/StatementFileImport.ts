@@ -25,6 +25,15 @@ export type PickedStatementFileResult =
       fileKind: "pdf";
     } & Omit<Extract<PickedPdfTextResult, { canceled: false }>, "canceled">);
 
+export type PickedStatementFileHandle =
+  | {
+      canceled: true;
+    }
+  | {
+      canceled: false;
+      file: PickedFile;
+    };
+
 type PickedFile = Pick<
   FileSystemModule.File,
   "arrayBuffer" | "delete" | "name" | "text" | "uri"
@@ -33,6 +42,16 @@ type PickedFile = Pick<
 };
 
 export async function pickStatementFileFromDevice(): Promise<PickedStatementFileResult> {
+  const pickedFile = await pickStatementFileOnly();
+
+  if (pickedFile.canceled) {
+    return pickedFile;
+  }
+
+  return readPickedStatementFile(pickedFile.file);
+}
+
+export async function pickStatementFileOnly(): Promise<PickedStatementFileHandle> {
   const { File } = await loadStatementNativeModules();
   const result = await File.pickFileAsync(STATEMENT_FILE_PICKER_OPTIONS);
 
@@ -40,8 +59,15 @@ export async function pickStatementFileFromDevice(): Promise<PickedStatementFile
     return { canceled: true };
   }
 
-  const file = result.result as PickedFile;
+  return {
+    canceled: false,
+    file: result.result as PickedFile,
+  };
+}
 
+export async function readPickedStatementFile(
+  file: PickedFile
+): Promise<Exclude<PickedStatementFileResult, { canceled: true }>> {
   try {
     const fileKind = await resolveStatementFileKind(file);
 
@@ -139,15 +165,28 @@ async function readPdfSource(file: Pick<PickedFile, "arrayBuffer" | "text">) {
   return file.text();
 }
 
-function decodeBytesPreservingByteValues(bytes: Uint8Array) {
+async function decodeBytesPreservingByteValues(bytes: Uint8Array) {
   const chunkSize = 8192;
+  const yieldEveryChunks = 8;
   let output = "";
 
   for (let index = 0; index < bytes.length; index += chunkSize) {
     output += String.fromCharCode(
       ...bytes.subarray(index, index + chunkSize)
     );
+
+    const chunkIndex = index / chunkSize;
+
+    if (chunkIndex > 0 && chunkIndex % yieldEveryChunks === 0) {
+      await waitForNextImportChunk();
+    }
   }
 
   return output;
+}
+
+async function waitForNextImportChunk() {
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
 }

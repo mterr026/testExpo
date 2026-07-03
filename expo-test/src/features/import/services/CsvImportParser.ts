@@ -4,8 +4,15 @@ import type {
 } from "@/database/repositories/types";
 
 import {
+  isExportableImportSuggestion,
+  type ImportSuggestionFilterCandidate,
+} from "@/features/import/classification/importSuggestionFilter";
+
+import {
   parseBankStatementImport,
   type BankStatementParseOptions,
+  type BankStatementSuggestion,
+  type NormalizedTransaction,
 } from "./BankStatementParser";
 
 export type CsvImportSuggestionCandidate = {
@@ -54,6 +61,11 @@ export function parseCsvImportSuggestions(
     ...importResult.suggestions.possibleBills,
     ...importResult.suggestions.possibleIncome,
   ]
+    .filter((suggestion) =>
+      isExportableImportSuggestion(
+        toImportSuggestionFilterCandidate(suggestion, importResult.transactions)
+      )
+    )
     .map(
       ({
         detectedInterval,
@@ -105,6 +117,37 @@ export function createStatementImportDiagnostics(
       merchant: transaction.description,
       transactionType: transaction.type === "credit" ? "credit" : "debit",
     })),
+  };
+}
+
+function toImportSuggestionFilterCandidate(
+  suggestion: BankStatementSuggestion,
+  transactions: NormalizedTransaction[]
+): ImportSuggestionFilterCandidate {
+  const matchingTransaction =
+    transactions.find(
+      (transaction) =>
+        transaction.date === suggestion.suggestedDate &&
+        (transaction.normalizedDescription === suggestion.suggestedName ||
+          transaction.description === suggestion.suggestedName)
+    ) ??
+    transactions.find(
+      (transaction) =>
+        transaction.description.includes(suggestion.suggestedName) ||
+        suggestion.suggestedName.includes(
+          transaction.normalizedDescription || transaction.description
+        )
+    );
+
+  return {
+    category: matchingTransaction?.category ?? "unknown",
+    description: matchingTransaction?.description ?? suggestion.suggestedName,
+    direction: suggestion.suggestionKind === "income" ? "credit" : "debit",
+    occurrenceCount: suggestion.occurrenceCount,
+    suggestedAmountCents: suggestion.suggestedAmountCents,
+    suggestedName: suggestion.suggestedName,
+    suggestionKind: suggestion.suggestionKind,
+    suggestionType: matchingTransaction?.suggestionType ?? "needs_review",
   };
 }
 

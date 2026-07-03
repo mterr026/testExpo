@@ -2,13 +2,16 @@ import { useEffect, useRef, useState } from "react";
 
 import type { BillType, ImportSuggestion } from "@/database/repositories/types";
 import type { DashboardSnapshot } from "@/features/dashboard/services";
+import type { ImportPhase } from "@/features/import/importLoadingStatus";
 import {
-  pickStatementFileFromDevice,
+  pickStatementFileOnly,
+  readPickedStatementFile,
   type PickedStatementFileResult,
 } from "@/features/import/services/StatementFileImport";
 import { processPickedStatementFile } from "@/features/import/services/processPickedStatementFile";
 import {
   createOverlayDismissalWaiter,
+  waitForImportLoadingPaint,
   waitForModalPresentationReady,
   waitForNextReactFrame,
 } from "@/features/import/services/waitForOverlayDismissal";
@@ -50,6 +53,7 @@ export function useImportReviewController({
   const [isConfirming, setIsConfirming] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [importPhase, setImportPhase] = useState<ImportPhase | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<ImportSuggestion[]>([]);
   const [isFilePickerActive, setIsFilePickerActive] = useState(false);
@@ -99,14 +103,37 @@ export function useImportReviewController({
       return;
     }
 
+    await runStatementImport(async () => {
+      await waitForImportLoadingPaint();
+      setImportPhase("reading");
+
+      const pickedFile = await pickStatementFileOnly();
+
+      if (pickedFile.canceled) {
+        return pickedFile;
+      }
+
+      await waitForImportLoadingPaint();
+      return readPickedStatementFile(pickedFile.file);
+    });
+  }
+
+  async function runStatementImport(
+    pickFile: () => Promise<PickedStatementFileResult>
+  ) {
     try {
       setIsImporting(true);
-      const pickedFile = await pickStatementFileFromDevice();
+      setImportPhase("reading");
+      setError("");
+      await waitForImportLoadingPaint();
+      const pickedFile = await pickFile();
 
       if (pickedFile.canceled) {
         return;
       }
 
+      setImportPhase("analyzing");
+      await waitForImportLoadingPaint();
       await applyImportedStatementFile(pickedFile);
     } catch (error) {
       setError(
@@ -116,6 +143,7 @@ export function useImportReviewController({
       );
     } finally {
       setIsImporting(false);
+      setImportPhase(null);
     }
   }
 
@@ -156,6 +184,8 @@ export function useImportReviewController({
     try {
       setIsImporting(true);
       setError("");
+      setImportPhase("preparing");
+      await waitForImportLoadingPaint();
       onboardingOverlayDismissalRef.current.reset();
       await waitForNextReactFrame();
       setIsFilePickerActive(true);
@@ -163,14 +193,20 @@ export function useImportReviewController({
       await onboardingOverlayDismissalRef.current.waitForDismissal();
       await waitForModalPresentationReady();
 
-      const pickedFile = await pickStatementFileFromDevice();
+      const pickedFile = await pickStatementFileOnly();
       setIsFilePickerActive(false);
 
       if (pickedFile.canceled) {
         return;
       }
 
-      await applyImportedStatementFile(pickedFile);
+      await waitForImportLoadingPaint();
+      setImportPhase("reading");
+      const readFile = await readPickedStatementFile(pickedFile.file);
+
+      setImportPhase("analyzing");
+      await waitForImportLoadingPaint();
+      await applyImportedStatementFile(readFile);
     } catch (error) {
       setError(
         error instanceof Error
@@ -179,6 +215,7 @@ export function useImportReviewController({
       );
     } finally {
       setIsImporting(false);
+      setImportPhase(null);
       setIsFilePickerActive(false);
     }
   }
@@ -314,6 +351,26 @@ export function useImportReviewController({
     }
   }
 
+  async function rejectAllPendingSuggestions() {
+    if (!profileId || suggestions.length === 0) {
+      return;
+    }
+
+    try {
+      setIsClearing(true);
+      const runtime = await getAppRuntime();
+
+      await runtime.services.importService.clearPendingSuggestions(profileId);
+      setSuggestions([]);
+      setError("");
+      setImportMessage("");
+    } catch {
+      setError("Import suggestions could not be dismissed.");
+    } finally {
+      setIsClearing(false);
+    }
+  }
+
   async function clearSuggestions() {
     if (!profileId) {
       setError("A profile is required before clearing import suggestions.");
@@ -370,6 +427,7 @@ export function useImportReviewController({
     error,
     importFile,
     importMessage,
+    importPhase,
     importStatementFileForOnboarding,
     isClearing,
     isFilePickerActive,
@@ -377,6 +435,7 @@ export function useImportReviewController({
     isLoading,
     notifyOnboardingOverlayDismissed,
     openConfirmSuggestion,
+    rejectAllPendingSuggestions,
     rejectSuggestion,
     suggestions,
   };

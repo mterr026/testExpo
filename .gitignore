@@ -1,1 +1,13 @@
 .DS_Store
+
+# Roblox / Luau scripts (local only — not part of Budget Flow / expo-test)
+*.lua
+*.luau
+TerrainImportService*
+tis_*
+mcp_*
+deploy_import_all.lua
+all_parts.lua
+restore_tis_cmd.txt
+exec_*.json
+run_exec_*.sh

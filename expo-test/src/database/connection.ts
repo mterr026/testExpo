@@ -1,6 +1,14 @@
 import * as SQLite from "expo-sqlite";
 
-import { DATABASE_VERSION, schemaV1, schemaV2, schemaV3, schemaV4, schemaV5 } from "./schema";
+import {
+  DATABASE_VERSION,
+  schemaV1,
+  schemaV2,
+  schemaV3,
+  schemaV4,
+  schemaV5,
+  schemaV6,
+} from "./schema";
 
 const DATABASE_NAME = "budget-flow.db";
 
@@ -47,6 +55,7 @@ export async function migrateDatabase(db: SQLite.SQLiteDatabase) {
       await transaction.execAsync(schemaV3);
       await transaction.execAsync(schemaV4);
       await transaction.execAsync(schemaV5);
+      await transaction.execAsync(schemaV6);
       await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
     });
     return;
@@ -57,6 +66,7 @@ export async function migrateDatabase(db: SQLite.SQLiteDatabase) {
       await transaction.execAsync(schemaV3);
       await transaction.execAsync(schemaV4);
       await transaction.execAsync(schemaV5);
+      await transaction.execAsync(schemaV6);
       await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
     });
     return;
@@ -66,6 +76,7 @@ export async function migrateDatabase(db: SQLite.SQLiteDatabase) {
     await db.withExclusiveTransactionAsync(async (transaction) => {
       await transaction.execAsync(schemaV4);
       await transaction.execAsync(schemaV5);
+      await transaction.execAsync(schemaV6);
       await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
     });
     return;
@@ -74,6 +85,15 @@ export async function migrateDatabase(db: SQLite.SQLiteDatabase) {
   if (currentVersion === 4) {
     await db.withExclusiveTransactionAsync(async (transaction) => {
       await transaction.execAsync(schemaV5);
+      await transaction.execAsync(schemaV6);
+      await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
+    });
+    return;
+  }
+
+  if (currentVersion === 5) {
+    await db.withExclusiveTransactionAsync(async (transaction) => {
+      await transaction.execAsync(schemaV6);
       await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
     });
     return;

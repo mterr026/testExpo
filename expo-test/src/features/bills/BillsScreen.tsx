@@ -14,9 +14,14 @@ import {
 import { styles } from "@/shared/ui/styles";
 import type { Bill } from "@/shared/ui/types";
 
+import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
+import { useTutorialScrollView } from "@/features/tutorial/hooks";
+
 export function BillsScreen({
+  actionError = "",
   bills,
   cycleLabel,
+  dueThisCycleBills,
   openActionMenuForBillId,
   onAddBill,
   onClearOpenActionMenuTarget,
@@ -27,8 +32,10 @@ export function BillsScreen({
   onConfirmBill,
   onToggleBillPaused,
 }: {
+  actionError?: string;
   bills: Bill[];
   cycleLabel: string;
+  dueThisCycleBills?: Bill[];
   openActionMenuForBillId?: string | null;
   onAddBill: () => void;
   onClearOpenActionMenuTarget?: () => void;
@@ -39,20 +46,23 @@ export function BillsScreen({
   onConfirmBill: (bill: Bill) => void;
   onToggleBillPaused: (bill: Bill) => void;
 }) {
-  const currentCycleBills = bills.filter(
-    (bill) => bill.status !== "Scheduled" && bill.status !== "Paid"
-  );
+  const currentCycleBills =
+    dueThisCycleBills ??
+    bills.filter((bill) => bill.status !== "Scheduled" && bill.status !== "Paid");
   const paidBills = bills.filter((bill) => bill.status === "Paid");
   const scheduledBills = bills.filter((bill) => bill.status === "Scheduled");
   const [showPaidBills, setShowPaidBills] = useState(false);
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+  const { onTutorialScroll, tutorialScrollRef } = useTutorialScrollView("Bills");
 
   useEffect(() => {
     if (!openActionMenuForBillId) {
       return;
     }
 
-    const bill = bills.find((candidate) => candidate.id === openActionMenuForBillId);
+    const bill =
+      bills.find((candidate) => candidate.id === openActionMenuForBillId) ??
+      currentCycleBills.find((candidate) => candidate.id === openActionMenuForBillId);
 
     if (!bill) {
       return;
@@ -60,7 +70,7 @@ export function BillsScreen({
 
     setSelectedBill(bill);
     onClearOpenActionMenuTarget?.();
-  }, [bills, onClearOpenActionMenuTarget, openActionMenuForBillId]);
+  }, [bills, currentCycleBills, onClearOpenActionMenuTarget, openActionMenuForBillId]);
 
   const billActions = selectedBill
     ? getBillActions({
@@ -77,16 +87,20 @@ export function BillsScreen({
   return (
     <>
     <ScrollView
+      ref={tutorialScrollRef}
       style={styles.content}
       contentContainerStyle={styles.contentInner}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
+      scrollEventThrottle={16}
+      onScroll={onTutorialScroll}
     >
       <View style={styles.screenHeaderRow}>
         <View style={styles.itemCopy}>
           <Text style={styles.sectionTitle}>Bills</Text>
           <Text style={styles.helpText}>Saved bills and current-cycle obligations.</Text>
         </View>
+        <TutorialTarget id="bills-add">
         <Pressable
           style={({ pressed }) => [
             styles.inlinePrimaryButton,
@@ -96,13 +110,21 @@ export function BillsScreen({
         >
           <Text style={styles.inlinePrimaryButtonText}>+ Add</Text>
         </Pressable>
+        </TutorialTarget>
       </View>
 
+      {!!actionError && (
+        <Text style={styles.errorText}>{actionError}</Text>
+      )}
+
       {bills.length === 0 && (
+        <TutorialTarget id="bills-due">
         <EmptyState title="No bills yet" body="Add upcoming bills to keep Safe to Spend grounded." />
+        </TutorialTarget>
       )}
 
       {bills.length > 0 && (
+        <TutorialTarget id="bills-due">
         <View style={styles.plainListGroup}>
           <View style={styles.listSectionHeader}>
             <Text style={styles.settingsGroupTitle}>Due this cycle</Text>
@@ -166,6 +188,7 @@ export function BillsScreen({
             </>
           )}
         </View>
+        </TutorialTarget>
       )}
     </ScrollView>
     <ActionMenu
@@ -274,7 +297,9 @@ function getBillActions({
   }
 
   if (
-    (bill.status === "Due" || bill.status === "Scheduled") &&
+    (bill.status === "Due" ||
+      bill.status === "Scheduled" ||
+      bill.status === "Projected") &&
     !bill.isPaused
   ) {
     primaryActions.push({

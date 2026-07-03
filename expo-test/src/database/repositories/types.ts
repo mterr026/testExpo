@@ -57,6 +57,7 @@ export type Profile = {
   currencyCode: string;
   onboardingComplete: boolean;
   openingBalanceCents: number;
+  tutorialComplete: boolean;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -69,6 +70,7 @@ export type NewProfile = {
   currencyCode?: string;
   onboardingComplete?: boolean;
   openingBalanceCents?: number;
+  tutorialComplete?: boolean;
 };
 
 export type ProfileChanges = Partial<
@@ -79,6 +81,7 @@ export type ProfileChanges = Partial<
     | "currencyCode"
     | "onboardingComplete"
     | "openingBalanceCents"
+    | "tutorialComplete"
   >
 >;
 

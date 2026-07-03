@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.anonymous.expotest"
+      "bundleIdentifier": "com.expottest.expotest"
     },
     "android": {
       "adaptiveIcon": {

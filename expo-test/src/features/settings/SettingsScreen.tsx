@@ -6,15 +6,20 @@ import { parseDollarInputToNonNegativeCents } from "@/shared/currency";
 import { money } from "@/shared/ui/components";
 import { colors, styles } from "@/shared/ui/styles";
 
+import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
+import { useTutorialScrollView } from "@/features/tutorial/hooks";
+
 export function SettingsScreen({
   backupExportError,
   backupExportMessage,
+  balanceCents,
   reserveCents,
   isBackupExporting,
   isNotificationSaving,
   notificationError,
   notificationsEnabled,
   onBackupExport,
+  onBalanceChange,
   onNotificationsToggle,
   onReserveChange,
   isSettingsReady,
@@ -23,6 +28,7 @@ export function SettingsScreen({
 }: {
   backupExportError: string;
   backupExportMessage: string;
+  balanceCents: number;
   reserveCents: number;
   isBackupExporting: boolean;
   isNotificationSaving: boolean;
@@ -30,22 +36,26 @@ export function SettingsScreen({
   notificationError: string;
   notificationsEnabled: boolean | null;
   onBackupExport: () => void | Promise<void>;
+  onBalanceChange: (value: number) => void | Promise<void>;
   onNotificationsToggle: () => void | Promise<void>;
   onReserveChange: (value: number) => void | Promise<void>;
   moneyInputAccessoryId: string;
   afterContent?: ReactNode;
 }) {
+  const [balanceDraft, setBalanceDraft] = useState((balanceCents / 100).toFixed(2));
   const [reserveDraft, setReserveDraft] = useState((reserveCents / 100).toFixed(2));
   const [settingsError, setSettingsError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const { onTutorialScroll, tutorialScrollRef } = useTutorialScrollView("Settings");
 
   useEffect(() => {
     if (!isSettingsReady) {
       return;
     }
 
+    setBalanceDraft((balanceCents / 100).toFixed(2));
     setReserveDraft((reserveCents / 100).toFixed(2));
-  }, [isSettingsReady, reserveCents]);
+  }, [balanceCents, isSettingsReady, reserveCents]);
 
   async function applySettings() {
     if (!isSettingsReady) {
@@ -53,7 +63,13 @@ export function SettingsScreen({
       return;
     }
 
+    const nextBalanceCents = parseDollarInputToNonNegativeCents(balanceDraft);
     const nextReserveCents = parseDollarInputToNonNegativeCents(reserveDraft);
+
+    if (nextBalanceCents === null) {
+      setSettingsError("Use a valid dollar amount for current balance.");
+      return;
+    }
 
     if (nextReserveCents === null) {
       setSettingsError("Use a valid dollar amount for reserve.");
@@ -62,7 +78,9 @@ export function SettingsScreen({
 
     try {
       setIsSaving(true);
+      await onBalanceChange(nextBalanceCents);
       await onReserveChange(nextReserveCents);
+      setBalanceDraft((nextBalanceCents / 100).toFixed(2));
       setReserveDraft((nextReserveCents / 100).toFixed(2));
       setSettingsError("");
     } catch {
@@ -74,28 +92,51 @@ export function SettingsScreen({
 
   return (
     <ScrollView
+      ref={tutorialScrollRef}
       style={styles.content}
       contentContainerStyle={styles.contentInner}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
+      scrollEventThrottle={16}
+      onScroll={onTutorialScroll}
     >
       <View style={styles.screenHeaderRow}>
         <View style={styles.itemCopy}>
           <Text style={styles.sectionTitle}>Settings</Text>
           <Text style={styles.helpText}>
-            Adjust your essential reserve and app preferences.
+            Reconcile your current balance and essential reserve with your bank.
           </Text>
         </View>
       </View>
 
+      <TutorialTarget id="settings-money">
       <View style={styles.settingsMoneyCard}>
         <Text style={styles.settingsGroupTitle}>Money</Text>
         <View style={styles.settingsMetricRow}>
+          <View style={styles.settingsMetric}>
+            <Text style={styles.settingsMetricLabel}>Current balance</Text>
+            <Text style={styles.settingsMetricValue}>{money(balanceCents)}</Text>
+          </View>
           <View style={styles.settingsMetric}>
             <Text style={styles.settingsMetricLabel}>Current reserve</Text>
             <Text style={styles.settingsMetricValue}>{money(reserveCents)}</Text>
           </View>
         </View>
+
+        <Text style={styles.inputLabel}>Current balance</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="decimal-pad"
+          inputAccessoryViewID={moneyInputAccessoryId}
+          value={balanceDraft}
+          onChangeText={(text) => {
+            setBalanceDraft(text);
+            setSettingsError("");
+          }}
+        />
+        <Text style={styles.helpText}>
+          Match this to your bank account so safe-to-spend stays accurate.
+        </Text>
 
         <Text style={styles.inputLabel}>Essential reserve</Text>
         <TextInput
@@ -126,11 +167,13 @@ export function SettingsScreen({
               ? "Loading dashboard..."
               : isSaving
                 ? "Saving..."
-                : "Save reserve"}
+                : "Save money settings"}
           </Text>
         </Pressable>
       </View>
+      </TutorialTarget>
 
+      <TutorialTarget id="settings-preferences">
       <View style={styles.settingsSectionHeader}>
         <Text style={styles.settingsGroupTitle}>Preferences</Text>
       </View>
@@ -194,6 +237,7 @@ export function SettingsScreen({
           </Pressable>
         </View>
       </View>
+      </TutorialTarget>
 
       {afterContent}
     </ScrollView>

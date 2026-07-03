@@ -42,6 +42,7 @@ export class ProfileRepository {
       currencyCode: input.currencyCode ?? "USD",
       onboardingComplete: input.onboardingComplete ?? false,
       openingBalanceCents: input.openingBalanceCents ?? 0,
+      tutorialComplete: input.tutorialComplete ?? false,
       createdAt,
       updatedAt: createdAt,
       deletedAt: null,
@@ -57,11 +58,12 @@ export class ProfileRepository {
           currency_code,
           onboarding_complete,
           opening_balance_cents,
+          tutorial_complete,
           created_at,
           updated_at,
           deleted_at,
           sync_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         profileToParams(profile)
       );
       await new SyncQueueRepository(transaction, this.idFactory, this.now).enqueue({
@@ -97,6 +99,7 @@ export class ProfileRepository {
           currency_code = ?,
           onboarding_complete = ?,
           opening_balance_cents = ?,
+          tutorial_complete = ?,
           updated_at = ?
         WHERE id = ? AND deleted_at IS NULL`,
         [
@@ -105,6 +108,7 @@ export class ProfileRepository {
           updated.currencyCode,
           updated.onboardingComplete ? 1 : 0,
           updated.openingBalanceCents,
+          updated.tutorialComplete ? 1 : 0,
           updated.updatedAt,
           updated.id,
         ]
@@ -160,6 +164,7 @@ function profileSelectSql() {
     currency_code,
     onboarding_complete,
     opening_balance_cents,
+    tutorial_complete,
     created_at,
     updated_at,
     deleted_at,
@@ -175,6 +180,7 @@ function profileToParams(profile: Profile) {
     profile.currencyCode,
     profile.onboardingComplete ? 1 : 0,
     profile.openingBalanceCents,
+    profile.tutorialComplete ? 1 : 0,
     profile.createdAt,
     profile.updatedAt,
     profile.deletedAt,

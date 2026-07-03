@@ -36,10 +36,14 @@ const TOKEN_REPLACEMENTS: [RegExp, string][] = [
 const MERCHANT_NORMALIZATION_PATTERNS: [RegExp, string][] = [
   [/\bPAYROLL\b.*\bUSPS\b|\bUSPS\b.*\b(?:PAYROLL|SALARY)\b/g, "USPS PAYROLL"],
   [/\bVA\b.*\bBENEFIT\b|\bBENEFIT\b.*\bVA\b/g, "VA BENEFIT"],
+  [/\bFPL\b.*\b(?:DIRECT|DEBIT|PAYMENT)\b|\bFLORIDA POWER\b.*/g, "FPL"],
   [/\bNETFLIX\b.*/g, "NETFLIX"],
   [/\bSPOTIFY\b.*/g, "SPOTIFY"],
   [/\bPARAMOUNT\b.*/g, "PARAMOUNT"],
   [/\bAPPLE\b\s+\bCOM\b\s+\bBILL\b.*/g, "APPLE COM BILL"],
+  [/\bGOOGLE\b.*\bYOUTUB\w*\b.*/g, "YOUTUBE"],
+  [/\bYOUTUBEPREMIUM\b.*/g, "YOUTUBE"],
+  [/\bYOUTUBE\b.*/g, "YOUTUBE"],
 ];
 
 export function normalizeTransactionDescription(
@@ -83,8 +87,15 @@ export function normalizeTransactionDescription(
     normalizedDescription = "USPS PAYROLL";
   }
 
-  if (/\bVA BENEFIT\b/.test(normalizedDescription)) {
-    normalizedDescription = "VA BENEFIT";
+  if (/\bYOUTUBE\b/.test(normalizedDescription)) {
+    normalizedDescription = "YOUTUBE";
+  }
+
+  if (
+    /\bGOOGLE\b/.test(normalizedDescription) &&
+    /\bYOUTUB\b/.test(normalizedDescription)
+  ) {
+    normalizedDescription = "YOUTUBE";
   }
 
   normalizedDescription = normalizedDescription.replace(/\s+/g, " ").trim();

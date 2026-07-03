@@ -3,17 +3,19 @@ import { useEffect, useState } from "react";
 import type { NotificationSettings } from "@/database/repositories/types";
 import { getAppRuntime } from "@/shared/services/appRuntime";
 
-import { getOrCreateActiveProfile } from "@/features/app/homeData";
+import { getOrCreateActiveProfile, getTodayIsoDate } from "@/features/app/homeData";
 
 type UseSettingsActionsInput = {
   onSettingsChanged?: () => void | Promise<void>;
   profileId?: string;
+  setBalanceCents: (balanceCents: number) => void;
   setReserveCents: (reserveCents: number) => void;
 };
 
 export function useSettingsActions({
   onSettingsChanged,
   profileId,
+  setBalanceCents,
   setReserveCents,
 }: UseSettingsActionsInput) {
   const [backupExportError, setBackupExportError] = useState("");
@@ -58,6 +60,23 @@ export function useSettingsActions({
       isActive = false;
     };
   }, [profileId]);
+
+  async function updateBalance(targetBalanceCents: number) {
+    const runtime = await getAppRuntime();
+    const profile = await getOrCreateActiveProfile(runtime);
+    const snapshot = await runtime.services.dashboardService.loadDashboardSnapshot(
+      getTodayIsoDate()
+    );
+    const previousBalanceCents = snapshot.safeToSpend.runningBalanceCents;
+
+    await runtime.services.settingsService.adjustCurrentBalance(
+      profile.id,
+      previousBalanceCents,
+      targetBalanceCents
+    );
+    setBalanceCents(targetBalanceCents);
+    await onSettingsChanged?.();
+  }
 
   async function updateReserve(nextReserveCents: number) {
     const runtime = await getAppRuntime();
@@ -154,6 +173,7 @@ export function useSettingsActions({
     notificationError,
     notificationSettings,
     toggleNotifications,
+    updateBalance,
     updateReserve,
   };
 }

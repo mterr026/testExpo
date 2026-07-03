@@ -7,6 +7,10 @@ import { parseDollarInputToCents } from "@/shared/currency";
 import type { Bill, BillRepeatMode } from "@/shared/ui/types";
 import { getAppRuntime } from "@/shared/services/appRuntime";
 
+import {
+  shouldDeleteEntireBillDefinition,
+  shouldUpdateBillDefinitionOnly,
+} from "@/features/bills/billDeletion";
 import { getPaidBillInstanceId } from "@/features/bills/billCycleResolution";
 import { getOrCreateActiveProfile, getTodayIsoDate } from "@/features/app/homeData";
 
@@ -76,7 +80,7 @@ export function useBillEntryController({
           endDate: input.endDate,
         };
 
-        if (editingBill.status === "Paused" || editingBill.id === editingBill.billId) {
+        if (shouldUpdateBillDefinitionOnly(editingBill)) {
           await runtime.services.billService.updateBill(editingBill.billId, changes);
         } else {
           await runtime.services.billService.updateBillForCycle(
@@ -103,7 +107,8 @@ export function useBillEntryController({
 
       await onBillsChanged?.();
       closeBillModal();
-    } catch {
+    } catch (error) {
+      console.error("Bill could not be saved.", error);
       setBillError("Bill could not be saved.");
     }
   }
@@ -238,7 +243,7 @@ export function useBillEntryController({
     try {
       const runtime = await getAppRuntime();
 
-      if (bill.isPaused || bill.id === bill.billId) {
+      if (shouldDeleteEntireBillDefinition(bill)) {
         await runtime.services.billService.deleteBill(bill.billId);
       } else {
         await runtime.services.billService.deleteBillForCycle(
@@ -247,6 +252,8 @@ export function useBillEntryController({
           dashboardSnapshot.profile.id
         );
       }
+
+      setBillError("");
       await onBillsChanged?.();
     } catch {
       setBillError("Bill could not be deleted.");

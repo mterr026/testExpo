@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { SafeToSpendBreakdown } from "@/engine";
+import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
+import { useTutorialScrollView } from "@/features/tutorial/hooks";
 import { money } from "@/shared/ui/components";
 import { styles } from "@/shared/ui/styles";
 import type { Bill, PaycheckListItem } from "@/shared/ui/types";
@@ -41,6 +43,7 @@ export function DashboardScreen({
   onOpenPaychecks: () => void;
 }) {
   const [showAllTimelineEvents, setShowAllTimelineEvents] = useState(false);
+  const { onTutorialScroll, tutorialScrollRef } = useTutorialScrollView("Dashboard");
   const isNegative = safeToSpend < 0;
   const timelineEvents = buildTimelineEvents(upcomingBills, upcomingPaychecks);
   const timelinePreview = timelineEvents.slice(0, 5);
@@ -51,11 +54,15 @@ export function DashboardScreen({
 
   return (
     <ScrollView
+      ref={tutorialScrollRef}
       style={styles.content}
       contentContainerStyle={styles.contentInner}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
+      scrollEventThrottle={16}
+      onScroll={onTutorialScroll}
     >
+      <TutorialTarget id="dashboard-safe-to-spend">
       <View style={[styles.dashboardHeroCard, isNegative && styles.warningCard]}>
         <View style={styles.dashboardHeroFocus}>
           <Text style={styles.dashboardHeroLabel}>Safe to Spend</Text>
@@ -83,6 +90,7 @@ export function DashboardScreen({
             : `${money(unpaidBills)} set aside for upcoming bills`}
         </Text>
       </View>
+      </TutorialTarget>
 
       <View style={styles.dashboardSummaryPanel}>
         <View style={styles.dashboardSummaryStrip}>
@@ -156,6 +164,7 @@ export function DashboardScreen({
         <Text style={styles.sectionTitleCompact}>Safe to Spend Breakdown</Text>
       </View>
 
+      <TutorialTarget id="dashboard-breakdown">
       <View style={styles.dashboardBreakdownCard}>
         {safeToSpendBreakdown.openingBalanceCents > 0 && (
           <DashboardBreakdownRow
@@ -211,6 +220,7 @@ export function DashboardScreen({
           value={money(safeToSpendBreakdown.safeToSpendCents)}
         />
       </View>
+      </TutorialTarget>
 
     </ScrollView>
   );

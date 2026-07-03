@@ -54,7 +54,21 @@ export function resolvePurchaseCycleId(
   paychecks: PaycheckListItem[]
 ) {
   if (purchase.paycheckCycleId) {
-    return purchase.paycheckCycleId;
+    const storedCycleWindow = getPaycheckCycleWindow(
+      purchase.paycheckCycleId,
+      paychecks
+    );
+
+    if (
+      storedCycleWindow &&
+      isPurchaseDateInCycle(
+        purchase.purchaseDate,
+        storedCycleWindow.startDate,
+        storedCycleWindow.endDate
+      )
+    ) {
+      return purchase.paycheckCycleId;
+    }
   }
 
   const sortedPaychecks = sortPaychecksByDate(paychecks);
@@ -83,7 +97,21 @@ export function resolvePurchaseCycleIdFromContext(
   context: PurchaseCycleContext
 ) {
   if (purchase.paycheckCycleId) {
-    return purchase.paycheckCycleId;
+    const storedCycleWindow = getCycleWindowForId(
+      purchase.paycheckCycleId,
+      context
+    );
+
+    if (
+      storedCycleWindow &&
+      isPurchaseDateInCycle(
+        purchase.purchaseDate,
+        storedCycleWindow.startDate,
+        storedCycleWindow.endDate
+      )
+    ) {
+      return purchase.paycheckCycleId;
+    }
   }
 
   if (
@@ -107,25 +135,7 @@ export function purchaseBelongsToCycle(
   cycleId: string,
   context: PurchaseCycleContext
 ) {
-  if (cycleId === "unassigned") {
-    return resolvePurchaseCycleIdFromContext(purchase, context) === "unassigned";
-  }
-
-  if (purchase.paycheckCycleId) {
-    return purchase.paycheckCycleId === cycleId;
-  }
-
-  const cycleWindow = getCycleWindowForId(cycleId, context);
-
-  if (!cycleWindow) {
-    return resolvePurchaseCycleIdFromContext(purchase, context) === cycleId;
-  }
-
-  return isPurchaseDateInCycle(
-    purchase.purchaseDate,
-    cycleWindow.startDate,
-    cycleWindow.endDate
-  );
+  return resolvePurchaseCycleIdFromContext(purchase, context) === cycleId;
 }
 
 export function getArchivedPurchaseCycleOptions(options: PurchaseCycleOption[]) {

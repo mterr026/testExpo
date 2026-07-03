@@ -2,7 +2,11 @@ import type {
   ImportSuggestionInterval,
   ImportSuggestionKind,
 } from "@/database/repositories/types";
-import type { TransactionCategory } from "@/features/import/classification/categoryVocabulary";
+import {
+  getCanonicalMerchantToken,
+  type TransactionCategory,
+} from "@/features/import/classification/categoryVocabulary";
+import { shouldHardIgnoreImportTransaction } from "@/features/import/classification/importIgnoreRules";
 import { calculateOutlierCoefficient } from "@/features/import/classification/outlierCoefficient";
 import { classifyTransactionDescription } from "@/features/import/classification/transactionClassifier";
 import {
@@ -10,7 +14,10 @@ import {
   isIncomeCategory,
   isIncomeSuggestion,
   isOrdinarySpendingCategory,
+  isPaycheckHeuristicExcludedCategory,
   isReviewOnlyCreditCategory,
+  isStructuralBillCategory,
+  isStructuralIncomeCategory,
   mapCategoryToSuggestion,
   type BudgetFlowSuggestionType,
 } from "@/features/import/classification/suggestionMapper";
@@ -411,20 +418,36 @@ function buildStatementRows(
   }[] = [];
   let currentParts: string[] = [];
   let currentSectionKind: StatementSectionKind = "unknown";
+  let lineIndex = 0;
 
-  for (const { line, sectionKind } of annotatedLines) {
+  while (lineIndex < annotatedLines.length) {
+    const { line, sectionKind } = annotatedLines[lineIndex];
+
     if (isStatementTableHeader(line) || isIgnoredStatementLine(line)) {
+      lineIndex += 1;
       continue;
     }
 
-    if (containsStatementDate(line)) {
-      appendStatementRow(rows, currentParts, currentSectionKind);
+    if (isStatementDateLine(line)) {
+      if (currentParts.length > 0) {
+        const detachedAmount = attachDetachedAmountLine(
+          annotatedLines,
+          lineIndex,
+          currentParts
+        );
+
+        appendStatementRow(rows, detachedAmount.parts, currentSectionKind);
+        lineIndex += detachedAmount.skipLines;
+      }
+
       currentParts = [line];
       currentSectionKind = sectionKind;
+      lineIndex += 1;
       continue;
     }
 
     if (currentParts.length === 0) {
+      lineIndex += 1;
       continue;
     }
 
@@ -434,11 +457,82 @@ function buildStatementRows(
       appendStatementRow(rows, currentParts, currentSectionKind);
       currentParts = [];
     }
+
+    lineIndex += 1;
   }
 
-  appendStatementRow(rows, currentParts, currentSectionKind);
+  if (currentParts.length > 0) {
+    const detachedAmount = attachDetachedAmountLine(
+      annotatedLines,
+      lineIndex,
+      currentParts
+    );
+
+    appendStatementRow(rows, detachedAmount.parts, currentSectionKind);
+  }
 
   return rows;
+}
+
+function attachDetachedAmountLine(
+  annotatedLines: {
+    line: string;
+    sectionKind: StatementSectionKind;
+  }[],
+  fromIndex: number,
+  parts: string[]
+) {
+  const joinedParts = parts.join(" ");
+
+  if (findMoneyAmounts(joinedParts).length >= 1) {
+    return { parts, skipLines: 0 };
+  }
+
+  for (
+    let offset = 0;
+    offset < 12 && fromIndex + offset < annotatedLines.length;
+    offset += 1
+  ) {
+    const candidateLine = annotatedLines[fromIndex + offset].line;
+
+    if (isStatementDateLine(candidateLine)) {
+      break;
+    }
+
+    if (
+      isStatementTableHeader(candidateLine) ||
+      isIgnoredStatementLine(candidateLine)
+    ) {
+      continue;
+    }
+
+    if (isStandaloneAmountLine(candidateLine)) {
+      return {
+        parts: [...parts, candidateLine],
+        skipLines: offset + 1,
+      };
+    }
+  }
+
+  return { parts, skipLines: 0 };
+}
+
+function isStandaloneAmountLine(line: string) {
+  const trimmed = line.trim();
+
+  if (!trimmed || containsStatementDate(trimmed)) {
+    return false;
+  }
+
+  const amounts = findMoneyAmounts(trimmed);
+
+  if (amounts.length !== 1) {
+    return false;
+  }
+
+  const normalizedLine = trimmed.replace(/\$/g, "").trim();
+
+  return /^[-+]?(?:\d[\d,]*\.\d{2}|\.\d{2})$/.test(normalizedLine);
 }
 
 function appendStatementRow(
@@ -695,22 +789,47 @@ function getTransactionAmount(
   return transaction.debitCents ?? transaction.creditCents ?? 0;
 }
 
+function resolveTransactionDirection(
+  transaction: Pick<NormalizedTransaction, "creditCents" | "debitCents" | "type">
+): "credit" | "debit" | "unknown" {
+  if (transaction.type === "credit" || transaction.type === "debit") {
+    return transaction.type;
+  }
+
+  if (transaction.creditCents != null && transaction.debitCents == null) {
+    return "credit";
+  }
+
+  if (transaction.debitCents != null && transaction.creditCents == null) {
+    return "debit";
+  }
+
+  return "unknown";
+}
+
 function applyTransactionCategoryPredictions(
   transactions: NormalizedTransaction[]
 ): NormalizedTransaction[] {
   const categorizedTransactions = transactions.map((transaction) => {
     const prediction = classifyTransactionDescription(transaction.description);
+    const direction = resolveTransactionDirection(transaction);
     const amountCents =
-      transaction.type === "credit"
+      direction === "credit"
         ? getTransactionAmount(transaction, "credit")
         : getTransactionAmount(transaction, "debit");
-    const suggestionType = isPointOfSalePurchaseDescription(transaction.description)
+    let suggestionType = isPointOfSalePurchaseDescription(transaction.description)
       ? "ignored_ordinary_spending"
       : mapCategoryToSuggestion({
           category: prediction.category,
           categoryConfidence: prediction.confidence,
-          direction: transaction.type,
+          direction,
         });
+
+    if (
+      shouldHardIgnoreImportTransaction(transaction.description, direction)
+    ) {
+      suggestionType = "ignored_ordinary_spending";
+    }
 
     return {
       ...transaction,
@@ -723,7 +842,7 @@ function applyTransactionCategoryPredictions(
     };
   });
 
-  return categorizedTransactions.map((transaction) => {
+  const withOutlierScores = categorizedTransactions.map((transaction) => {
     const outlierCoefficient = calculateOutlierCoefficient(
       {
         amountCents: transaction.amountCents,
@@ -755,6 +874,8 @@ function applyTransactionCategoryPredictions(
       suggestionType: adjustedSuggestionType,
     };
   });
+
+  return applyLargestCreditPaycheckHeuristic(withOutlierScores);
 }
 
 function adjustSuggestionTypeWithBudgetStructure({
@@ -769,13 +890,14 @@ function adjustSuggestionTypeWithBudgetStructure({
   }
 
   if (transaction.type === "debit" && transaction.category === "fee") {
-    return "needs_review";
+    return "ignored_ordinary_spending";
   }
 
   if (
     transaction.type === "debit" &&
     transaction.suggestionType === "likely_bill" &&
-    outlierCoefficient >= 85
+    outlierCoefficient >= 85 &&
+    !isStructuralBillCategory(transaction.category)
   ) {
     return "needs_review";
   }
@@ -783,7 +905,8 @@ function adjustSuggestionTypeWithBudgetStructure({
   if (
     transaction.type === "debit" &&
     transaction.suggestionType === "likely_bill" &&
-    outlierCoefficient >= 70
+    outlierCoefficient >= 70 &&
+    !isStructuralBillCategory(transaction.category)
   ) {
     return "possible_bill";
   }
@@ -791,12 +914,150 @@ function adjustSuggestionTypeWithBudgetStructure({
   if (
     transaction.type === "credit" &&
     transaction.suggestionType === "likely_income" &&
-    outlierCoefficient >= 85
+    outlierCoefficient >= 85 &&
+    !isStructuralIncomeCategory(transaction.category)
   ) {
     return "possible_income";
   }
 
+  if (
+    transaction.type === "debit" &&
+    transaction.suggestionType === "needs_review" &&
+    isStructuralBillCategory(transaction.category) &&
+    transaction.categoryConfidence >= 20
+  ) {
+    return "likely_bill";
+  }
+
+  if (
+    transaction.type === "debit" &&
+    transaction.suggestionType === "needs_review" &&
+    transaction.category === "subscription" &&
+    transaction.categoryConfidence >= 20
+  ) {
+    return "possible_bill";
+  }
+
+  if (
+    transaction.type === "credit" &&
+    transaction.suggestionType === "needs_review" &&
+    isStructuralIncomeCategory(transaction.category) &&
+    transaction.categoryConfidence >= 20
+  ) {
+    return "likely_income";
+  }
+
   return transaction.suggestionType;
+}
+
+const MIN_PAYCHECK_HEURISTIC_CENTS = 50_000;
+
+function applyLargestCreditPaycheckHeuristic(
+  transactions: NormalizedTransaction[]
+): NormalizedTransaction[] {
+  const credits = transactions.filter(
+    (transaction) =>
+      transaction.creditCents != null && transaction.type !== "debit"
+  );
+  const creditAmountsAscending = credits
+    .map((transaction) => getTransactionAmount(transaction, "credit"))
+    .sort((first, second) => first - second);
+  const paycheckCandidates = credits
+    .filter((transaction) => isPaycheckHeuristicCandidate(transaction, creditAmountsAscending))
+    .sort(
+      (first, second) =>
+        getTransactionAmount(second, "credit") - getTransactionAmount(first, "credit")
+    );
+  const primaryPaycheck = paycheckCandidates[0] ?? null;
+  const secondaryPaycheck = paycheckCandidates[1] ?? null;
+
+  if (!primaryPaycheck) {
+    return transactions;
+  }
+
+  return transactions.map((transaction) => {
+    if (transaction.description === primaryPaycheck.description) {
+      return boostPaycheckCandidate(transaction, "likely_income");
+    }
+
+    if (
+      secondaryPaycheck &&
+      transaction.description === secondaryPaycheck.description
+    ) {
+      return boostPaycheckCandidate(transaction, "possible_income");
+    }
+
+    return transaction;
+  });
+}
+
+function isPaycheckHeuristicCandidate(
+  transaction: NormalizedTransaction,
+  creditAmountsAscending: number[]
+) {
+  if (transaction.creditCents == null || transaction.type === "debit") {
+    return false;
+  }
+
+  if (transaction.suggestionType !== "needs_review") {
+    return false;
+  }
+
+  if (!hasPaycheckDescriptionSignal(transaction.description)) {
+    return false;
+  }
+
+  if (transaction.suggestionType === "ignored_ordinary_spending") {
+    return false;
+  }
+
+  if (isIncomeSuggestion(transaction.suggestionType)) {
+    return false;
+  }
+
+  if (isPaycheckHeuristicExcludedCategory(transaction.category)) {
+    return false;
+  }
+
+  if (isIgnoredCreditDescription(transaction.description)) {
+    return false;
+  }
+
+  if (isLikelyOrdinarySpendingDescription(transaction.description)) {
+    return false;
+  }
+
+  const amountCents = getTransactionAmount(transaction, "credit");
+
+  return (
+    amountCents >= MIN_PAYCHECK_HEURISTIC_CENTS &&
+    isTopQuartileAmount(amountCents, creditAmountsAscending)
+  );
+}
+
+function boostPaycheckCandidate(
+  transaction: NormalizedTransaction,
+  suggestionType: BudgetFlowSuggestionType
+) {
+  if (isIncomeSuggestion(transaction.suggestionType)) {
+    return transaction;
+  }
+
+  if (transaction.suggestionType !== "needs_review") {
+    return transaction;
+  }
+
+  return {
+    ...transaction,
+    type: transaction.type === "unknown" ? "credit" : transaction.type,
+    category:
+      transaction.category === "unknown" ? "payroll_income" : transaction.category,
+    suggestionType,
+    reasons: [
+      ...transaction.reasons,
+      "Largest credit on the statement resembles a paycheck",
+    ],
+  };
 }
 
 function classifySuggestions(
@@ -833,7 +1094,7 @@ function classifySuggestions(
       continue;
     }
 
-    if (latestTransaction.type === "credit") {
+    if (resolveTransactionDirection(latestTransaction) === "credit") {
       const incomeConfidence = buildIncomeConfidence(group, context);
 
       if (!isIncomeSuggestion(latestTransaction.suggestionType)) {
@@ -867,7 +1128,7 @@ function classifySuggestions(
       continue;
     }
 
-    if (latestTransaction.type !== "debit") {
+    if (resolveTransactionDirection(latestTransaction) !== "debit") {
       continue;
     }
 
@@ -917,14 +1178,19 @@ function groupTransactionsForSuggestion(transactions: NormalizedTransaction[]) {
   const grouped = new Map<string, NormalizedTransaction[]>();
 
   for (const transaction of transactions) {
-    if (transaction.type === "unknown") {
+    const direction = resolveTransactionDirection(transaction);
+
+    if (direction === "unknown") {
       continue;
     }
 
+    const descriptionKey = normalizeDescriptionKey(
+      transaction.normalizedDescription || transaction.description
+    );
     const key =
-      transaction.type === "credit"
-        ? `${transaction.type}:${normalizeDescriptionKey(transaction.description)}:${getTransactionAmount(transaction, "credit")}`
-        : `${transaction.type}:${normalizeDescriptionKey(transaction.description)}`;
+      direction === "credit"
+        ? `${direction}:${descriptionKey}:${getTransactionAmount(transaction, "credit")}`
+        : `${direction}:${descriptionKey}`;
     const existing = grouped.get(key) ?? [];
 
     existing.push(transaction);
@@ -972,7 +1238,11 @@ function createSuggestion(
     suggestedDate: latestTransaction.date,
     suggestedName:
       suggestionKind === "bill"
-        ? formatBillSuggestionName(latestTransaction.description)
+        ? formatBillSuggestionName(
+            latestTransaction.description,
+            latestTransaction.normalizedDescription,
+            latestTransaction.category
+          )
         : latestTransaction.description,
     suggestionKind,
   };
@@ -1009,7 +1279,7 @@ function applyTransactionClassifications(
         : getTransactionAmount(transaction, "debit");
     const kind = transaction.type === "credit" ? "income" : "bill";
     const suggestion = suggestionByKey.get(
-      `${kind}:${normalizeDescriptionKey(formatBillSuggestionName(transaction.description))}:${amount}`
+      `${kind}:${normalizeDescriptionKey(formatBillSuggestionName(transaction.description, transaction.normalizedDescription, transaction.category))}:${amount}`
     ) ?? suggestionByKey.get(
       `${kind}:${normalizeDescriptionKey(transaction.description)}:${amount}`
     );
@@ -1168,7 +1438,8 @@ function buildIncomeConfidence(
   if (
     amount < 15000 &&
     sorted.length === 1 &&
-    !isLikelyIncomeDescription(latestTransaction.description)
+    !isLikelyIncomeDescription(latestTransaction.description) &&
+    !isStructuralIncomeCategory(latestTransaction.category)
   ) {
     score -= 20;
     reasons.push("Small one-off credit without an income signal");
@@ -1251,7 +1522,8 @@ function buildBillConfidence(
   if (
     amount < 1500 &&
     sorted.length === 1 &&
-    !isLikelyBillDescription(latestTransaction.description)
+    !isLikelyBillDescription(latestTransaction.description) &&
+    !isStructuralBillCategory(latestTransaction.category)
   ) {
     score -= 20;
     reasons.push("Small one-off debit without a bill signal");
@@ -1378,7 +1650,23 @@ function isGenericCheckDescription(description: string) {
   return normalized === "check" || /^check \d+$/.test(normalized);
 }
 
-function formatBillSuggestionName(description: string) {
+function formatBillSuggestionName(
+  description: string,
+  normalizedDescription?: string,
+  category?: TransactionCategory
+) {
+  const canonical =
+    category === "subscription" && normalizedDescription
+      ? getCanonicalMerchantToken(normalizedDescription)
+      : null;
+
+  if (
+    canonical &&
+    normalizeDescriptionKey(description) !== normalizeDescriptionKey(canonical)
+  ) {
+    return canonical;
+  }
+
   return description.replace(/\s+payment$/i, "").trim();
 }
 
@@ -1390,24 +1678,33 @@ function isLikelyBillDescription(description: string) {
     "at t",
     "at&t",
     "comcast",
+    "direct debit",
     "duke",
     "duke energy",
     "electric",
-    "florida power",
     "fpl",
     "gym",
     "insurance",
     "internet",
+    "jea",
     "light",
     "netflix",
+    "ouc",
     "power",
+    "property mgmt",
+    "rent",
+    "seco",
+    "spectrum",
     "spotify",
     "subscription",
+    "teco",
     "utility",
     "verizon",
     "water",
     "wireless",
     "xfinity",
+    "youtube",
+    "youtub",
   ].some((term) => normalized.includes(term));
 }
 
@@ -1416,10 +1713,19 @@ function isLikelyIncomeDescription(description: string) {
 
   return [
     "benefit",
+    "civ serv",
+    "dfas",
+    "direct dep",
     "direct deposit",
+    "earnings",
+    "net pay",
+    "opm",
     "payroll",
     "pension",
+    "postal service",
     "salary",
+    "soc sec",
+    "social security",
     "ssa",
     "treasury",
     "usps",
@@ -1442,6 +1748,30 @@ function isIgnoredCreditDescription(description: string) {
   const normalized = normalizeDescriptionKey(description);
 
   return isLikelyTransferDescription(normalized);
+}
+
+function hasPaycheckDescriptionSignal(description: string) {
+  if (isLikelyIncomeDescription(description)) {
+    return true;
+  }
+
+  const normalized = normalizeDescriptionKey(description);
+
+  if (
+    /\b(?:ach credit|mobile deposit|preauthorized credit|random entry|refund|transfer from|zelle)\b/.test(
+      normalized
+    )
+  ) {
+    return false;
+  }
+
+  return (
+    /\b(?:corporation pay|direct dep|employer|net pay|paycheck|payroll|salary|wages)\b/.test(
+      normalized
+    ) ||
+    (/\bpay\b/.test(normalized) &&
+      !/\b(?:auto pay|bill pay|payment)\b/.test(normalized))
+  );
 }
 
 function isLikelyTransferDescription(description: string) {
@@ -1619,6 +1949,12 @@ function isSummaryDescription(description: string) {
 function containsStatementDate(value: string) {
   return /\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}(?:\/(?:\d{2}|\d{4}))?)\b/.test(
     value
+  );
+}
+
+function isStatementDateLine(value: string) {
+  return /^(?:\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}(?:\/(?:\d{2}|\d{4}))?)\b/.test(
+    value.trim()
   );
 }
 

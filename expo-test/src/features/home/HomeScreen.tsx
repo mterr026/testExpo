@@ -10,15 +10,18 @@ import {
   useNotificationNavigation,
   useReminderNotifications,
 } from "@/features/notifications/hooks";
+import { usePurchaseDeepLink } from "@/features/purchases/hooks";
+import { TutorialOverlay } from "@/features/tutorial/TutorialOverlay";
+import { TutorialProvider } from "@/features/tutorial/TutorialContext";
 
 import { HomeFloatingActionButton } from "./components/HomeFloatingActionButton";
 import { HomeHeader } from "./components/HomeHeader";
 import { HomeModals } from "./components/HomeModals";
 import { HomePager } from "./components/HomePager";
-import type { HomeScreenController } from "./useHomeScreenController";
+import { useHomeScreenController } from "./useHomeScreenController";
 import { useHomePager } from "./useHomePager";
 
-export function HomeScreen({ controller }: { controller: HomeScreenController }) {
+export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const {
     changeScreen,
@@ -27,6 +30,7 @@ export function HomeScreen({ controller }: { controller: HomeScreenController })
     screen,
     width,
   } = useHomePager();
+  const controller = useHomeScreenController({ changeScreen });
   const { clearNotificationTarget, notificationTarget } =
     useNotificationNavigation(changeScreen);
 
@@ -36,30 +40,43 @@ export function HomeScreen({ controller }: { controller: HomeScreenController })
       controller.notificationSettings?.notificationsEnabled,
   });
 
+  usePurchaseDeepLink({
+    onOpenAddPurchase: controller.openAddPurchase,
+  });
+
   return (
-    <View style={[styles.page, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
-      <HomeHeader />
-      <HomePager
-        controller={controller}
-        notificationTarget={notificationTarget}
-        onChangeScreen={changeScreen}
-        onClearNotificationTarget={clearNotificationTarget}
-        onScrollEnd={handlePagerScrollEnd}
-        pagerRef={pagerRef}
-        width={width}
-      />
-      <HomeModals controller={controller} />
-      <HomeFloatingActionButton
-        bottomInset={insets.bottom}
-        onPress={controller.openAddPurchase}
-        screen={screen}
-      />
-      <BottomNav
-        active={screen}
-        bottomInset={insets.bottom}
-        onChange={changeScreen}
-      />
-      <KeyboardDoneAccessory nativeID={settingsMoneyAccessoryId} />
-    </View>
+    <TutorialProvider>
+      <View style={[styles.page, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
+        <HomeHeader />
+        <HomePager
+          controller={controller}
+          notificationTarget={notificationTarget}
+          onChangeScreen={changeScreen}
+          onClearNotificationTarget={clearNotificationTarget}
+          onScrollEnd={handlePagerScrollEnd}
+          pagerRef={pagerRef}
+          width={width}
+        />
+        <HomeModals controller={controller} />
+        <HomeFloatingActionButton
+          bottomInset={insets.bottom}
+          onPress={controller.openAddPurchase}
+          screen={screen}
+        />
+        <BottomNav
+          active={screen}
+          bottomInset={insets.bottom}
+          onChange={changeScreen}
+        />
+        <KeyboardDoneAccessory nativeID={settingsMoneyAccessoryId} />
+        <TutorialOverlay
+          visible={controller.tutorial.visible}
+          stepIndex={controller.tutorial.stepIndex}
+          isSaving={controller.tutorial.isSaving}
+          onNext={controller.tutorial.nextTutorialStep}
+          onSkip={controller.tutorial.skipTutorial}
+        />
+      </View>
+    </TutorialProvider>
   );
 }

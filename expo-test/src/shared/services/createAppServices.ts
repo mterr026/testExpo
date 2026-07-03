@@ -21,6 +21,7 @@ import { PurchaseService } from "@/features/purchases/services";
 import { SettingsService } from "@/features/settings/services";
 import { NotificationService } from "@/features/notifications/services";
 import { OnboardingService } from "@/features/onboarding/services/OnboardingService";
+import { TutorialService } from "@/features/tutorial/services";
 import type { FinancialEventBus } from "@/shared/events/financialEvents";
 
 import { createLocalId } from "./idFactory";
@@ -46,6 +47,7 @@ export type AppServices = {
   importService: ImportService;
   notificationService: NotificationService;
   onboardingService: OnboardingService;
+  tutorialService: TutorialService;
   paycheckService: PaycheckService;
   purchaseService: PurchaseService;
   settingsService: SettingsService;
@@ -95,7 +97,8 @@ export function createAppServices(
         repositories.paycheckRepository,
         repositories.purchaseRepository,
         repositories.billRepository,
-        repositories.billCycleInstanceRepository
+        repositories.billCycleInstanceRepository,
+        repositories.balanceAdjustmentRepository
       ),
       importService: new ImportService(
         repositories.importSuggestionRepository,
@@ -110,6 +113,7 @@ export function createAppServices(
         repositories.profileRepository,
         eventBus
       ),
+      tutorialService: new TutorialService(repositories.profileRepository),
       paycheckService,
       purchaseService: new PurchaseService(
         repositories.purchaseRepository,
@@ -121,6 +125,7 @@ export function createAppServices(
         repositories.profileRepository,
         repositories.notificationSettingsRepository,
         repositories.activityLogRepository,
+        repositories.balanceAdjustmentRepository,
         eventBus
       ),
     },

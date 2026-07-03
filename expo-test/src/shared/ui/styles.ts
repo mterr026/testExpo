@@ -1357,6 +1357,24 @@ export const styles = StyleSheet.create({
   purchasePastCycleSection: {
     marginTop: spacing.xl,
   },
+  purchaseOutsideCycleSection: {
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+  },
+  purchaseOutsideCycleHeader: {
+    marginBottom: spacing.xs,
+  },
+  purchaseOutsideCycleTitle: {
+    color: colors.text,
+    fontSize: fontSize.sectionCompact,
+    fontWeight: fontWeight.bold,
+    marginBottom: spacing.xs,
+  },
+  purchaseOutsideCycleMeta: {
+    color: colors.muted,
+    fontSize: fontSize.meta,
+    lineHeight: lineHeight.tight,
+  },
   purchasePreviousCycleGroup: {
     gap: spacing.md,
     marginTop: spacing.sm,
@@ -1663,6 +1681,12 @@ export const styles = StyleSheet.create({
     lineHeight: lineHeight.body,
     marginBottom: spacing.md,
   },
+  importPrivacyNote: {
+    color: colors.warmText,
+    fontSize: fontSize.meta,
+    lineHeight: lineHeight.body,
+    marginTop: spacing.sm,
+  },
   importSuggestionListGroup: {
     backgroundColor: surfaces.card,
     borderRadius: radius.lg,
@@ -1715,6 +1739,73 @@ export const styles = StyleSheet.create({
     padding: spacing.lg,
     marginBottom: spacing.lg,
     ...shadows.subtle,
+  },
+  importLoadingCard: {
+    alignItems: "center",
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+    ...shadows.subtle,
+  },
+  importLoadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    backgroundColor: "rgba(246, 243, 234, 0.88)",
+    borderRadius: radius.sheet,
+    justifyContent: "center",
+    padding: spacing.xl,
+    zIndex: 20,
+  },
+  importLoadingModalBackdrop: {
+    alignItems: "center",
+    backgroundColor: "rgba(11, 31, 51, 0.28)",
+    flex: 1,
+    justifyContent: "center",
+    padding: spacing.xl,
+  },
+  importLoadingOverlayCard: {
+    marginBottom: 0,
+    width: "100%",
+  },
+  importLoadingSpinnerWrap: {
+    alignItems: "center",
+    height: 56,
+    justifyContent: "center",
+    marginBottom: spacing.sm,
+    width: 56,
+  },
+  importLoadingPulseRing: {
+    backgroundColor: colors.accentLight,
+    borderRadius: 28,
+    height: 56,
+    position: "absolute",
+    width: 56,
+  },
+  importLoadingTitle: {
+    color: colors.text,
+    fontSize: fontSize.bodyLg,
+    fontWeight: fontWeight.bold,
+    textAlign: "center",
+  },
+  importLoadingSubtitle: {
+    color: colors.muted,
+    fontSize: fontSize.body,
+    lineHeight: lineHeight.body,
+    textAlign: "center",
+  },
+  importLoadingDotsRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  importLoadingDot: {
+    backgroundColor: colors.accent,
+    borderRadius: 4,
+    height: 8,
+    width: 8,
   },
   statusText: {
     marginTop: 12,
@@ -2166,6 +2257,8 @@ export const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.card,
+    overflow: "hidden",
+    position: "relative",
     padding: spacing.xl + 2,
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,

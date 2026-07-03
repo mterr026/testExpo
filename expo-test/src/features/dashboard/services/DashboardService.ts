@@ -1,4 +1,5 @@
 import type {
+  BalanceAdjustmentRepository,
   BillCycleInstanceRepository,
   BillRepository,
   PaycheckRepository,
@@ -59,7 +60,8 @@ export class DashboardService {
     private readonly paycheckRepository: PaycheckRepository,
     private readonly purchaseRepository: PurchaseRepository,
     private readonly billRepository: BillRepository,
-    private readonly billCycleInstanceRepository: BillCycleInstanceRepository
+    private readonly billCycleInstanceRepository: BillCycleInstanceRepository,
+    private readonly balanceAdjustmentRepository: BalanceAdjustmentRepository
   ) {}
 
   async loadDashboardSnapshot(date: string): Promise<DashboardSnapshot> {
@@ -73,10 +75,11 @@ export class DashboardService {
       return createEmptySnapshot();
     }
 
-    const [paychecks, bills, purchases] = await Promise.all([
+    const [paychecks, bills, purchases, balanceAdjustments] = await Promise.all([
       this.paycheckRepository.findAll(profile.id),
       this.billRepository.findAll(profile.id),
       this.purchaseRepository.findAll(profile.id),
+      this.balanceAdjustmentRepository.findAll(profile.id),
     ]);
     const allExistingBillInstances =
       await this.billCycleInstanceRepository.findByProfile(profile.id);
@@ -106,7 +109,9 @@ export class DashboardService {
       paychecks,
       purchases,
       billInstances: safeToSpendBillInstances,
-      balanceAdjustments: [],
+      balanceAdjustments: balanceAdjustments.map((adjustment) => ({
+        deltaCents: adjustment.deltaCents,
+      })),
       openingBalanceCents: profile.openingBalanceCents,
       essentialReserveCents: profile.essentialReserveCents,
     });

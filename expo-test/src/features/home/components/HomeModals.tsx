@@ -1,6 +1,7 @@
 import { BillConfirmationModal } from "@/features/bills/BillConfirmationModal";
 import { BillEntryModal } from "@/features/bills/BillEntryModal";
 import { ImportSuggestionConfirmModal } from "@/features/import/ImportSuggestionConfirmModal";
+import { ImportLoadingModal } from "@/features/import/components/ImportLoadingModal";
 import { OnboardingModal } from "@/features/onboarding/OnboardingModal";
 import { PaycheckEntryModal } from "@/features/paychecks/PaycheckEntryModal";
 import { PurchaseEntryModal } from "@/features/purchases/PurchaseEntryModal";
@@ -24,9 +25,17 @@ export function HomeModals({ controller }: HomeModalsProps) {
     controller.onboarding.visible &&
     controller.onboarding.step === "import" &&
     controller.importReview.confirmSuggestion.visible;
+  const showOnboardingImportLoading =
+    controller.onboarding.visible &&
+    controller.onboarding.step === "import" &&
+    controller.importReview.isImporting;
 
   return (
     <>
+      <ImportLoadingModal
+        importPhase={controller.importReview.importPhase}
+        visible={showOnboardingImportLoading}
+      />
       <OnboardingModal
         visible={
           controller.onboarding.visible &&
@@ -52,10 +61,12 @@ export function HomeModals({ controller }: HomeModalsProps) {
           importMessage: controller.importReview.importMessage,
           isClearing: controller.importReview.isClearing,
           isImporting: controller.importReview.isImporting,
+          importPhase: controller.importReview.importPhase,
           isLoading: controller.importReview.isLoading,
           onClearSuggestions: controller.importReview.clearSuggestions,
           onImportFile: controller.importReview.importStatementFileForOnboarding,
           onConfirmSuggestion: controller.importReview.openConfirmSuggestion,
+          onRejectAllSuggestions: controller.importReview.rejectAllPendingSuggestions,
           suggestions: controller.importReview.suggestions,
           onRejectSuggestion: controller.importReview.rejectSuggestion,
         }}

@@ -71,6 +71,44 @@ const REVIEW_CATEGORIES = new Set<TransactionCategory>([
   "unknown",
 ]);
 
+export function isStructuralBillCategory(category: TransactionCategory) {
+  return LIKELY_BILL_CATEGORIES.has(category);
+}
+
+export function isStructuralIncomeCategory(category: TransactionCategory) {
+  return LIKELY_INCOME_CATEGORIES.has(category) || category === "retirement_income";
+}
+
+export function isPaycheckHeuristicExcludedCategory(category: TransactionCategory) {
+  return (
+    REVIEW_CREDIT_CATEGORIES.has(category) ||
+    category === "refund" ||
+    category === "deposit" ||
+    ORDINARY_SPENDING_CATEGORIES.has(category) ||
+    category === "atm" ||
+    category === "cash_app" ||
+    category === "check" ||
+    category === "fee" ||
+    category === "internal_transfer" ||
+    category === "tax_payment" ||
+    category === "transfer" ||
+    category === "transfer_sent" ||
+    category === "venmo" ||
+    category === "zelle"
+  );
+}
+
+function hasCategorySignal(
+  category: TransactionCategory,
+  categoryConfidence: number
+) {
+  const threshold = isStructuralBillCategory(category) || isStructuralIncomeCategory(category)
+    ? 20
+    : 30;
+
+  return categoryConfidence >= threshold;
+}
+
 export function mapCategoryToSuggestion({
   category,
   categoryConfidence,
@@ -80,14 +118,19 @@ export function mapCategoryToSuggestion({
   categoryConfidence: number;
   direction: TransactionDirection;
 }): BudgetFlowSuggestionType {
-  const hasCategorySignal = categoryConfidence >= 30;
-
   if (direction === "credit") {
-    if (LIKELY_INCOME_CATEGORIES.has(category) && hasCategorySignal) {
+    if (LIKELY_INCOME_CATEGORIES.has(category) && hasCategorySignal(category, categoryConfidence)) {
       return "likely_income";
     }
 
-    if (POSSIBLE_INCOME_CATEGORIES.has(category) && hasCategorySignal) {
+    if (
+      category === "retirement_income" &&
+      hasCategorySignal(category, categoryConfidence)
+    ) {
+      return "likely_income";
+    }
+
+    if (POSSIBLE_INCOME_CATEGORIES.has(category) && hasCategorySignal(category, categoryConfidence)) {
       return "possible_income";
     }
 
@@ -99,11 +142,19 @@ export function mapCategoryToSuggestion({
   }
 
   if (direction === "debit") {
-    if (LIKELY_BILL_CATEGORIES.has(category) && hasCategorySignal) {
+    if (category === "credit_card_payment" && hasCategorySignal(category, categoryConfidence)) {
+      return "ignored_ordinary_spending";
+    }
+
+    if (category === "fee" && hasCategorySignal(category, categoryConfidence)) {
+      return "ignored_ordinary_spending";
+    }
+
+    if (LIKELY_BILL_CATEGORIES.has(category) && hasCategorySignal(category, categoryConfidence)) {
       return "likely_bill";
     }
 
-    if (POSSIBLE_BILL_CATEGORIES.has(category) && hasCategorySignal) {
+    if (POSSIBLE_BILL_CATEGORIES.has(category) && hasCategorySignal(category, categoryConfidence)) {
       return "possible_bill";
     }
 

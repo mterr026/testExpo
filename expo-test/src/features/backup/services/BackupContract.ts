@@ -117,6 +117,12 @@ function validateProfile(value: unknown): Profile {
     value.onboardingComplete,
     "Backup profile onboarding state is invalid."
   );
+  if ("tutorialComplete" in value) {
+    assertBoolean(
+      value.tutorialComplete,
+      "Backup profile tutorial state is invalid."
+    );
+  }
   assertNumber(
     value.openingBalanceCents,
     "Backup profile opening balance is invalid."

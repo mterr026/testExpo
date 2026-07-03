@@ -28,6 +28,8 @@ import {
   purchaseFilters,
   type PurchaseFilter,
 } from "./purchaseScreenHelpers";
+import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
+import { useTutorialScrollView } from "@/features/tutorial/hooks";
 
 type PurchasesScreenProps = {
   purchases: Purchase[];
@@ -77,12 +79,17 @@ export function PurchasesScreen({
     : [];
   const unassignedCycleOption =
     cycleOptions.find((option) => option.id === "unassigned") ?? null;
-  const previousCycleOptions = [
-    ...getArchivedPurchaseCycleOptions(cycleOptions),
-    ...(unassignedCycleOption && unassignedCycleOption.transactionCount > 0
-      ? [unassignedCycleOption]
-      : []),
-  ];
+  const outsideCyclePurchases = filterPurchasesForCycle(
+    purchases,
+    "unassigned",
+    cycleContext
+  );
+  const hasOutsideCyclePurchases =
+    outsideCyclePurchases.length > 0 ||
+    (unassignedCycleOption?.transactionCount ?? 0) > 0;
+  const previousCycleOptions = getArchivedPurchaseCycleOptions(cycleOptions).filter(
+    (option) => option.id !== "unassigned"
+  );
   const purchaseActions = selectedPurchase
     ? getPurchaseActions({
         purchase: selectedPurchase,
@@ -93,13 +100,20 @@ export function PurchasesScreen({
       })
     : [];
   const sortedCurrentPurchases = [...currentCyclePurchases].sort(sortPurchasesByMostRecent);
+  const sortedOutsideCyclePurchases = [...outsideCyclePurchases].sort(
+    sortPurchasesByMostRecent
+  );
   const filteredPurchases = sortedCurrentPurchases.filter((purchase) =>
     activeFilter === "All" ? true : purchase.status === activeFilter
+  );
+  const filteredOutsideCyclePurchases = sortedOutsideCyclePurchases.filter(
+    (purchase) => (activeFilter === "All" ? true : purchase.status === activeFilter)
   );
   const purchaseSummary = getPurchaseSummaryForPurchases(currentCyclePurchases);
   const pendingPurchaseCount = currentCyclePurchases.filter(
     (purchase) => purchase.status === "Pending"
   ).length;
+  const { onTutorialScroll, tutorialScrollRef } = useTutorialScrollView("Purchases");
 
   function togglePreviousCycles() {
     setShowPreviousCycles((expanded) => {
@@ -146,10 +160,13 @@ export function PurchasesScreen({
 
   return (
     <ScrollView
+      ref={tutorialScrollRef}
       style={styles.content}
       contentContainerStyle={styles.contentInner}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
+      scrollEventThrottle={16}
+      onScroll={onTutorialScroll}
     >
       <View style={styles.screenHeaderRow}>
         <View style={styles.itemCopy}>
@@ -158,6 +175,7 @@ export function PurchasesScreen({
         </View>
       </View>
 
+      <TutorialTarget id="purchases-summary">
       <View style={styles.purchaseSummaryCard}>
         <Text style={styles.dashboardHeroLabel}>{getPurchaseSummaryTitle()}</Text>
         {activeCycleOption?.cycleWindowLabel ? (
@@ -181,7 +199,9 @@ export function PurchasesScreen({
           />
         </View>
       </View>
+      </TutorialTarget>
 
+      <TutorialTarget id="purchases-filters">
       <View style={styles.filterChipRow}>
         {purchaseFilters.map((filter) => (
           <Pressable
@@ -212,7 +232,11 @@ export function PurchasesScreen({
       {purchases.length > 0 && currentCyclePurchases.length === 0 && (
         <EmptyState
           title="No purchases in this cycle"
-          body="Add a purchase or browse previous cycles below."
+          body={
+            hasOutsideCyclePurchases
+              ? "Purchases outside this cycle are listed below."
+              : "Add a purchase or browse previous cycles below."
+          }
         />
       )}
 
@@ -241,6 +265,50 @@ export function PurchasesScreen({
             </View>
           </View>
         ))}
+
+      </TutorialTarget>
+
+      {hasOutsideCyclePurchases && (
+        <View style={styles.purchaseOutsideCycleSection}>
+          <View style={styles.purchaseOutsideCycleHeader}>
+            <View style={styles.itemCopy}>
+              <Text style={styles.purchaseOutsideCycleTitle}>
+                Outside any paycheck cycle
+              </Text>
+              <Text style={styles.purchaseOutsideCycleMeta}>
+                {unassignedCycleOption?.transactionCount ?? outsideCyclePurchases.length}{" "}
+                {(unassignedCycleOption?.transactionCount ??
+                  outsideCyclePurchases.length) === 1
+                  ? "purchase"
+                  : "purchases"}{" "}
+                · {money(unassignedCycleOption?.totalSpentCents ?? 0)}
+              </Text>
+            </View>
+          </View>
+
+          {filteredOutsideCyclePurchases.length === 0 ? (
+            <Text style={styles.rowMetaText}>
+              No {activeFilter.toLowerCase()} purchases outside this cycle.
+            </Text>
+          ) : (
+            groupPurchasesByDate(filteredOutsideCyclePurchases).map((group) => (
+              <View key={`outside-${group.dateKey}`} style={styles.transactionDateGroup}>
+                <Text style={styles.transactionDateHeader}>{group.label}</Text>
+                <View style={styles.transactionListGroup}>
+                  {group.purchases.map((purchase, index) => (
+                    <PurchaseTransactionRow
+                      key={purchase.id}
+                      purchase={purchase}
+                      showDivider={index < group.purchases.length - 1}
+                      onOpenActions={setSelectedPurchase}
+                    />
+                  ))}
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+      )}
 
       {previousCycleOptions.length > 0 && (
         <View style={styles.purchasePastCycleSection}>

@@ -19,6 +19,7 @@ export type ProfileRow = {
   currency_code: string;
   onboarding_complete: number;
   opening_balance_cents: number;
+  tutorial_complete: number;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -175,6 +176,7 @@ export function mapProfileRow(row: ProfileRow): Profile {
     currencyCode: row.currency_code,
     onboardingComplete: row.onboarding_complete === 1,
     openingBalanceCents: row.opening_balance_cents,
+    tutorialComplete: row.tutorial_complete === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,

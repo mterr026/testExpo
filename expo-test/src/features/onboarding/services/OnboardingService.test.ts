@@ -13,6 +13,7 @@ const profile: Profile = {
   currencyCode: "USD",
   onboardingComplete: false,
   openingBalanceCents: 0,
+  tutorialComplete: false,
   createdAt: "2026-06-01T12:00:00.000Z",
   updatedAt: "2026-06-01T12:00:00.000Z",
   deletedAt: null,

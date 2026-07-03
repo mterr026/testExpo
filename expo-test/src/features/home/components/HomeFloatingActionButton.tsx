@@ -1,6 +1,7 @@
 import { SymbolView } from "expo-symbols";
 import { Pressable } from "react-native";
 
+import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { spacing, styles } from "@/shared/ui/styles";
 import type { Screen } from "@/shared/ui/types";
 
@@ -20,6 +21,7 @@ export function HomeFloatingActionButton({
   }
 
   return (
+    <TutorialTarget id="dashboard-fab">
     <Pressable
       accessibilityLabel="Add purchase"
       style={({ pressed }) => [
@@ -35,5 +37,6 @@ export function HomeFloatingActionButton({
         size={26}
       />
     </Pressable>
+    </TutorialTarget>
   );
 }

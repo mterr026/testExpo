@@ -1,6 +1,9 @@
+import { existsSync, readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import { parseBankStatementImport } from "./BankStatementParser";
+import { extractTextFromPdfSource } from "./PdfTextExtraction";
 
 describe("parseBankStatementImport", () => {
   it("extracts_a_normalized_ocr_statement_table_before_classifying_suggestions", () => {
@@ -233,22 +236,24 @@ Date Description Debit Credit Balance
       result.suggestions.likelyIncome.map((suggestion) => suggestion.suggestedName)
     ).toEqual([]);
     expect(
-      result.suggestions.needsReview.map((suggestion) => suggestion.suggestedName)
-    ).toContain("MOBILE DEPOSIT");
-    expect(
       result.transactions.find(
         (transaction) => transaction.description === "MOBILE DEPOSIT"
       )
     ).toMatchObject({
-      classification: "needs_review",
+      classification: "ignored_ordinary_spending",
+      suggestionType: "ignored_ordinary_spending",
       type: "credit",
     });
     expect(
       result.suggestions.possibleIncome.map((suggestion) => suggestion.suggestedName)
     ).not.toContain("ACH CREDIT");
     expect(
-      result.suggestions.needsReview.map((suggestion) => suggestion.suggestedName)
-    ).toContain("ACH CREDIT");
+      result.transactions.find(
+        (transaction) => transaction.description === "ACH CREDIT"
+      )
+    ).toMatchObject({
+      suggestionType: "ignored_ordinary_spending",
+    });
   });
 
   it("keeps_tax_payments_and_ordinary_spending_out_of_bill_suggestions", () => {
@@ -278,5 +283,212 @@ Date Description Debit Credit Balance
       result.suggestions.possibleBills.map((suggestion) => suggestion.suggestedName)
     ).not.toContain("IRS USATAXPYMT");
     expect(result.diagnostics.ignoredOrdinarySpendingCount).toBe(3);
+  });
+
+  it("suggests_single_occurrence_structural_bills_on_a_one_month_statement", () => {
+    const result = parseBankStatementImport(
+      `Statement period June 1, 2026 through June 30, 2026
+06/05 RENT PAYMENT APARTMENTS 1450.00 3550.00
+06/07 TECO ENERGY ELECTRIC 182.44 3367.56
+06/10 SPECTRUM INTERNET 79.99 3287.57`,
+      {
+        includeSingleOccurrenceCandidates: true,
+        parseAsStatementText: true,
+        source: "pdf_ocr",
+      }
+    );
+
+    expect(result.suggestions.possibleBills.map((suggestion) => suggestion.suggestedName)).toEqual([
+      "RENT PAYMENT APARTMENTS",
+      "SPECTRUM INTERNET",
+      "TECO ENERGY ELECTRIC",
+    ]);
+  });
+
+  it("promotes_the_largest_credit_to_paycheck_when_merchant_vocabulary_is_weak", () => {
+    const result = parseBankStatementImport(
+      `Statement period June 1, 2026 through June 30, 2026
+06/01 ACME CORPORATION PAY 2450.00 5450.00
+06/03 MOBILE DEPOSIT 500.00 5950.00
+06/15 REFUND FROM STORE 42.00 5992.00`,
+      {
+        includeSingleOccurrenceCandidates: true,
+        parseAsStatementText: true,
+        source: "pdf_ocr",
+      }
+    );
+
+    const acme = result.transactions.find(
+      (transaction) => transaction.description === "ACME CORPORATION PAY"
+    );
+
+    expect(acme).toMatchObject({
+      suggestionType: "likely_income",
+      type: "credit",
+    });
+    expect(result.suggestions.possibleIncome.map((suggestion) => suggestion.suggestedName)).toEqual([
+      "ACME CORPORATION PAY",
+    ]);
+    expect(
+      result.transactions.find(
+        (transaction) => transaction.description === "ACME CORPORATION PAY"
+      )
+    ).toMatchObject({
+      suggestionType: "likely_income",
+      type: "credit",
+    });
+    expect(
+      result.suggestions.possibleIncome.some((suggestion) =>
+        /MOBILE DEPOSIT|REFUND/.test(suggestion.suggestedName)
+      )
+    ).toBe(false);
+  });
+
+  it("detects_youtube_subscriptions_from_common_bank_statement_labels", () => {
+    const result = parseBankStatementImport(
+      `Statement period June 1, 2026 through June 30, 2026
+06/04 GOOGLE YOUTUBEPREMIUM 13.99 2986.01
+06/12 GOOGLE YOUTUBE G CO HELPPAY 13.99 2972.02`,
+      {
+        includeSingleOccurrenceCandidates: true,
+        parseAsStatementText: true,
+        source: "pdf_ocr",
+      }
+    );
+
+    expect(result.suggestions.possibleBills.map((suggestion) => suggestion.suggestedName)).toEqual([
+      "YOUTUBE",
+    ]);
+    expect(
+      result.transactions.find((transaction) =>
+        transaction.normalizedDescription.includes("YOUTUBE")
+      )
+    ).toMatchObject({
+      category: "subscription",
+      suggestionType: "possible_bill",
+    });
+  });
+
+  it("detects_truncated_google_youtube_labels_from_bank_of_america_statements", () => {
+    const result = parseBankStatementImport(
+      `MATTHEW RYAN TERRELL Account # 2290 5488 3614 May 7, 2026 to June 5, 2026
+Withdrawals and other subtractions
+ATM and debit card subtractions
+Date Description Amount
+05/26/26 CHECKCARD 0525 GOOGLE *YouTub Mountain ViewCA -18.09
+06/03/26 CHECKCARD 0603 NETFLIX COM LOS GATOS CA -30.54`,
+      {
+        includeSingleOccurrenceCandidates: true,
+        parseAsStatementText: true,
+        source: "pdf_ocr",
+      }
+    );
+
+    expect(result.suggestions.possibleBills.map((suggestion) => suggestion.suggestedName)).toEqual(
+      expect.arrayContaining(["YOUTUBE", "NETFLIX"])
+    );
+    expect(
+      result.transactions.find((transaction) => transaction.normalizedDescription === "YOUTUBE")
+    ).toMatchObject({
+      category: "subscription",
+      suggestionType: "possible_bill",
+      debitCents: 1809,
+    });
+  });
+
+  it("pairs_detached_ocr_amount_lines_for_generic_multiline_subscriptions", () => {
+    const result = parseBankStatementImport(
+      `Generic Bank Statement
+Statement period June 1, 2026 through June 30, 2026
+Date Description Amount
+06/03/26
+CHECKCARD MERCHANT SUBSCRIPTION SERVICE
+Reference 060326
+-30.54
+06/04/26 COFFEE SHOP 6.25`,
+      {
+        includeSingleOccurrenceCandidates: true,
+        parseAsStatementText: true,
+        source: "pdf_ocr",
+      }
+    );
+
+    expect(
+      result.transactions.find((transaction) =>
+        transaction.description.includes("SUBSCRIPTION SERVICE")
+      )
+    ).toMatchObject({
+      debitCents: 3054,
+      type: "debit",
+    });
+    expect(
+      result.suggestions.possibleBills.map((suggestion) => suggestion.suggestedName)
+    ).not.toContain("SUBSCRIPTION SERVICE");
+  });
+
+  it("pairs_detached_payroll_credit_amounts_from_multiline_ocr_text", () => {
+    const result = parseBankStatementImport(
+      `Generic Bank Statement
+Statement period June 1, 2026 through June 30, 2026
+Deposits and other credits
+06/15/26
+USPS PAYROLL DIRECT DEP
+Pay period ending 06/14
+2808.07
+Withdrawals and other debits
+06/16/26 COFFEE SHOP 6.25`,
+      {
+        includeSingleOccurrenceCandidates: true,
+        parseAsStatementText: true,
+        source: "pdf_ocr",
+      }
+    );
+
+    expect(
+      result.transactions.find((transaction) =>
+        transaction.description.includes("PAYROLL")
+      )
+    ).toMatchObject({
+      creditCents: 280807,
+      type: "credit",
+    });
+    expect(
+      result.suggestions.possibleIncome.map((suggestion) => suggestion.suggestedName)
+    ).toEqual(expect.arrayContaining([expect.stringMatching(/USPS PAYROLL/)]));
+  });
+
+  it("detects_youtube_from_user_bofa_pdf_fixture", () => {
+    const pdfPath = "/Users/matt/Downloads/eStmt_2026-06-05 2.pdf";
+    const ocrStyleStatementText = `MATTHEW RYAN TERRELL Account # 2290 5488 3614 May 7, 2026 to June 5, 2026
+Withdrawals and other subtractions
+ATM and debit card subtractions
+Date Description Amount
+05/26/26 CHECKCARD 0525 GOOGLE *YouTub Mountain ViewCA -18.09
+05/11/26 CHECKCARD 0510 GEICO *AUTO 8008413000 DC -242.40 RECURRING
+05/18/26 CHECKCARD 0516 PARAMOUNT+ 8882745343 CA -15.83 RECURRING
+06/03/26 CHECKCARD 0603 NETFLIX COM LOS GATOS CA -30.54
+05/08/26 PAYROLL USPS DES:FED SALARY 2808.07`;
+
+    if (existsSync(pdfPath)) {
+      const pdfSource = readFileSync(pdfPath).toString("latin1");
+      expect(extractTextFromPdfSource(pdfSource)).toBe("");
+    }
+
+    const result = parseBankStatementImport(ocrStyleStatementText, {
+      includeSingleOccurrenceCandidates: true,
+      parseAsStatementText: true,
+      source: "pdf_ocr",
+    });
+
+    expect(
+      result.suggestions.possibleBills.map((suggestion) => suggestion.suggestedName)
+    ).toEqual(expect.arrayContaining(["YOUTUBE", "NETFLIX"]));
+    expect(
+      result.transactions.find((transaction) => transaction.normalizedDescription === "YOUTUBE")
+    ).toMatchObject({
+      category: "subscription",
+      suggestionType: "possible_bill",
+      debitCents: 1809,
+    });
   });
 });

@@ -1,0 +1,17 @@
+Account Statement
+Statement period June 1, 2026 through June 30, 2026
+Transactions
+Date
+Description
+Amount
+06/03/26
+CHECKCARD MERCHANT SUBSCRIPTION SERVICE
+Reference 060326
+-30.54
+06/15/26
+USPS PAYROLL DIRECT DEP
+Pay period ending 06/14
+2808.07
+06/18/26
+ATT INTERNET SERVICE
+200.00

@@ -71,3 +71,15 @@ export async function waitForModalPresentationReady() {
     });
   });
 }
+
+export async function waitForImportLoadingPaint() {
+  await waitForNextReactFrame();
+
+  await new Promise<void>((resolve) => {
+    InteractionManager.runAfterInteractions(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+  });
+}
