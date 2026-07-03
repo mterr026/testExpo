@@ -369,7 +369,7 @@ Date Description Debit Credit Balance
     });
   });
 
-  it("detects_truncated_google_youtube_labels_from_bank_of_america_statements", () => {
+  it("detects_truncated_google_youtube_labels_from_fragmented_ocr_text", () => {
     const result = parseBankStatementImport(
       `MATTHEW RYAN TERRELL Account # 2290 5488 3614 May 7, 2026 to June 5, 2026
 Withdrawals and other subtractions
@@ -457,7 +457,55 @@ Withdrawals and other debits
     ).toEqual(expect.arrayContaining([expect.stringMatching(/USPS PAYROLL/)]));
   });
 
-  it("detects_youtube_from_user_bofa_pdf_fixture", () => {
+  it("pairs_two_column_ocr_fragments_for_subscriptions_and_utilities", () => {
+    const result = parseBankStatementImport(
+      `Generic Bank Account Statement
+Statement period June 1, 2026 through June 30, 2026
+Withdrawals
+Date Description Amount
+06/03/26 CHECKCARD MERCHANT SUBSCRIPTION SERVICE
+06/03/26 UTILITY ELECTRIC DIRECT DEBIT DES:ELEC PYMT
+06/04/26 CHECKCARD COFFEE SHOP
+06/04/26 PURCHASE RETAIL STORE
+Fort Lauderdale FL
+-30.54
+-116.38
+-5.25
+-42.00`,
+      {
+        includeSingleOccurrenceCandidates: true,
+        parseAsStatementText: true,
+        source: "pdf_ocr",
+      }
+    );
+
+    expect(
+      result.transactions.find((transaction) =>
+        transaction.description.includes("SUBSCRIPTION SERVICE")
+      )
+    ).toMatchObject({
+      debitCents: 3054,
+      type: "debit",
+    });
+    expect(
+      result.transactions.find((transaction) =>
+        transaction.description.includes("ELEC PYMT")
+      )
+    ).toMatchObject({
+      debitCents: 11638,
+      type: "debit",
+    });
+    expect(
+      result.suggestions.possibleBills.map((suggestion) => suggestion.suggestedName)
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/SUBSCRIPTION SERVICE/),
+        expect.stringMatching(/UTILITY ELECTRIC/),
+      ])
+    );
+  });
+
+  it("detects_subscriptions_from_real_world_estmt_regression_layout", () => {
     const pdfPath = "/Users/matt/Downloads/eStmt_2026-06-05 2.pdf";
     const ocrStyleStatementText = `MATTHEW RYAN TERRELL Account # 2290 5488 3614 May 7, 2026 to June 5, 2026
 Withdrawals and other subtractions

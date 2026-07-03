@@ -1,0 +1,20 @@
+Generic Bank Statement
+Statement period June 1, 2026 through June 30, 2026
+Withdrawals and other debits
+Date
+Description
+Amount
+06/03/26
+CHECKCARD MERCHANT SUBSCRIPTION SERVICE
+Reference 060326
+06/04/26
+REGIONAL UTILITY ELECTRIC DES:ELEC PYMT
+ID:8165726194 WEB
+06/05/26
+NOISE MERCHANT COFFEE SHOP DOWNTOWN
+FL
+-30.54
+TX
+-116.38
+CA
+-12.50

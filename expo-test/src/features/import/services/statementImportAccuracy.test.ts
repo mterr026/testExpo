@@ -59,6 +59,37 @@ describe("statementImportAccuracy", () => {
     ).toBe(false);
   });
 
+  it("parses_generic_two_column_ocr_fragment_fixture", () => {
+    const statementText = readFixture("generic-ocr-two-column-fragment.txt");
+    const result = parseBankStatementImport(statementText, parseOptions);
+    const suggestions = parseCsvImportSuggestions(statementText, parseOptions);
+
+    expect(
+      result.transactions.find((transaction) =>
+        transaction.description.includes("SUBSCRIPTION SERVICE")
+      )
+    ).toMatchObject({
+      debitCents: 3054,
+      type: "debit",
+    });
+    expect(
+      result.transactions.find((transaction) =>
+        transaction.description.includes("ELEC PYMT")
+      )
+    ).toMatchObject({
+      debitCents: 11638,
+      type: "debit",
+    });
+    expect(
+      suggestions.map((suggestion) => suggestion.suggestedName)
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/SUBSCRIPTION SERVICE/),
+        expect.stringMatching(/UTILITY ELECTRIC/),
+      ])
+    );
+  });
+
   it("filters_transfer_and_fee_noise_from_generic_fixture", () => {
     const statementText = readFixture("generic-transfer-noise.txt");
     const result = parseBankStatementImport(statementText, parseOptions);
@@ -77,7 +108,7 @@ describe("statementImportAccuracy", () => {
     ).toBeGreaterThanOrEqual(5);
   });
 
-  it("validates_bofa_estmt_fixture_without_bank_specific_logic", () => {
+  it("validates_real_world_estmt_regression_fixture", () => {
     const statementText = readFixture("bofa-estmt-2026-06-05.txt");
     const result = parseBankStatementImport(statementText, parseOptions);
     const suggestions = parseCsvImportSuggestions(statementText, parseOptions);
