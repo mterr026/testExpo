@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -77,26 +77,34 @@ describe("statementImportAccuracy", () => {
     ).toBeGreaterThanOrEqual(5);
   });
 
-  it("optionally_validates_bofa_pdf_fixture_without_bofa_specific_logic", () => {
-    const pdfPath = "/Users/matt/Downloads/eStmt_2026-06-05 3.pdf";
-
-    if (!existsSync(pdfPath)) {
-      return;
-    }
-
-    const statementText = readFileSync(pdfPath, "latin1");
+  it("validates_bofa_estmt_fixture_without_bank_specific_logic", () => {
+    const statementText = readFixture("bofa-estmt-2026-06-05.txt");
     const result = parseBankStatementImport(statementText, parseOptions);
-
-    if (result.transactions.length === 0) {
-      return;
-    }
-
     const suggestions = parseCsvImportSuggestions(statementText, parseOptions);
+    const suggestionNames = suggestions.map((suggestion) => suggestion.suggestedName);
 
+    expect(result.transactions.length).toBeGreaterThanOrEqual(100);
+    expect(suggestions.length).toBeGreaterThanOrEqual(10);
+    expect(suggestions.length).toBeLessThanOrEqual(25);
     expect(suggestions.length).toBeLessThan(result.transactions.length);
     expect(
-      suggestions.some((suggestion) =>
-        /ZELLE|VENMO|CASH APP|OVERDRAFT|CRCARDPMT/.test(suggestion.suggestedName)
+      suggestionNames.some((name) => /PAYROLL|FED SALARY/.test(name))
+    ).toBe(true);
+    expect(
+      suggestions.some(
+        (suggestion) =>
+          suggestion.suggestionKind === "income" &&
+          /PAYROLL|FED SALARY/.test(suggestion.suggestedName)
+      )
+    ).toBe(true);
+    expect(
+      suggestionNames.some((name) =>
+        /GEICO|PARAMOUNT|YOUTUBE|FLEXJOBS|AFFIRM/.test(name)
+      )
+    ).toBe(true);
+    expect(
+      suggestionNames.some((name) =>
+        /ZELLE|VENMO|CASH APP|OVERDRAFT|CRCARDPMT/.test(name)
       )
     ).toBe(false);
   });
