@@ -9,7 +9,7 @@ import type { BillService } from "@/features/bills/services";
 import {
   getDefaultImportIncomeExpectedDateForRecurrence,
 } from "@/features/import/importBillCycle";
-import { getTodayIsoDate } from "@/features/app/homeData";
+import { getTodayIsoDate } from "@/shared/dates";
 import type { PaycheckService } from "@/features/paychecks/services";
 
 import { parseCsvImportSuggestions } from "./CsvImportParser";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DATABASE_VERSION, schemaV1, schemaV2, schemaV3, schemaV4, schemaV5, schemaV6 } from "./schemaV1";
+import { DATABASE_VERSION, schemaV1, schemaV2, schemaV3, schemaV4, schemaV5, schemaV6, schemaV7, schemaV8 } from "./schemaV1";
 
 const expectedTables = [
   "profiles",
@@ -18,7 +18,7 @@ const expectedTables = [
 
 describe("database schema contract", () => {
   it("tracks_the_latest_schema_version", () => {
-    expect(DATABASE_VERSION).toBe(6);
+    expect(DATABASE_VERSION).toBe(8);
   });
 
   it("creates_all_sprint_1_tables", () => {
@@ -104,5 +104,14 @@ describe("database schema contract", () => {
     expect(schemaV1).toContain(
       "tutorial_complete INTEGER NOT NULL DEFAULT 0 CHECK (tutorial_complete IN (0, 1))"
     );
+  });
+
+  it("adds_opening_balance_as_of_date_in_v7", () => {
+    expect(schemaV7).toContain("ADD COLUMN opening_balance_as_of_date");
+    expect(schemaV1).toContain("opening_balance_as_of_date TEXT");
+  });
+
+  it("backfills_opening_balance_anchor_timestamps_in_v8", () => {
+    expect(schemaV8).toContain("length(opening_balance_as_of_date) = 10");
   });
 });

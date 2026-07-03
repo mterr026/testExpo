@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import {
@@ -24,7 +24,9 @@ import {
   splitPaycheckSchedule,
 } from "./paycheckSchedule";
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
+import { useOptionalTutorialContext } from "@/features/tutorial/TutorialContext";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
+import { pickPaycheckIdForTutorialCoverage } from "@/features/tutorial/paycheckTutorial";
 
 type PaychecksScreenProps = {
   nextCyclePreview: NextCyclePreview;
@@ -75,6 +77,52 @@ export function PaychecksScreen({
   const [selectedPaycheck, setSelectedPaycheck] =
     useState<PaycheckListItem | null>(null);
   const { onTutorialScroll, tutorialScrollRef } = useTutorialScrollView("Paychecks");
+  const tutorialContext = useOptionalTutorialContext();
+  const activeTutorialTargetId = tutorialContext?.activeTargetId ?? null;
+  const shouldOpenCoverageForTutorial =
+    activeTutorialTargetId === "paychecks-coverage-breakdown";
+  const tutorialCoveragePaycheckId = useMemo(() => {
+    if (!shouldOpenCoverageForTutorial) {
+      return null;
+    }
+
+    return pickPaycheckIdForTutorialCoverage(
+      expectedPrimaryPaychecks,
+      paycheckBillCoverage
+    );
+  }, [
+    expectedPrimaryPaychecks,
+    paycheckBillCoverage,
+    shouldOpenCoverageForTutorial,
+  ]);
+
+  useEffect(() => {
+    if (!tutorialCoveragePaycheckId) {
+      return;
+    }
+
+    setExpandedCoverageIds((current) => {
+      if (current.size === 1 && current.has(tutorialCoveragePaycheckId)) {
+        return current;
+      }
+
+      return new Set([tutorialCoveragePaycheckId]);
+    });
+  }, [tutorialCoveragePaycheckId]);
+
+  useEffect(() => {
+    if (shouldOpenCoverageForTutorial) {
+      return;
+    }
+
+    setExpandedCoverageIds((current) => {
+      if (current.size === 0) {
+        return current;
+      }
+
+      return new Set();
+    });
+  }, [shouldOpenCoverageForTutorial]);
 
   useEffect(() => {
     if (!openActionMenuForPaycheckId) {
@@ -186,6 +234,7 @@ export function PaychecksScreen({
             expandedCoverageIds={expandedCoverageIds}
             onToggleCoverage={togglePaycheckCoverage}
             paychecks={expectedPrimaryPaychecks}
+            showTutorialCoverageTarget={shouldOpenCoverageForTutorial}
             title="Expected income"
             onOpenActions={setSelectedPaycheck}
           />
@@ -454,6 +503,7 @@ function PaycheckScheduleGroup({
   onOpenActions,
   onToggleCoverage,
   paychecks,
+  showTutorialCoverageTarget = false,
   title,
 }: {
   coverageByPaycheckId: Map<string, PaycheckBillCoverage>;
@@ -461,6 +511,7 @@ function PaycheckScheduleGroup({
   onOpenActions: (paycheck: PaycheckListItem) => void;
   onToggleCoverage: (paycheckId: string) => void;
   paychecks: PaycheckListItem[];
+  showTutorialCoverageTarget?: boolean;
   title: string;
 }) {
   if (paychecks.length === 0) {
@@ -517,6 +568,10 @@ function PaycheckScheduleGroup({
               coverage={coverageByPaycheckId.get(paycheck.id)}
               isExpanded={expandedCoverageIds.has(paycheck.id)}
               onToggle={() => onToggleCoverage(paycheck.id)}
+              showTutorialTarget={
+                showTutorialCoverageTarget &&
+                expandedCoverageIds.has(paycheck.id)
+              }
             />
           </View>
         ))}
@@ -599,10 +654,12 @@ function PaycheckCoveredBills({
   coverage,
   isExpanded,
   onToggle,
+  showTutorialTarget = false,
 }: {
   coverage: PaycheckBillCoverage | undefined;
   isExpanded: boolean;
   onToggle: () => void;
+  showTutorialTarget?: boolean;
 }) {
   if (!coverage) {
     return null;
@@ -654,59 +711,77 @@ function PaycheckCoveredBills({
         </Text>
       </Pressable>
       {isExpanded && (
-        <View style={styles.paycheckCoverageExpanded}>
-          <Text style={styles.paycheckCoverageWindowText}>{windowText}</Text>
-          {!coverage.canProjectBills ? (
-            <Text style={styles.paycheckCoverageHelpText}>
-              Add another expected paycheck after this one to calculate covered
-              bills.
-            </Text>
-          ) : (
-            <>
-              <PaycheckProjectionBreakdown coverage={coverage} />
-              <View style={styles.paycheckCoverageBillList}>
-                {coverage.coveredBills.map((bill, index) => (
-                  <View
-                    key={bill.id}
-                    style={[
-                      styles.paycheckCoverageBillRow,
-                      index < coverage.coveredBills.length - 1 &&
-                        styles.paycheckCoverageBillRowDivider,
-                    ]}
-                  >
-                    <View style={styles.itemCopy}>
-                      <Text style={styles.paycheckCoverageName}>{bill.name}</Text>
-                      <Text style={styles.rowMetaText}>
-                        {formatPaycheckBillMeta(bill)}
-                      </Text>
-                    </View>
-                    <Text style={styles.paycheckCoverageAmount}>
-                      {money(bill.amountCents)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </>
-          )}
-          {coverage.canProjectBills && (
-            <>
-              <View style={styles.paycheckCoverageTotalRow}>
-                <Text style={styles.paycheckCoverageTitle}>Total bills</Text>
+        showTutorialTarget ? (
+          <TutorialTarget id="paychecks-coverage-breakdown">
+            <PaycheckCoverageExpandedContent coverage={coverage} windowText={windowText} />
+          </TutorialTarget>
+        ) : (
+          <PaycheckCoverageExpandedContent coverage={coverage} windowText={windowText} />
+        )
+      )}
+    </View>
+  );
+}
+
+function PaycheckCoverageExpandedContent({
+  coverage,
+  windowText,
+}: {
+  coverage: PaycheckBillCoverage;
+  windowText: string;
+}) {
+  return (
+    <View style={styles.paycheckCoverageExpanded}>
+      <Text style={styles.paycheckCoverageWindowText}>{windowText}</Text>
+      {!coverage.canProjectBills ? (
+        <Text style={styles.paycheckCoverageHelpText}>
+          Add another expected paycheck after this one to calculate covered
+          bills.
+        </Text>
+      ) : (
+        <>
+          <PaycheckProjectionBreakdown coverage={coverage} />
+          <View style={styles.paycheckCoverageBillList}>
+            {coverage.coveredBills.map((bill, index) => (
+              <View
+                key={bill.id}
+                style={[
+                  styles.paycheckCoverageBillRow,
+                  index < coverage.coveredBills.length - 1 &&
+                    styles.paycheckCoverageBillRowDivider,
+                ]}
+              >
+                <View style={styles.itemCopy}>
+                  <Text style={styles.paycheckCoverageName}>{bill.name}</Text>
+                  <Text style={styles.rowMetaText}>
+                    {formatPaycheckBillMeta(bill)}
+                  </Text>
+                </View>
                 <Text style={styles.paycheckCoverageAmount}>
-                  {money(coverage.totalCents)}
+                  {money(bill.amountCents)}
                 </Text>
               </View>
-              <View style={styles.paycheckProjectionTotalRowPrimary}>
-                <Text style={styles.paycheckProjectionTotalLabel}>
-                  Projected Safe to Spend
-                </Text>
-                <Text style={styles.paycheckProjectionTotalValue}>
-                  {money(coverage.projectedSafeToSpendCents)}
-                </Text>
-              </View>
-            </>
-          )}
-        </View>
+            ))}
+          </View>
+        </>
+      )}
+      {coverage.canProjectBills && (
+        <>
+          <View style={styles.paycheckCoverageTotalRow}>
+            <Text style={styles.paycheckCoverageTitle}>Total bills</Text>
+            <Text style={styles.paycheckCoverageAmount}>
+              {money(coverage.totalCents)}
+            </Text>
+          </View>
+          <View style={styles.paycheckProjectionTotalRowPrimary}>
+            <Text style={styles.paycheckProjectionTotalLabel}>
+              Projected Safe to Spend
+            </Text>
+            <Text style={styles.paycheckProjectionTotalValue}>
+              {money(coverage.projectedSafeToSpendCents)}
+            </Text>
+          </View>
+        </>
       )}
     </View>
   );

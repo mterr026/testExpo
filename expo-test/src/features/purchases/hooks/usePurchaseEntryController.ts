@@ -4,7 +4,8 @@ import { parseDollarInputToCents } from "@/shared/currency";
 import type { Purchase } from "@/shared/ui/types";
 import { getAppRuntime } from "@/shared/services/appRuntime";
 
-import { getOrCreateActiveProfile, getTodayIsoDate } from "@/features/app/homeData";
+import { getOrCreateActiveProfile } from "@/shared/services/activeProfile";
+import { getTodayIsoDate } from "@/shared/dates";
 
 type UsePurchaseEntryControllerInput = {
   onPurchasesChanged?: () => void | Promise<void>;

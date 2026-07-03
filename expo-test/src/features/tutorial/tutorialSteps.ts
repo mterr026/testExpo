@@ -43,9 +43,9 @@ export const tutorialSteps: TutorialStep[] = [
   },
   {
     screen: "Paychecks",
-    targetId: "paychecks-schedule",
+    targetId: "paychecks-coverage-breakdown",
     title: "Paycheck breakdown",
-    body: "Expand a paycheck to see starting Safe to Spend, bills in that cycle, and how income covers them.",
+    body: "Expand a paycheck to see its bill window, starting Safe to Spend, and projected Safe to Spend after that cycle's bills.",
     placement: "below",
   },
   {

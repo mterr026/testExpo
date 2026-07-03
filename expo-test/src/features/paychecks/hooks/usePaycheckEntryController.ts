@@ -4,7 +4,8 @@ import { parseDollarInputToCents } from "@/shared/currency";
 import { getAppRuntime } from "@/shared/services/appRuntime";
 import type { PaycheckIncomeRole, PaycheckListItem, PaycheckRecurrence } from "@/shared/ui/types";
 
-import { getOrCreateActiveProfile, getTodayIsoDate } from "@/features/app/homeData";
+import { getOrCreateActiveProfile } from "@/shared/services/activeProfile";
+import { getTodayIsoDate } from "@/shared/dates";
 
 type UsePaycheckEntryControllerInput = {
   onPaychecksChanged?: () => void | Promise<void>;

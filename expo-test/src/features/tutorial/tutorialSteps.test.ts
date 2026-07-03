@@ -32,6 +32,7 @@ describe("tutorialSteps", () => {
     expect(targetIds).toContain("dashboard-breakdown");
     expect(targetIds).toContain("paychecks-summary");
     expect(targetIds).toContain("paychecks-add");
+    expect(targetIds).toContain("paychecks-coverage-breakdown");
     expect(targetIds).toContain("bills-due");
     expect(targetIds).toContain("purchases-filters");
     expect(targetIds).toContain("settings-money");

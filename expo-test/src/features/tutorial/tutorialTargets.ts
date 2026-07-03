@@ -5,6 +5,7 @@ export const tutorialTargetIds = [
   "paychecks-summary",
   "paychecks-add",
   "paychecks-schedule",
+  "paychecks-coverage-breakdown",
   "bills-add",
   "bills-due",
   "purchases-summary",

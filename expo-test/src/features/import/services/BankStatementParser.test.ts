@@ -539,4 +539,32 @@ Date Description Amount
       debitCents: 1809,
     });
   });
+
+  it("does_not_pair_section_totals_with_orphan_subscription_descriptions", () => {
+    const result = parseBankStatementImport(
+      `Generic Bank Statement
+Statement period June 1, 2026 through June 30, 2026
+Withdrawals and other debits
+06/05/26 CHECKCARD NETFLIX COM LOS GATOS
+FL
+Total ATM and debit card subtractions
+-$4,796.47`,
+      {
+        includeSingleOccurrenceCandidates: true,
+        parseAsStatementText: true,
+        source: "pdf_ocr",
+      }
+    );
+
+    const netflix = result.transactions.find((transaction) =>
+      transaction.description.includes("NETFLIX")
+    );
+
+    expect(netflix?.debitCents ?? null).not.toBe(479647);
+    expect(
+      result.suggestions.possibleBills.find((suggestion) =>
+        suggestion.suggestedName.includes("NETFLIX")
+      )?.suggestedAmountCents ?? null
+    ).not.toBe(479647);
+  });
 });

@@ -23,6 +23,7 @@ type ScrollEntry = {
 };
 
 type TutorialContextValue = {
+  activeTargetId: TutorialTargetId | null;
   registerTarget: (id: TutorialTargetId, ref: RefObject<View | null>) => void;
   unregisterTarget: (id: TutorialTargetId) => void;
   registerScrollView: (
@@ -65,7 +66,13 @@ function measureViewInWindow(
   });
 }
 
-export function TutorialProvider({ children }: { children: React.ReactNode }) {
+export function TutorialProvider({
+  activeTargetId = null,
+  children,
+}: {
+  activeTargetId?: TutorialTargetId | null;
+  children: React.ReactNode;
+}) {
   const targetsRef = useRef(new Map<TutorialTargetId, TargetEntry>());
   const scrollViewsRef = useRef(new Map<Screen, ScrollEntry>());
 
@@ -169,6 +176,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
+      activeTargetId,
       registerTarget,
       unregisterTarget,
       registerScrollView,
@@ -178,6 +186,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       scrollTargetIntoView,
     }),
     [
+      activeTargetId,
       measureTarget,
       registerScrollView,
       registerTarget,

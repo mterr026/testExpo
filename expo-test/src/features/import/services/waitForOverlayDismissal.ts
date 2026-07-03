@@ -1,7 +1,14 @@
-import { InteractionManager } from "react-native";
-
 const DEFAULT_OVERLAY_DISMISS_TIMEOUT_MS = 1_000;
 const MODAL_PRESENTATION_BUFFER_MS = 350;
+
+function runAfterInteractions(callback: () => void) {
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(() => callback());
+    return;
+  }
+
+  setTimeout(callback, 0);
+}
 
 type OverlayDismissalWaiter = {
   notifyDismissed: () => void;
@@ -66,7 +73,7 @@ export async function waitForNextReactFrame() {
 
 export async function waitForModalPresentationReady() {
   await new Promise<void>((resolve) => {
-    InteractionManager.runAfterInteractions(() => {
+    runAfterInteractions(() => {
       setTimeout(resolve, MODAL_PRESENTATION_BUFFER_MS);
     });
   });
@@ -76,7 +83,7 @@ export async function waitForImportLoadingPaint() {
   await waitForNextReactFrame();
 
   await new Promise<void>((resolve) => {
-    InteractionManager.runAfterInteractions(() => {
+    runAfterInteractions(() => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => resolve());
       });

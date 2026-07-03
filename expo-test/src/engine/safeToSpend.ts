@@ -7,12 +7,33 @@ import {
 } from "./balance";
 import type { SafeToSpendBreakdown, SafeToSpendInput } from "./types";
 
+export function createEmptySafeToSpendBreakdown(
+  essentialReserveCents = 0,
+  openingBalanceCents = 0
+): SafeToSpendBreakdown {
+  return calculateSafeToSpend({
+    paychecks: [],
+    purchases: [],
+    billInstances: [],
+    balanceAdjustments: [],
+    essentialReserveCents,
+    openingBalanceCents,
+  });
+}
+
 export function calculateSafeToSpend(input: SafeToSpendInput): SafeToSpendBreakdown {
   const openingBalanceCents = input.openingBalanceCents ?? 0;
-  const confirmedIncomeCents = sumConfirmedIncome(input.paychecks);
+  const confirmedIncomeCents = sumConfirmedIncome(
+    input.paychecks,
+    input.openingBalanceAsOfDate
+  );
   const chargedPurchasesCents = sumPurchasesByState(input.purchases, "charged");
   const pendingPurchasesCents = sumPurchasesByState(input.purchases, "pending");
-  const paidBillsCents = sumBillInstances(input.billInstances, true);
+  const paidBillsCents = sumBillInstances(
+    input.billInstances,
+    true,
+    input.openingBalanceAsOfDate
+  );
   const unpaidBillsCents = sumBillInstances(input.billInstances, false);
   const balanceAdjustmentsCents = sumBalanceAdjustments(input.balanceAdjustments);
 

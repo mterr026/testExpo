@@ -4,7 +4,8 @@ import type { DashboardSnapshot } from "@/features/dashboard/services";
 import { FINANCIAL_STATE_CHANGED } from "@/shared/events/financialEvents";
 import { getAppRuntime } from "@/shared/services/appRuntime";
 
-import { getOrCreateActiveProfile, getTodayIsoDate } from "@/features/app/homeData";
+import { getOrCreateActiveProfile } from "@/shared/services/activeProfile";
+import { getTodayIsoDate } from "@/shared/dates";
 
 export function useDashboardSnapshot() {
   const [dashboardSnapshot, setDashboardSnapshot] =

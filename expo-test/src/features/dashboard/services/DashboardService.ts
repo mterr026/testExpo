@@ -16,6 +16,7 @@ import type {
 import {
   calculateBillDueDateForCycle,
   calculateSafeToSpend,
+  createEmptySafeToSpendBreakdown,
   generateBillCycleInstances,
   isProjectedBillCycleInstance,
   OPEN_ENDED_PAYCHECK_CYCLE_DATE,
@@ -24,20 +25,6 @@ import {
   type GeneratedBillCycleInstance,
   type SafeToSpendBreakdown,
 } from "@/engine";
-
-export function createEmptySafeToSpendBreakdown(
-  essentialReserveCents = 0,
-  openingBalanceCents = 0
-): SafeToSpendBreakdown {
-  return calculateSafeToSpend({
-    paychecks: [],
-    purchases: [],
-    billInstances: [],
-    balanceAdjustments: [],
-    essentialReserveCents,
-    openingBalanceCents,
-  });
-}
 
 export type DashboardSnapshot = {
   activeCycleEndDate: string | null;
@@ -113,6 +100,7 @@ export class DashboardService {
         deltaCents: adjustment.deltaCents,
       })),
       openingBalanceCents: profile.openingBalanceCents,
+      openingBalanceAsOfDate: profile.openingBalanceAsOfDate,
       essentialReserveCents: profile.essentialReserveCents,
     });
 

@@ -25,7 +25,7 @@ import {
 import { mapRepositoryPaycheckToListItem } from "@/features/paychecks/adapters/paycheckViewAdapters";
 import { getPrimaryPaychecks } from "@/features/paychecks/paycheckSchedule";
 import { mapRepositoryPurchaseToPrototype } from "@/features/purchases/adapters/purchaseViewAdapters";
-import { getTodayIsoDate } from "@/features/app/homeData";
+import { getTodayIsoDate } from "@/shared/dates";
 
 type UseHomeDerivedDataInput = {
   balanceCents: number;

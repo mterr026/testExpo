@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import type { NotificationSettings } from "@/database/repositories/types";
 import { getAppRuntime } from "@/shared/services/appRuntime";
 
-import { getOrCreateActiveProfile, getTodayIsoDate } from "@/features/app/homeData";
+import { getOrCreateActiveProfile } from "@/shared/services/activeProfile";
+import { getTodayIsoDate } from "@/shared/dates";
 
 type UseSettingsActionsInput = {
   onSettingsChanged?: () => void | Promise<void>;

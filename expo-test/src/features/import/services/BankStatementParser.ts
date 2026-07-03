@@ -778,6 +778,11 @@ function findContiguousStandaloneAmountBlocks(
     }
 
     if (isStandaloneAmountLine(line) && isDebitStandaloneAmountLine(line)) {
+      if (isSectionAggregateTotalAmountLine(annotatedLines, index)) {
+        flush();
+        continue;
+      }
+
       if (amounts.length === 0) {
         startLineIndex = index;
       }
@@ -910,6 +915,46 @@ function isStandaloneAmountBlockNoiseLine(line: string) {
   return false;
 }
 
+function isSectionAggregateTotalAmountLine(
+  annotatedLines: {
+    line: string;
+    sectionKind: StatementSectionKind;
+  }[],
+  lineIndex: number
+) {
+  const line = annotatedLines[lineIndex]?.line;
+
+  if (
+    !line ||
+    !isStandaloneAmountLine(line) ||
+    !isDebitStandaloneAmountLine(line)
+  ) {
+    return false;
+  }
+
+  for (
+    let index = lineIndex - 1;
+    index >= Math.max(0, lineIndex - 5);
+    index -= 1
+  ) {
+    const previousLine = annotatedLines[index].line;
+
+    if (isStandaloneAmountLine(previousLine)) {
+      break;
+    }
+
+    if (isStandaloneAmountBlockNoiseLine(previousLine)) {
+      const normalized = normalizeDescriptionKey(previousLine);
+
+      if (/^total (?:atm and debit card subtractions|deposits and other additions|other subtractions)/.test(normalized)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function isStatementSectionBoundaryLine(line: string) {
   if (containsStatementDate(line)) {
     return false;
@@ -982,6 +1027,12 @@ function attachDetachedAmountLine(
     }
 
     if (isStandaloneAmountLine(candidateLine)) {
+      if (
+        isSectionAggregateTotalAmountLine(annotatedLines, fromIndex + offset)
+      ) {
+        continue;
+      }
+
       return {
         parts: [...parts, candidateLine],
         skipLines: offset + 1,

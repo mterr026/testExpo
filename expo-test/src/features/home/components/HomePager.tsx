@@ -8,7 +8,7 @@ import { ImportReviewSection } from "@/features/import/ImportReviewSection";
 import { PaychecksScreen } from "@/features/paychecks/PaychecksScreen";
 import { PurchasesScreen } from "@/features/purchases/PurchasesScreen";
 import { SettingsScreen } from "@/features/settings/SettingsScreen";
-import { createEmptySafeToSpendBreakdown } from "@/features/dashboard/services";
+import { createEmptySafeToSpendBreakdown } from "@/engine";
 import { settingsMoneyAccessoryId } from "@/shared/ui/keyboard";
 import { styles } from "@/shared/ui/styles";
 import type { Screen } from "@/shared/ui/types";

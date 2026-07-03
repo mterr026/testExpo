@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import type { DashboardSnapshot } from "@/features/dashboard/services";
-import { getTodayIsoDate } from "@/features/app/homeData";
+import { getTodayIsoDate } from "@/shared/dates";
 import { getAppRuntime } from "@/shared/services/appRuntime";
 
 type UseReminderNotificationsInput = {

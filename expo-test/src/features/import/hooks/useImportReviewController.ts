@@ -19,7 +19,7 @@ import { parseDollarInputToNonNegativeCents } from "@/shared/currency";
 import { getAppRuntime } from "@/shared/services/appRuntime";
 import type { PaycheckRecurrence } from "@/shared/ui/types";
 
-import { getTodayIsoDate } from "@/features/app/homeData";
+import { getTodayIsoDate } from "@/shared/dates";
 import {
   getDefaultImportBillDueDate,
   getDefaultImportIncomeExpectedDateForRecurrence,

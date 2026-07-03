@@ -140,6 +140,20 @@ describe("isExportableImportSuggestion", () => {
       ).toBe(false);
     });
 
+    it("rejects single-occurrence subscription above $500 without recurrence", () => {
+      expect(
+        isExportableImportSuggestion(
+          candidate({
+            category: "subscription",
+            description: "NETFLIX",
+            occurrenceCount: 1,
+            suggestedAmountCents: 479647,
+            suggestionType: "possible_bill",
+          })
+        )
+      ).toBe(false);
+    });
+
     it("rejects non-recurring misc bill without structural category", () => {
       expect(
         isExportableImportSuggestion(

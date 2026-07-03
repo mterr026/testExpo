@@ -93,14 +93,18 @@ export function TutorialOverlay({
     async function syncHighlight() {
       setHighlightLayout(null);
       await scrollTargetIntoView(step.targetId, step.screen);
-      await new Promise((resolve) => {
-        setTimeout(resolve, 80);
-      });
 
-      const layout = await measureTarget(step.targetId);
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        await new Promise((resolve) => {
+          setTimeout(resolve, attempt === 0 ? 120 : 100);
+        });
 
-      if (!cancelled) {
-        setHighlightLayout(layout);
+        const layout = await measureTarget(step.targetId);
+
+        if (!cancelled && layout) {
+          setHighlightLayout(layout);
+          return;
+        }
       }
     }
 

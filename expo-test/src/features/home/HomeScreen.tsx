@@ -45,7 +45,13 @@ export function HomeScreen() {
   });
 
   return (
-    <TutorialProvider>
+    <TutorialProvider
+      activeTargetId={
+        controller.tutorial.visible
+          ? (controller.tutorial.currentStep?.targetId ?? null)
+          : null
+      }
+    >
       <View style={[styles.page, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
         <HomeHeader />
         <HomePager

@@ -13,6 +13,7 @@ const profile: Profile = {
   currencyCode: "USD",
   onboardingComplete: false,
   openingBalanceCents: 0,
+  openingBalanceAsOfDate: null,
   tutorialComplete: false,
   createdAt: "2026-06-01T12:00:00.000Z",
   updatedAt: "2026-06-01T12:00:00.000Z",
@@ -31,10 +32,14 @@ function createMocks() {
   };
 }
 
-function createService(mocks: ReturnType<typeof createMocks>) {
+function createService(
+  mocks: ReturnType<typeof createMocks>,
+  now: () => Date = () => new Date("2026-07-03T16:00:00.000Z")
+) {
   return new OnboardingService(
     mocks.profileRepository as unknown as ProfileRepository,
-    mocks.eventBus
+    mocks.eventBus,
+    now
   );
 }
 
@@ -63,6 +68,7 @@ describe("OnboardingService", () => {
     ).resolves.toEqual(updatedProfile);
     expect(mocks.profileRepository.update).toHaveBeenCalledWith("profile-1", {
       openingBalanceCents: 125000,
+      openingBalanceAsOfDate: "2026-07-03T16:00:00.000Z",
       essentialReserveCents: 10000,
       onboardingComplete: true,
     });
@@ -88,6 +94,7 @@ describe("OnboardingService", () => {
     ).resolves.toEqual(updatedProfile);
     expect(mocks.profileRepository.update).toHaveBeenCalledWith("profile-1", {
       openingBalanceCents: 125000,
+      openingBalanceAsOfDate: "2026-07-03T16:00:00.000Z",
       essentialReserveCents: 0,
       onboardingComplete: true,
     });
@@ -111,6 +118,7 @@ describe("OnboardingService", () => {
 
     expect(mocks.profileRepository.update).toHaveBeenCalledWith("profile-1", {
       openingBalanceCents: 0,
+      openingBalanceAsOfDate: "2026-07-03T16:00:00.000Z",
       essentialReserveCents: 0,
       onboardingComplete: true,
     });

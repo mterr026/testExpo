@@ -122,8 +122,9 @@ export function OnboardingModal({
                   What&apos;s your current account balance?
                 </Text>
                 <Text style={styles.helpText}>
-                  Required. This is your one-time starting point — not income.
-                  Paychecks and purchases track changes after this.
+                  Required. Use the balance in your bank app right now. Paychecks
+                  on this same day are treated as already included; later paychecks
+                  add when you confirm them.
                 </Text>
                 <Text style={styles.inputLabel}>Current balance</Text>
                 <TextInput

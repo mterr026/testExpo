@@ -9,6 +9,7 @@ import {
 } from "./suggestionMapper";
 
 const SUBSCRIPTION_INSTALLMENT_THRESHOLD_CENTS = 500;
+const SUBSCRIPTION_INSTALLMENT_MAX_CENTS = 50_000;
 
 export type ImportSuggestionFilterCandidate = {
   category: TransactionCategory;
@@ -50,6 +51,13 @@ function isExportableBillCandidate(candidate: ImportSuggestionFilterCandidate) {
     (candidate.category === "installment" || candidate.category === "subscription") &&
     candidate.suggestedAmountCents >= SUBSCRIPTION_INSTALLMENT_THRESHOLD_CENTS
   ) {
+    if (
+      candidate.occurrenceCount <= 1 &&
+      candidate.suggestedAmountCents > SUBSCRIPTION_INSTALLMENT_MAX_CENTS
+    ) {
+      return false;
+    }
+
     return true;
   }
 

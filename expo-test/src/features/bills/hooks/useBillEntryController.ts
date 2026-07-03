@@ -12,7 +12,8 @@ import {
   shouldUpdateBillDefinitionOnly,
 } from "@/features/bills/billDeletion";
 import { getPaidBillInstanceId } from "@/features/bills/billCycleResolution";
-import { getOrCreateActiveProfile, getTodayIsoDate } from "@/features/app/homeData";
+import { getOrCreateActiveProfile } from "@/shared/services/activeProfile";
+import { getTodayIsoDate } from "@/shared/dates";
 
 type UseBillEntryControllerInput = {
   bills: Bill[];

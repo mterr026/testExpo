@@ -1,5 +1,6 @@
 import type { ProfileRepository } from "@/database/repositories";
 import type { Profile } from "@/database/repositories/types";
+import type { Clock } from "@/database/repositories/types";
 import {
   FINANCIAL_STATE_CHANGED,
   type FinancialEventBus,
@@ -13,7 +14,8 @@ export type CompleteOnboardingInput = {
 export class OnboardingService {
   constructor(
     private readonly profileRepository: ProfileRepository,
-    private readonly eventBus: FinancialEventBus
+    private readonly eventBus: FinancialEventBus,
+    private readonly now: Clock = () => new Date()
   ) {}
 
   async completeOpeningBalance(
@@ -33,8 +35,10 @@ export class OnboardingService {
     validateOpeningBalance(input.openingBalanceCents);
     validateEssentialReserve(input.essentialReserveCents);
 
+    const anchoredAt = this.now().toISOString();
     const profile = await this.profileRepository.update(profileId, {
       openingBalanceCents: input.openingBalanceCents,
+      openingBalanceAsOfDate: anchoredAt,
       essentialReserveCents: input.essentialReserveCents,
       onboardingComplete: true,
     });
