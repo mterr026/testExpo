@@ -33,7 +33,7 @@ async function openAndMigrateDatabase() {
   return db;
 }
 
-export async function migrateDatabase(db: SQLite.SQLiteDatabase) {
+async function migrateDatabase(db: SQLite.SQLiteDatabase) {
   const versionRow = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version"
   );
