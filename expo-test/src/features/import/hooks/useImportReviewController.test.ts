@@ -5,6 +5,7 @@ import type { DashboardSnapshot } from "@/features/dashboard/services";
 import {
   getDefaultImportBillDueDate,
   getDefaultImportIncomeExpectedDate,
+  getDefaultImportIncomeExpectedDateForRecurrence,
   getImportBillCycle,
 } from "@/features/import/importBillCycle";
 
@@ -110,5 +111,29 @@ describe("getDefaultImportIncomeExpectedDate", () => {
         today: "2026-06-21",
       })
     ).toBe("2026-07-04");
+  });
+});
+
+describe("getDefaultImportIncomeExpectedDateForRecurrence", () => {
+  it("uses_selected_biweekly_recurrence_instead_of_monthly_detection", () => {
+    expect(
+      getDefaultImportIncomeExpectedDateForRecurrence({
+        detectedInterval: "monthly",
+        recurrenceInterval: "biweekly",
+        suggestedDate: "2026-06-05",
+        today: "2026-06-21",
+      })
+    ).toBe("2026-07-03");
+  });
+
+  it("keeps_a_future_anchor_when_biweekly_is_selected", () => {
+    expect(
+      getDefaultImportIncomeExpectedDateForRecurrence({
+        detectedInterval: "monthly",
+        recurrenceInterval: "biweekly",
+        suggestedDate: "2026-06-05",
+        today: "2026-06-01",
+      })
+    ).toBe("2026-06-05");
   });
 });

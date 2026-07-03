@@ -123,6 +123,45 @@ describe("PaycheckService", () => {
     expect(mocks.eventBus.emit).toHaveBeenCalledTimes(1);
   });
 
+  it("createPaycheck_generates_biweekly_next_paycheck_fourteen_days_after_anchor", async () => {
+    const mocks = createMocks();
+    const anchorPaycheck = {
+      ...paycheck,
+      expectedDate: "2026-06-05",
+    };
+    const generatedPaycheck = {
+      ...paycheck,
+      id: "paycheck-2",
+      expectedDate: "2026-06-19",
+    };
+
+    mocks.paycheckRepository.create
+      .mockResolvedValueOnce(anchorPaycheck)
+      .mockResolvedValueOnce(generatedPaycheck);
+    const service = createService(mocks);
+
+    await service.createPaycheck({
+      profileId: "profile-1",
+      label: "USPS Payroll",
+      amountCents: 200000,
+      expectedDate: "2026-06-05",
+      isRecurring: true,
+      recurrenceInterval: "biweekly",
+    });
+
+    expect(mocks.paycheckRepository.create).toHaveBeenNthCalledWith(2, {
+      profileId: "profile-1",
+      label: "USPS Payroll",
+      amountCents: 200000,
+      expectedDate: "2026-06-19",
+      isPrimary: true,
+      isReceived: false,
+      isRecurring: true,
+      recurrenceInterval: "biweekly",
+      notes: undefined,
+    });
+  });
+
   it("createPaycheck_does_not_generate_future_paychecks_for_one_time_income", async () => {
     const oneTimePaycheck = {
       ...paycheck,

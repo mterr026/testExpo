@@ -6,10 +6,12 @@ import type {
 } from "@/database/repositories/types";
 import type { BillCycleWindow } from "@/engine";
 import type { BillService } from "@/features/bills/services";
-import { getDefaultImportIncomeExpectedDate } from "@/features/import/importBillCycle";
+import {
+  getDefaultImportIncomeExpectedDateForRecurrence,
+} from "@/features/import/importBillCycle";
+import { getTodayIsoDate } from "@/features/app/homeData";
 import type { PaycheckService } from "@/features/paychecks/services";
 
-import { getTodayIsoDate } from "@/features/app/homeData";
 import { parseCsvImportSuggestions } from "./CsvImportParser";
 
 type ImportServiceOptions = {
@@ -229,8 +231,9 @@ export class ImportService {
       amountCents: incomeDetails.amountCents ?? suggestion.suggestedAmountCents,
       expectedDate:
         incomeDetails.expectedDate ??
-        getDefaultImportIncomeExpectedDate({
+        getDefaultImportIncomeExpectedDateForRecurrence({
           detectedInterval: suggestion.detectedInterval,
+          recurrenceInterval,
           suggestedDate: suggestion.suggestedDate,
           today,
         }),

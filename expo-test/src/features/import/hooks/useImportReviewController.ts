@@ -22,7 +22,7 @@ import type { PaycheckRecurrence } from "@/shared/ui/types";
 import { getTodayIsoDate } from "@/features/app/homeData";
 import {
   getDefaultImportBillDueDate,
-  getDefaultImportIncomeExpectedDate,
+  getDefaultImportIncomeExpectedDateForRecurrence,
   getImportBillCycle,
 } from "@/features/import/importBillCycle";
 import { inferDefaultIncomeIsPrimary } from "@/features/import/importIncomeDefaults";
@@ -226,14 +226,19 @@ export function useImportReviewController({
 
   function openConfirmSuggestion(suggestion: ImportSuggestion) {
     const today = getTodayIsoDate();
+    const defaultRecurrence = mapImportIntervalToPaycheckRecurrence(
+      suggestion.detectedInterval
+    );
 
     setConfirmingSuggestion(suggestion);
     setConfirmName(suggestion.suggestedName);
     setConfirmAmount((suggestion.suggestedAmountCents / 100).toFixed(2));
     setConfirmDueDate(
       suggestion.suggestionKind === "income"
-        ? getDefaultImportIncomeExpectedDate({
+        ? getDefaultImportIncomeExpectedDateForRecurrence({
             detectedInterval: suggestion.detectedInterval,
+            recurrenceInterval:
+              defaultRecurrence === "none" ? null : defaultRecurrence,
             suggestedDate: suggestion.suggestedDate,
             today,
           })
@@ -243,7 +248,7 @@ export function useImportReviewController({
             today,
           })
     );
-    setConfirmRecurrence(mapImportIntervalToPaycheckRecurrence(suggestion.detectedInterval));
+    setConfirmRecurrence(defaultRecurrence);
     setConfirmIsPrimary(
       suggestion.suggestionKind === "income"
         ? inferDefaultIncomeIsPrimary(suggestion)
@@ -251,6 +256,26 @@ export function useImportReviewController({
     );
     setConfirmBillType("fixed");
     setConfirmError("");
+  }
+
+  function handleConfirmRecurrenceChange(recurrence: PaycheckRecurrence) {
+    setConfirmRecurrence(recurrence);
+
+    if (
+      confirmingSuggestion?.suggestionKind !== "income" ||
+      recurrence === "none"
+    ) {
+      return;
+    }
+
+    setConfirmDueDate(
+      getDefaultImportIncomeExpectedDateForRecurrence({
+        detectedInterval: confirmingSuggestion.detectedInterval,
+        recurrenceInterval: recurrence,
+        suggestedDate: confirmingSuggestion.suggestedDate,
+        today: getTodayIsoDate(),
+      })
+    );
   }
 
   function closeConfirmSuggestion() {
@@ -420,7 +445,7 @@ export function useImportReviewController({
       setDueDate: setConfirmDueDate,
       setIsPrimary: setConfirmIsPrimary,
       setName: setConfirmName,
-      setRecurrence: setConfirmRecurrence,
+      setRecurrence: handleConfirmRecurrenceChange,
       visible: !!confirmingSuggestion,
     },
     clearSuggestions,
