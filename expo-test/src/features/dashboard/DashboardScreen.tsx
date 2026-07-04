@@ -56,7 +56,7 @@ export function DashboardScreen({
     <ScrollView
       ref={tutorialScrollRef}
       style={styles.content}
-      contentContainerStyle={styles.contentInner}
+      contentContainerStyle={styles.contentInnerWithFab}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       scrollEventThrottle={16}

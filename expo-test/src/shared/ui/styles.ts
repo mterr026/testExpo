@@ -86,6 +86,14 @@ export const lineHeight = {
   display: 58,
 } as const;
 
+/** Home shell layout — bottom nav, FAB, and scroll clearance. */
+export const homeChrome = {
+  navClearance: 80,
+  fabBottomOffset: spacing.xxxl * 2 + spacing.sm,
+  fabSize: 56,
+  fabScrollPaddingExtra: spacing.sm,
+} as const;
+
 /** Reusable elevation presets — keep shadows subtle and on-brand. */
 export const shadows = {
   none: {
@@ -197,7 +205,13 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   contentInner: {
-    paddingBottom: 166,
+    paddingBottom: homeChrome.navClearance,
+  },
+  contentInnerWithFab: {
+    paddingBottom:
+      homeChrome.fabBottomOffset +
+      homeChrome.fabSize +
+      homeChrome.fabScrollPaddingExtra,
   },
   heroCard: {
     backgroundColor: colors.hero,
@@ -2214,6 +2228,7 @@ export const styles = StyleSheet.create({
   },
   bottomNav: {
     flexDirection: "row",
+    alignItems: "flex-end",
     backgroundColor: colors.card,
     borderTopWidth: 0,
     paddingHorizontal: spacing.sm,
@@ -2232,6 +2247,30 @@ export const styles = StyleSheet.create({
     gap: spacing.xs - 1,
     minHeight: 44,
   },
+  navItemPrimary: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: spacing.xs,
+    marginTop: -spacing.lg,
+    gap: spacing.xs,
+    minHeight: 72,
+  },
+  navItemPrimaryButton: {
+    width: 58,
+    height: 58,
+    borderRadius: radius.fab,
+    backgroundColor: colors.accentLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.fab,
+  },
+  navItemPrimaryButtonActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accentDark,
+  },
   navItemActive: {
     backgroundColor: colors.accentLight,
   },
@@ -2241,6 +2280,14 @@ export const styles = StyleSheet.create({
     fontWeight: "800",
   },
   navTextActive: {
+    color: colors.accentDark,
+  },
+  navTextPrimary: {
+    fontSize: 11,
+    color: colors.muted,
+    fontWeight: fontWeight.bold,
+  },
+  navTextPrimaryActive: {
     color: colors.accentDark,
   },
   modalOverlay: {

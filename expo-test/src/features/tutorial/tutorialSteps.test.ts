@@ -6,13 +6,11 @@ import { tutorialSteps } from "./tutorialSteps";
 import { tutorialTargetIds } from "./tutorialTargets";
 
 describe("tutorialSteps", () => {
-  it("defines_a_step_for_each_major_home_panel", () => {
+  it("defines_a_step_for_each_tutorial_screen", () => {
     const screens = new Set(tutorialSteps.map((step) => step.screen));
 
     expect(screens.has("Dashboard")).toBe(true);
     expect(screens.has("Paychecks")).toBe(true);
-    expect(screens.has("Bills")).toBe(true);
-    expect(screens.has("Purchases")).toBe(true);
     expect(screens.has("Settings")).toBe(true);
   });
 
@@ -25,7 +23,7 @@ describe("tutorialSteps", () => {
     }
   });
 
-  it("covers_safe_to_spend_paychecks_bills_purchases_and_settings", () => {
+  it("covers_safe_to_spend_paychecks_and_settings", () => {
     const targetIds = tutorialSteps.map((step) => step.targetId);
 
     expect(targetIds).toContain("dashboard-safe-to-spend");
@@ -35,8 +33,7 @@ describe("tutorialSteps", () => {
     expect(targetIds).toContain("paychecks-row-overflow");
     expect(targetIds).toContain("paychecks-coverage-breakdown");
     expect(targetIds).toContain("paychecks-additional-income");
-    expect(targetIds).toContain("bills-due");
-    expect(targetIds).toContain("purchases-summary");
+    expect(targetIds).toContain("dashboard-fab");
     expect(targetIds).toContain("settings-current-balance");
     expect(targetIds).toContain("settings-essential-reserve");
     expect(targetIds).toContain("settings-preferences");

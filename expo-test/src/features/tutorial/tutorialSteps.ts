@@ -63,20 +63,6 @@ export const tutorialSteps: TutorialStep[] = [
     placement: "below",
   },
   {
-    screen: "Bills",
-    targetId: "bills-due",
-    title: "Upcoming and due bills",
-    body: "Bills due this cycle appear here. Open ⋯ to mark paid, confirm a variable amount, edit, or pause.",
-    placement: "below",
-  },
-  {
-    screen: "Purchases",
-    targetId: "purchases-summary",
-    title: "Spending this cycle",
-    body: "Total spent, pending charges, and transaction count for the active paycheck window.",
-    placement: "below",
-  },
-  {
     screen: "Dashboard",
     targetId: "dashboard-fab",
     title: "Log a purchase quickly",

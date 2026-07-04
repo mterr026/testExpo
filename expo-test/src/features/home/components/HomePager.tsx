@@ -2,6 +2,7 @@ import type { RefObject } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
+import { screenOrder } from "@/features/app/homeData";
 import { BillsScreen } from "@/features/bills/BillsScreen";
 import { DashboardScreen } from "@/features/dashboard/DashboardScreen";
 import { ImportReviewSection } from "@/features/import/ImportReviewSection";
@@ -49,7 +50,37 @@ export function HomePager({
       style={styles.screenPane}
       onMomentumScrollEnd={onScrollEnd}
     >
-      <View style={[styles.pagerPage, { width }]}>
+      {screenOrder.map((screen) => (
+        <View key={screen} style={[styles.pagerPage, { width }]}>
+          {renderPagerScreen({
+            controller,
+            notificationTarget,
+            onChangeScreen,
+            onClearNotificationTarget,
+            screen,
+          })}
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
+function renderPagerScreen({
+  controller,
+  notificationTarget,
+  onChangeScreen,
+  onClearNotificationTarget,
+  screen,
+}: {
+  controller: HomeScreenController;
+  notificationTarget: NotificationTarget;
+  onChangeScreen: (screen: Screen) => void;
+  onClearNotificationTarget: () => void;
+  screen: Screen;
+}) {
+  switch (screen) {
+    case "Dashboard":
+      return (
         <DashboardScreen
           nextPaycheckLabel={controller.dashboardTotals.nextPaycheckLabel}
           reserveCents={controller.dashboardTotals.reserveCents}
@@ -65,9 +96,9 @@ export function HomePager({
           isLoading={controller.dashboardLoading}
           onOpenPaychecks={() => onChangeScreen("Paychecks")}
         />
-      </View>
-
-      <View style={[styles.pagerPage, { width }]}>
+      );
+    case "Purchases":
+      return (
         <PurchasesScreen
           purchases={controller.visiblePurchases ?? []}
           activeCyclePaycheckId={controller.purchaseCycleContext.activeCyclePaycheckId}
@@ -79,9 +110,9 @@ export function HomePager({
           onMarkCharged={controller.markPurchaseCharged}
           onMarkPending={controller.markPurchasePending}
         />
-      </View>
-
-      <View style={[styles.pagerPage, { width }]}>
+      );
+    case "Bills":
+      return (
         <BillsScreen
           actionError={controller.billEntry.error}
           bills={controller.visibleBills}
@@ -101,9 +132,9 @@ export function HomePager({
           onConfirmBill={controller.openBillConfirmation}
           onToggleBillPaused={controller.toggleBillPaused}
         />
-      </View>
-
-      <View style={[styles.pagerPage, { width }]}>
+      );
+    case "Paychecks":
+      return (
         <PaychecksScreen
           nextCyclePreview={controller.nextCyclePreview}
           openActionMenuForPaycheckId={
@@ -120,9 +151,9 @@ export function HomePager({
           onEditPaycheck={controller.openPaycheckEdit}
           onMarkPaycheckUnreceived={controller.markPaycheckUnreceived}
         />
-      </View>
-
-      <View style={[styles.pagerPage, { width }]}>
+      );
+    case "Settings":
+      return (
         <SettingsScreen
           key={controller.dashboardSnapshot?.profile?.id ?? "profile"}
           backupExportError={controller.backupExportError}
@@ -145,9 +176,8 @@ export function HomePager({
           onReserveChange={controller.updateReserve}
           afterContent={<SettingsImportReview controller={controller} />}
         />
-      </View>
-    </ScrollView>
-  );
+      );
+  }
 }
 
 function SettingsImportReview({
