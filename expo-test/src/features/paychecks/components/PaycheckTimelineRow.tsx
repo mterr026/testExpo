@@ -81,13 +81,16 @@ export function PaycheckTimelineRow({
 
   return (
     <View
-      style={[
-        isHero ? styles.paycheckNextHeroCard : styles.paycheckTimelineRow,
-        !isHero &&
-          (paycheck.isReceived
-            ? styles.paycheckTimelineRowReceived
-            : styles.paycheckTimelineRowExpected),
-      ]}
+      style={
+        isHero
+          ? styles.paycheckNextHeroCardInner
+          : [
+              styles.paycheckTimelineRow,
+              paycheck.isReceived
+                ? styles.paycheckTimelineRowReceived
+                : styles.paycheckTimelineRowExpected,
+            ]
+      }
     >
       {swipeSection}
       <PaycheckCoveredBills

@@ -229,6 +229,7 @@ export function OverflowButton({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
       accessibilityLabel="Open actions"
+      accessibilityRole="button"
       hitSlop={10}
       style={({ pressed }) => [
         styles.overflowButton,

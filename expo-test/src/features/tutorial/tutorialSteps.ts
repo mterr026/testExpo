@@ -63,6 +63,27 @@ export const tutorialSteps: TutorialStep[] = [
     placement: "below",
   },
   {
+    screen: "Bills",
+    targetId: "bills-add",
+    title: "Add a bill",
+    body: "Tap + Add to save recurring or one-time bills. They feed Safe to Spend once confirmed or marked paid.",
+    placement: "below",
+  },
+  {
+    screen: "Bills",
+    targetId: "bills-due",
+    title: "Bills this cycle",
+    body: "Due this cycle shows what you owe before the next paycheck. Scheduled and paused bills stay visible below.",
+    placement: "below",
+  },
+  {
+    screen: "Bills",
+    targetId: "bills-row-swipe",
+    title: "Swipe for bill actions",
+    body: "Swipe left on a bill for Confirm, Mark paid, or Edit. Tap ⋯ for pause, resume, and delete.",
+    placement: "below",
+  },
+  {
     screen: "Dashboard",
     targetId: "dashboard-fab",
     title: "Log a purchase quickly",

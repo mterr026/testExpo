@@ -65,7 +65,7 @@ export function BillEntryModal({
         <Pressable style={styles.modalBackdrop} onPress={Keyboard.dismiss} />
         <View style={styles.sheet}>
           <Text style={styles.sectionTitle}>
-            {isEditing ? "Edit Bill" : "Record Bill"}
+            {isEditing ? "Edit Bill" : "Add Bill"}
           </Text>
           <Text style={styles.helpText}>
             Record upcoming bills to keep Safe to Spend accurate.

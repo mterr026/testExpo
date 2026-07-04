@@ -10,8 +10,11 @@ import {
   StatusPill,
   type ActionMenuHeader,
   type ActionMenuItem,
-  type StatusPillTone,
 } from "@/shared/ui/components";
+import {
+  getImportSuggestionMenuPresentation,
+  getImportSuggestionRowPresentation,
+} from "@/shared/ui/statusBadges";
 import { styles } from "@/shared/ui/styles";
 
 import { ImportLoadingIndicator } from "./components/ImportLoadingIndicator";
@@ -212,26 +215,17 @@ export function ImportReviewSection({
 }
 
 function getSuggestionActionHeader(suggestion: ImportSuggestion): ActionMenuHeader {
+  const status = getImportSuggestionMenuPresentation(suggestion);
+
   return {
     amount: formatSuggestionAmount(suggestion),
     meta: `${formatInterval(suggestion.detectedInterval)} • ${formatSuggestionDateLabel(
       suggestion
     )} • ${suggestion.occurrenceCount} matches`,
-    status:
-      suggestion.suggestionKind === "income"
-        ? suggestion.detectedInterval === "irregular"
-          ? "Possible Income"
-          : "Likely Income"
-        : suggestion.detectedInterval === "irregular"
-          ? "Possible Bill"
-          : "Likely Recurring Payment",
-    statusTone: getImportSuggestionTone(suggestion),
+    status: status.label,
+    statusTone: status.tone,
     title: suggestion.suggestedName,
   };
-}
-
-function getImportSuggestionTone(suggestion: ImportSuggestion): StatusPillTone {
-  return suggestion.suggestionKind === "income" ? "accent" : "warning";
 }
 
 function ImportSuggestionRow({
@@ -243,7 +237,7 @@ function ImportSuggestionRow({
   showDivider: boolean;
   onOpenActions: (suggestion: ImportSuggestion) => void;
 }) {
-  const kindLabel = formatSuggestionKind(suggestion);
+  const kindLabel = getImportSuggestionRowPresentation(suggestion);
   const isIncome = suggestion.suggestionKind === "income";
 
   return (
@@ -256,10 +250,7 @@ function ImportSuggestionRow({
       <View style={styles.itemCopy}>
         <View style={styles.importSuggestionTitleRow}>
           <Text style={styles.transactionTitle}>{suggestion.suggestedName}</Text>
-          <StatusPill
-            label={kindLabel}
-            tone={getImportSuggestionTone(suggestion)}
-          />
+          <StatusPill label={kindLabel.label} tone={kindLabel.tone} />
         </View>
         <Text style={styles.importSuggestionMeta}>
           {formatInterval(suggestion.detectedInterval)} •{" "}
@@ -284,14 +275,6 @@ function ImportSuggestionRow({
       </View>
     </View>
   );
-}
-
-function formatSuggestionKind(suggestion: ImportSuggestion) {
-  if (suggestion.suggestionKind === "income") {
-    return suggestion.detectedInterval === "irregular" ? "Possible Income" : "Income";
-  }
-
-  return suggestion.detectedInterval === "irregular" ? "Possible Bill" : "Bill";
 }
 
 function groupImportSuggestions(suggestions: ImportSuggestion[]) {

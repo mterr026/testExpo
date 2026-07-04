@@ -89,10 +89,35 @@ export const lineHeight = {
 /** Home shell layout — bottom nav, FAB, and scroll clearance. */
 export const homeChrome = {
   navClearance: 80,
+  navContentHeight: 72,
   fabBottomOffset: spacing.xxxl * 2 + spacing.sm,
   fabSize: 56,
   fabScrollPaddingExtra: spacing.sm,
 } as const;
+
+export function getBottomNavHeight(bottomInset: number) {
+  return (
+    spacing.sm +
+    2 +
+    homeChrome.navContentHeight +
+    Math.max(bottomInset, 10) +
+    spacing.sm
+  );
+}
+
+/** Distance from the screen bottom to the FAB's bottom edge. */
+export function getFabBottom(bottomInset: number) {
+  return getBottomNavHeight(bottomInset) + spacing.md;
+}
+
+/** Scroll content padding when the add-purchase FAB is visible. */
+export function getFabScrollPadding(bottomInset: number) {
+  return (
+    getFabBottom(bottomInset) +
+    homeChrome.fabSize +
+    homeChrome.fabScrollPaddingExtra
+  );
+}
 
 /** Reusable elevation presets — keep shadows subtle and on-brand. */
 export const shadows = {
@@ -532,66 +557,92 @@ export const styles = StyleSheet.create({
     ...shadows.subtle,
   },
   billRow: {
-    backgroundColor: surfaces.card,
-    borderRadius: radius.lg,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: spacing.md,
-    minHeight: 72,
-    ...shadows.card,
+    minHeight: 76,
   },
   billRowPaid: {
     backgroundColor: colors.rowSurface,
   },
+  billRowPaused: {
+    backgroundColor: colors.rowSurface,
+  },
+  billRowProjected: {
+    backgroundColor: surfaces.card,
+    borderWidth: 1,
+    borderColor: surfaces.dividerWarm,
+    ...shadows.subtle,
+  },
   billRowEmpty: {
     backgroundColor: surfaces.card,
     borderRadius: radius.lg,
-    marginBottom: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
     ...shadows.subtle,
   },
+  billListGroup: {
+    gap: spacing.lg,
+  },
   billDateBadge: {
-    width: 48,
+    width: 52,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: surfaces.timelineBadge,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm + 2,
     flexShrink: 0,
+  },
+  billDateBadgeDue: {
+    backgroundColor: colors.accentLight,
+  },
+  billDateBadgePaid: {
+    backgroundColor: colors.rowSurface,
+  },
+  billDateBadgeScheduled: {
+    backgroundColor: colors.rowSurface,
+  },
+  billDateBadgePaused: {
+    backgroundColor: colors.rowSurface,
   },
   billDateMonth: {
     color: colors.muted,
     fontSize: fontSize.caption,
-    fontWeight: fontWeight.semibold,
+    fontWeight: fontWeight.bold,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     lineHeight: lineHeight.tight - 3,
+  },
+  billDateMonthDue: {
+    color: colors.accent,
   },
   billDateDay: {
     color: colors.text,
-    fontSize: fontSize.title,
+    fontSize: fontSize.title + 1,
     fontWeight: fontWeight.bold,
     lineHeight: lineHeight.body,
-    marginTop: 1,
+    marginTop: spacing.xs,
+    fontVariant: ["tabular-nums"],
   },
   billRowMain: {
     flex: 1,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: spacing.md,
     minWidth: 0,
   },
   billTitleRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: spacing.sm,
     marginBottom: spacing.xs,
+  },
+  billTitleText: {
+    flex: 1,
+    minWidth: 0,
   },
   billDueMeta: {
     color: colors.muted,
@@ -601,12 +652,13 @@ export const styles = StyleSheet.create({
   },
   billAmountColumn: {
     alignItems: "flex-end",
-    gap: spacing.sm,
+    justifyContent: "flex-start",
     flexShrink: 0,
+    minWidth: 96,
   },
   billAmount: {
     color: colors.text,
-    fontSize: fontSize.bodyLg,
+    fontSize: fontSize.title,
     lineHeight: lineHeight.body,
     fontWeight: fontWeight.bold,
     fontVariant: ["tabular-nums"],
@@ -614,6 +666,25 @@ export const styles = StyleSheet.create({
   },
   billAmountPaid: {
     color: colors.warmText,
+  },
+  billAmountDue: {
+    color: colors.accent,
+  },
+  billSwipeableCard: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    ...shadows.card,
+  },
+  billSwipeableRowForeground: {
+    backgroundColor: surfaces.card,
+    marginBottom: 0,
+  },
+  billsContentInner: {
+    paddingBottom: homeChrome.navClearance + spacing.xl,
+  },
+  purchasesContentInner: {
+    paddingBottom: homeChrome.navClearance + spacing.xl,
   },
   paycheckSummaryPanel: {
     backgroundColor: colors.rowSurface,
@@ -672,13 +743,19 @@ export const styles = StyleSheet.create({
     backgroundColor: surfaces.card,
     borderRadius: radius.xl,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingTop: spacing.lg + spacing.xs,
+    paddingBottom: spacing.lg,
     ...shadows.hero,
+  },
+  paycheckNextHeroCardInner: {
+    paddingBottom: spacing.xs,
   },
   paycheckNextHeroFocus: {
     alignItems: "center",
-    gap: spacing.xs,
+    gap: spacing.sm,
+  },
+  paycheckNextHeroStatusRow: {
+    marginTop: spacing.xs,
   },
   paycheckNextHeroLabel: {
     color: colors.muted,
@@ -698,8 +775,13 @@ export const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: spacing.sm,
   },
+  paycheckNextHeroStatsBar: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: surfaces.dividerWarm,
+  },
   paycheckNextHeroStatsLine: {
-    marginTop: spacing.sm,
     color: colors.muted,
     fontSize: fontSize.meta,
     lineHeight: lineHeight.tight + 2,
@@ -747,7 +829,7 @@ export const styles = StyleSheet.create({
   },
   paycheckTimelineGroup: {
     marginBottom: spacing.section,
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   additionalIncomeGroup: {
     marginBottom: spacing.section,
@@ -779,8 +861,8 @@ export const styles = StyleSheet.create({
     borderRadius: radius.lg,
     overflow: "hidden",
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingTop: spacing.lg + spacing.xs,
+    paddingBottom: spacing.lg,
     ...shadows.card,
   },
   paycheckTimelineRowExpected: {
@@ -802,10 +884,10 @@ export const styles = StyleSheet.create({
     marginHorizontal: -spacing.md,
   },
   paycheckSwipeableRowForeground: {
-    minHeight: 68,
+    minHeight: 72,
     backgroundColor: surfaces.card,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
@@ -857,11 +939,11 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   paycheckCoverageBlock: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: surfaces.divider,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   paycheckCoverageToggle: {
     flexDirection: "row",
@@ -870,16 +952,6 @@ export const styles = StyleSheet.create({
     gap: spacing.sm + 2,
     minHeight: 44,
     paddingVertical: spacing.xs,
-  },
-  paidBillsToggle: {
-    backgroundColor: colors.rowSurface,
-    borderRadius: radius.md,
-    marginTop: spacing.sm + 2,
-    marginBottom: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md - 1,
-    minHeight: 44,
-    ...shadows.subtle,
   },
   paycheckCoverageTitle: {
     color: colors.muted,
@@ -936,17 +1008,17 @@ export const styles = StyleSheet.create({
     lineHeight: lineHeight.tight + 2,
   },
   paycheckCoverageBillList: {
-    backgroundColor: colors.rowSurface,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.md,
-    overflow: "hidden",
+    gap: 0,
+    borderTopWidth: 1,
+    borderTopColor: surfaces.divider,
+    paddingTop: spacing.xs,
   },
   paycheckCoverageBillRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: spacing.md,
-    paddingVertical: spacing.sm + 2,
+    paddingVertical: spacing.md,
   },
   paycheckCoverageBillRowDivider: {
     borderBottomWidth: 1,
@@ -1577,19 +1649,12 @@ export const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.xl,
   },
-  purchaseOutsideCycleHeader: {
-    marginBottom: spacing.xs,
-  },
-  purchaseOutsideCycleTitle: {
-    color: colors.text,
-    fontSize: fontSize.sectionCompact,
-    fontWeight: fontWeight.bold,
-    marginBottom: spacing.xs,
-  },
   purchaseOutsideCycleMeta: {
     color: colors.muted,
     fontSize: fontSize.meta,
     lineHeight: lineHeight.tight,
+    paddingHorizontal: spacing.xs,
+    marginBottom: spacing.sm,
   },
   purchasePreviousCycleGroup: {
     gap: spacing.md,
@@ -1765,13 +1830,21 @@ export const styles = StyleSheet.create({
     color: colors.warningText,
   },
   purchaseTransactionRow: {
-    minHeight: 68,
+    minHeight: 76,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: spacing.md,
+  },
+  purchaseRowMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    minWidth: 0,
   },
   transactionRow: {
     minHeight: 56,
@@ -1806,27 +1879,32 @@ export const styles = StyleSheet.create({
   },
   purchaseTitleRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: spacing.sm,
+  },
+  purchaseTitleText: {
+    flex: 1,
+    minWidth: 0,
   },
   purchaseAmountColumn: {
     alignItems: "flex-end",
-    gap: spacing.sm,
+    justifyContent: "flex-start",
     flexShrink: 0,
+    minWidth: 96,
   },
   purchaseAmount: {
-    color: colors.warningText,
-    fontSize: fontSize.bodyLg,
+    color: colors.accent,
+    fontSize: fontSize.title,
     lineHeight: lineHeight.body,
     fontWeight: fontWeight.bold,
     fontVariant: ["tabular-nums"],
     textAlign: "right",
-    minWidth: 72,
   },
   purchaseAmountPending: {
-    color: colors.warningText,
-    opacity: 0.88,
+    color: colors.accent,
+  },
+  purchaseAmountCharged: {
+    color: colors.warmText,
   },
   viewAllButton: {
     minHeight: 44,
@@ -2193,12 +2271,10 @@ export const styles = StyleSheet.create({
     gap: 12,
   },
   paycheckProjectionTotalRowPrimary: {
-    marginTop: spacing.md,
-    marginBottom: 2,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.rowSurface,
+    marginTop: spacing.sm,
+    paddingTop: spacing.md + 2,
+    borderTopWidth: 1,
+    borderTopColor: surfaces.dividerWarm,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -2217,11 +2293,10 @@ export const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   paycheckProjectionBreakdown: {
-    backgroundColor: colors.rowSurface,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     gap: spacing.xs,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: surfaces.divider,
   },
   paycheckProjectionBreakdownHelp: {
     color: colors.muted,

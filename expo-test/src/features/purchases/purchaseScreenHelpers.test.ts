@@ -6,8 +6,8 @@ import {
 } from "./purchaseScreenHelpers";
 
 describe("getPurchaseSummaryTitle", () => {
-  it("returns This Cycle for the current cycle view", () => {
-    expect(getPurchaseSummaryTitle()).toBe("This Cycle");
+  it("returns Current cycle for the current cycle view", () => {
+    expect(getPurchaseSummaryTitle()).toBe("Current cycle");
   });
 });
 

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import type { Envelope } from "@/database/repositories/types";
 import type { SafeToSpendBreakdown } from "@/engine";
 import type { EnvelopeSnapshotEntry } from "@/engine";
@@ -10,7 +12,11 @@ import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useOptionalTutorialContext } from "@/features/tutorial/TutorialContext";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
 import { money } from "@/shared/ui/components";
-import { styles } from "@/shared/ui/styles";
+import {
+  getBillTimelineMetaLabel,
+  getPaycheckTimelineMetaLabel,
+} from "@/shared/ui/statusBadges";
+import { styles, getFabScrollPadding } from "@/shared/ui/styles";
 import type { Bill, PaycheckListItem } from "@/shared/ui/types";
 
 type DashboardEnvelope = Pick<
@@ -76,6 +82,7 @@ export function DashboardScreen({
   onEditEnvelope: (envelope: DashboardEnvelope) => void;
   onToggleEnvelopePaused: (envelope: DashboardEnvelope) => void | Promise<void>;
 }) {
+  const insets = useSafeAreaInsets();
   const [showAllTimelineEvents, setShowAllTimelineEvents] = useState(false);
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   const [openSwipeEnvelopeId, setOpenSwipeEnvelopeId] = useState<string | null>(
@@ -113,7 +120,7 @@ export function DashboardScreen({
     <ScrollView
       ref={tutorialScrollRef}
       style={styles.content}
-      contentContainerStyle={styles.contentInnerWithFab}
+      contentContainerStyle={{ paddingBottom: getFabScrollPadding(insets.bottom) }}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       scrollEventThrottle={16}
@@ -628,18 +635,10 @@ function DashboardBreakdownRow({
 
 function formatTimelineStatus(event: TimelineEvent) {
   if (event.kind === "income") {
-    return "Expected Income";
+    return getPaycheckTimelineMetaLabel(event.status === "Received");
   }
 
-  if (event.status === "Projected") {
-    return "Projected Bill";
-  }
-
-  if (event.status === "Due" || event.status === "Needs confirmation") {
-    return "Due Soon";
-  }
-
-  return "Upcoming Bill";
+  return getBillTimelineMetaLabel(event.status as Bill["status"]);
 }
 
 function buildTimelineEvents(

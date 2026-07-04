@@ -45,26 +45,30 @@ export function NextPaycheckHero({
 }: NextPaycheckHeroProps) {
   return (
     <View style={styles.paycheckNextHeroSection}>
-      <PaycheckTimelineRow
-        coverage={coverage}
-        expandedCoverageIds={expandedCoverageIds}
-        isSwipeOpen={isSwipeOpen}
-        paycheck={paycheck}
-        showTutorialCoverageTarget={showTutorialCoverageTarget}
-        showTutorialSwipeTarget={showTutorialSwipeTarget}
-        variant="hero"
-        wrapUpcomingTutorialTarget={showTutorialUpcomingTarget}
-        onConfirmPaycheck={onConfirmPaycheck}
-        onDeletePaycheck={onDeletePaycheck}
-        onEditPaycheck={onEditPaycheck}
-        onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
-        onSwipeClose={onSwipeClose}
-        onSwipeOpen={onSwipeOpen}
-        onToggleCoverage={onToggleCoverage}
-      />
-      <Text style={styles.paycheckNextHeroStatsLine}>
-        {money(receivedTotalCents)} received • {upcomingCount} upcoming
-      </Text>
+      <View style={styles.paycheckNextHeroCard}>
+        <PaycheckTimelineRow
+          coverage={coverage}
+          expandedCoverageIds={expandedCoverageIds}
+          isSwipeOpen={isSwipeOpen}
+          paycheck={paycheck}
+          showTutorialCoverageTarget={showTutorialCoverageTarget}
+          showTutorialSwipeTarget={showTutorialSwipeTarget}
+          variant="hero"
+          wrapUpcomingTutorialTarget={showTutorialUpcomingTarget}
+          onConfirmPaycheck={onConfirmPaycheck}
+          onDeletePaycheck={onDeletePaycheck}
+          onEditPaycheck={onEditPaycheck}
+          onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+          onSwipeClose={onSwipeClose}
+          onSwipeOpen={onSwipeOpen}
+          onToggleCoverage={onToggleCoverage}
+        />
+        <View style={styles.paycheckNextHeroStatsBar}>
+          <Text style={styles.paycheckNextHeroStatsLine}>
+            {money(receivedTotalCents)} received • {upcomingCount} upcoming
+          </Text>
+        </View>
+      </View>
     </View>
   );
 }

@@ -51,6 +51,7 @@ export function HomeScreen() {
     if (
       screen !== "Purchases" &&
       screen !== "Paychecks" &&
+      screen !== "Bills" &&
       screen !== "Dashboard"
     ) {
       setSwipeRowTouchActive(false);
@@ -78,6 +79,7 @@ export function HomeScreen() {
             pagerScrollEnabled={
               (screen !== "Purchases" &&
                 screen !== "Paychecks" &&
+                screen !== "Bills" &&
                 screen !== "Dashboard") ||
               !swipeRowTouchActive
             }

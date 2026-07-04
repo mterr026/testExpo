@@ -1,14 +1,16 @@
 import { useState, type ReactElement } from "react";
 import { Pressable, Text, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   EmptyState,
   money,
-  type StatusPillTone,
 } from "@/shared/ui/components";
-import { styles } from "@/shared/ui/styles";
+import { getFabScrollPadding, styles } from "@/shared/ui/styles";
 import type { PaycheckListItem, Purchase } from "@/shared/ui/types";
+
+import { formatDashboardCycleLabel } from "@/features/dashboard/dashboardCycleLabel";
 
 import {
   buildPurchaseCycleOptions,
@@ -17,10 +19,8 @@ import {
   getPurchaseSummaryForPurchases,
   type PurchaseCycleOption,
 } from "./purchaseCycles";
-import { formatPurchaseCycleHeaderSummary } from "./purchaseCycleHeader";
 import {
   getFilterLabel,
-  getPurchaseSummaryTitle,
   PREVIOUS_PURCHASES_PAGE_SIZE,
   purchaseFilters,
   type PurchaseFilter,
@@ -28,6 +28,7 @@ import {
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
 
+import { PurchaseCycleSummaryCard } from "./components/PurchaseCycleSummaryCard";
 import { PurchaseSwipeableRow } from "./components/PurchaseSwipeableRow";
 
 type PurchasesScreenProps = {
@@ -53,6 +54,7 @@ export function PurchasesScreen({
   onMarkCharged,
   onMarkPending,
 }: PurchasesScreenProps) {
+  const insets = useSafeAreaInsets();
   const purchases = purchasesProp ?? [];
   const paychecks = paychecksProp ?? [];
   const [showPreviousCycles, setShowPreviousCycles] = useState(false);
@@ -71,8 +73,6 @@ export function PurchasesScreen({
     paychecks,
   };
   const cycleOptions = buildPurchaseCycleOptions(purchases, cycleContext);
-  const activeCycleOption =
-    cycleOptions.find((option) => option.id === activeCyclePaycheckId) ?? null;
   const currentCyclePurchases = activeCyclePaycheckId
     ? filterPurchasesForCycle(purchases, activeCyclePaycheckId, cycleContext)
     : [];
@@ -103,6 +103,10 @@ export function PurchasesScreen({
   const pendingPurchaseCount = currentCyclePurchases.filter(
     (purchase) => purchase.status === "Pending"
   ).length;
+  const cycleLabel = formatDashboardCycleLabel(
+    activeCycleStartDate,
+    activeCycleEndDate
+  );
   const { onTutorialScroll, tutorialScrollRef } = useTutorialScrollView("Purchases");
 
   function renderPurchaseSwipeableRow(purchase: Purchase) {
@@ -128,7 +132,7 @@ export function PurchasesScreen({
   function renderPurchaseDateGroups(purchaseList: Purchase[], keyPrefix = "") {
     return groupPurchasesByDate(purchaseList).map((group) => (
       <View key={`${keyPrefix}${group.dateKey}`} style={styles.transactionDateGroup}>
-        <Text style={styles.transactionDateHeader}>{group.label}</Text>
+        <Text style={styles.paycheckSectionTitle}>{group.label}</Text>
         <View style={styles.purchaseSwipeableList}>
           {group.purchases.map((purchase) => renderPurchaseSwipeableRow(purchase))}
         </View>
@@ -183,7 +187,7 @@ export function PurchasesScreen({
     <ScrollView
       ref={tutorialScrollRef}
       style={styles.content}
-      contentContainerStyle={styles.contentInner}
+      contentContainerStyle={{ paddingBottom: getFabScrollPadding(insets.bottom) }}
       directionalLockEnabled
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
@@ -198,21 +202,11 @@ export function PurchasesScreen({
       </View>
 
       <TutorialTarget id="purchases-summary">
-        <View
-          accessibilityRole="summary"
-          style={styles.purchaseCycleHeaderCard}
-        >
-          <Text style={styles.purchaseCycleHeaderTitle}>
-            {getPurchaseSummaryTitle()}
-          </Text>
-          <Text style={styles.purchaseCycleHeaderSummary}>
-            {formatPurchaseCycleHeaderSummary({
-              cycleWindowLabel: activeCycleOption?.cycleWindowLabel ?? null,
-              pendingCount: pendingPurchaseCount,
-              totalSpentCents: purchaseSummary.totalSpentCents,
-            })}
-          </Text>
-        </View>
+        <PurchaseCycleSummaryCard
+          cycleLabel={cycleLabel}
+          pendingCount={pendingPurchaseCount}
+          totalSpentCents={purchaseSummary.totalSpentCents}
+        />
       </TutorialTarget>
 
       <TutorialTarget id="purchases-filters">
@@ -220,6 +214,9 @@ export function PurchasesScreen({
         {purchaseFilters.map((filter) => (
           <Pressable
             key={filter}
+            accessibilityLabel={getFilterLabel(filter, pendingPurchaseCount)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: activeFilter === filter }}
             style={({ pressed }) => [
               styles.filterChip,
               activeFilter === filter && styles.filterChipActive,
@@ -268,21 +265,15 @@ export function PurchasesScreen({
 
       {hasOutsideCyclePurchases && (
         <View style={styles.purchaseOutsideCycleSection}>
-          <View style={styles.purchaseOutsideCycleHeader}>
-            <View style={styles.itemCopy}>
-              <Text style={styles.purchaseOutsideCycleTitle}>
-                Outside any paycheck cycle
-              </Text>
-              <Text style={styles.purchaseOutsideCycleMeta}>
-                {unassignedCycleOption?.transactionCount ?? outsideCyclePurchases.length}{" "}
-                {(unassignedCycleOption?.transactionCount ??
-                  outsideCyclePurchases.length) === 1
-                  ? "purchase"
-                  : "purchases"}{" "}
-                · {money(unassignedCycleOption?.totalSpentCents ?? 0)}
-              </Text>
-            </View>
-          </View>
+          <Text style={styles.paycheckSectionTitle}>Outside any paycheck cycle</Text>
+          <Text style={styles.purchaseOutsideCycleMeta}>
+            {unassignedCycleOption?.transactionCount ?? outsideCyclePurchases.length}{" "}
+            {(unassignedCycleOption?.transactionCount ??
+              outsideCyclePurchases.length) === 1
+              ? "purchase"
+              : "purchases"}{" "}
+            · {money(unassignedCycleOption?.totalSpentCents ?? 0)}
+          </Text>
 
           {filteredOutsideCyclePurchases.length === 0 ? (
             <Text style={styles.rowMetaText}>
@@ -339,7 +330,12 @@ function PreviousCyclesSection({
 }) {
   return (
     <Pressable
+      accessibilityHint={
+        isExpanded ? "Collapses previous purchase cycles" : "Expands previous purchase cycles"
+      }
+      accessibilityLabel="Previous cycles"
       accessibilityRole="button"
+      accessibilityState={{ expanded: isExpanded }}
       style={({ pressed }) => [
         styles.paycheckSectionToggle,
         pressed && styles.pressed,
@@ -408,7 +404,12 @@ function PreviousCycleRow({
         </Text>
       </View>
       <Pressable
+        accessibilityHint={
+          isExpanded ? "Hides purchases for this cycle" : "Shows purchases for this cycle"
+        }
+        accessibilityLabel={isExpanded ? "Hide purchases" : "Show purchases"}
         accessibilityRole="button"
+        accessibilityState={{ expanded: isExpanded }}
         style={({ pressed }) => [
           styles.paycheckCoverageToggle,
           pressed && styles.pressed,
@@ -433,6 +434,7 @@ function PreviousCycleRow({
               {renderPurchaseDateGroups(visiblePurchases)}
               {hasMorePurchases && (
                 <Pressable
+                  accessibilityLabel="Load more purchases"
                   accessibilityRole="button"
                   style={({ pressed }) => [
                     styles.secondaryButton,
@@ -449,10 +451,6 @@ function PreviousCycleRow({
       )}
     </View>
   );
-}
-
-function getPurchaseStatusTone(status: Purchase["status"]): StatusPillTone {
-  return status === "Pending" ? "warning" : "neutral";
 }
 
 function sortPurchasesByMostRecent(first: Purchase, second: Purchase) {

@@ -9,6 +9,7 @@ export const tutorialTargetIds = [
   "paychecks-additional-income",
   "bills-add",
   "bills-due",
+  "bills-row-swipe",
   "purchases-summary",
   "purchases-filters",
   "settings-current-balance",

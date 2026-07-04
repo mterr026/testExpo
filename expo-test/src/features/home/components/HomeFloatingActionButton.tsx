@@ -2,7 +2,7 @@ import { SymbolView } from "expo-symbols";
 import { Pressable } from "react-native";
 
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
-import { homeChrome, styles } from "@/shared/ui/styles";
+import { getFabBottom, styles } from "@/shared/ui/styles";
 import type { Screen } from "@/shared/ui/types";
 
 type HomeFloatingActionButtonProps = {
@@ -23,7 +23,7 @@ export function HomeFloatingActionButton({
   return (
     <TutorialTarget
       id="dashboard-fab"
-      style={[styles.fab, { bottom: bottomInset + homeChrome.fabBottomOffset }]}
+      style={[styles.fab, { bottom: getFabBottom(bottomInset) }]}
     >
       <Pressable
         accessibilityLabel="Add purchase"

@@ -2,7 +2,8 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
-import { money, StatusPill, type StatusPillTone } from "@/shared/ui/components";
+import { money, StatusPill } from "@/shared/ui/components";
+import { getPaycheckStatusPresentation } from "@/shared/ui/statusBadges";
 import { styles } from "@/shared/ui/styles";
 import type { PaycheckListItem } from "@/shared/ui/types";
 
@@ -62,11 +63,17 @@ export function PaycheckSwipeableHeader({
     swipeableRef.current?.close();
   }, [isSwipeOpen]);
 
+  const paycheckStatus = getPaycheckStatusPresentation(paycheck.isReceived);
   const rowContent = isHero ? (
     <View style={styles.paycheckNextHeroSwipeForeground}>
       <View style={styles.paycheckNextHeroFocus}>
         <Text style={styles.paycheckNextHeroLabel}>Next Paycheck</Text>
         <Text style={styles.itemTitle}>{paycheck.label}</Text>
+        {showStatusPill ? (
+          <View style={styles.paycheckNextHeroStatusRow}>
+            <StatusPill label={paycheckStatus.label} tone={paycheckStatus.tone} />
+          </View>
+        ) : null}
         <Text
           style={[
             styles.safeAmount,
@@ -96,10 +103,7 @@ export function PaycheckSwipeableHeader({
         {showStatusPill ? (
           <View style={styles.paycheckTitleRow}>
             <Text style={styles.itemTitle}>{paycheck.label}</Text>
-            <StatusPill
-              label={paycheck.isReceived ? "Received" : "Expected"}
-              tone={getPaycheckStatusTone(paycheck.isReceived)}
-            />
+            <StatusPill label={paycheckStatus.label} tone={paycheckStatus.tone} />
           </View>
         ) : (
           <Text style={styles.itemTitle}>{paycheck.label}</Text>
@@ -228,8 +232,4 @@ function getPaycheckSwipeActionStyle(destructive: boolean | undefined, label: st
   }
 
   return styles.purchaseSwipeActionDefault;
-}
-
-function getPaycheckStatusTone(isReceived: boolean): StatusPillTone {
-  return isReceived ? "neutral" : "accent";
 }

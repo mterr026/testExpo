@@ -2,12 +2,14 @@ import { useEffect, useRef } from "react";
 import { Pressable, Text, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
-import { money, StatusPill, type StatusPillTone } from "@/shared/ui/components";
+import { getPurchaseStatusPresentation } from "@/shared/ui/statusBadges";
+import { money, StatusPill } from "@/shared/ui/components";
 import { styles } from "@/shared/ui/styles";
 import type { Purchase } from "@/shared/ui/types";
 
 import { useSwipeRowGesture } from "@/features/home/SwipeRowGestureContext";
 import { getPurchaseSwipeActions } from "../purchaseActions";
+import { formatPurchaseDisplayName } from "../purchaseRowDisplay";
 
 type PurchaseSwipeableRowProps = {
   isSwipeOpen: boolean;
@@ -33,6 +35,8 @@ export function PurchaseSwipeableRow({
   const swipeableRef = useRef<Swipeable>(null);
   const setRowTouchActive = useSwipeRowGesture();
   const isPending = purchase.status === "Pending";
+  const isCharged = purchase.status === "Charged";
+  const purchaseStatus = getPurchaseStatusPresentation(purchase.status);
   const swipeActions = getPurchaseSwipeActions({
     purchase,
     onDeletePurchase,
@@ -42,31 +46,41 @@ export function PurchaseSwipeableRow({
   });
 
   useEffect(() => {
-    if (!isSwipeOpen) {
-      swipeableRef.current?.close();
+    if (isSwipeOpen) {
+      swipeableRef.current?.openRight();
+      return;
     }
+
+    swipeableRef.current?.close();
   }, [isSwipeOpen]);
 
   const rowContent = (
     <View style={[styles.purchaseTransactionRow, styles.purchaseSwipeableRowForeground]}>
-      <View style={styles.itemCopy}>
-        <View style={styles.purchaseTitleRow}>
-          <Text style={styles.transactionTitle}>{purchase.name}</Text>
-          <StatusPill
-            label={purchase.status}
-            tone={getPurchaseStatusTone(purchase.status)}
-          />
+      <View style={styles.purchaseRowMain}>
+        <View style={styles.itemCopy}>
+          <View style={styles.purchaseTitleRow}>
+            <Text
+              ellipsizeMode="tail"
+              numberOfLines={2}
+              style={[styles.itemTitle, styles.purchaseTitleText]}
+            >
+              {formatPurchaseDisplayName(purchase.name)}
+            </Text>
+            <StatusPill label={purchaseStatus.label} tone={purchaseStatus.tone} />
+          </View>
         </View>
-      </View>
-      <View style={styles.purchaseAmountColumn}>
-        <Text
-          style={[
-            styles.purchaseAmount,
-            isPending && styles.purchaseAmountPending,
-          ]}
-        >
-          -{money(normalizePurchaseAmountCents(purchase.amountCents))}
-        </Text>
+
+        <View style={styles.purchaseAmountColumn}>
+          <Text
+            style={[
+              styles.purchaseAmount,
+              isPending && styles.purchaseAmountPending,
+              isCharged && styles.purchaseAmountCharged,
+            ]}
+          >
+            -{money(normalizePurchaseAmountCents(purchase.amountCents))}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -173,10 +187,6 @@ function getPurchaseSwipeActionStyle(destructive: boolean | undefined, label: st
   }
 
   return styles.purchaseSwipeActionDefault;
-}
-
-function getPurchaseStatusTone(status: Purchase["status"]): StatusPillTone {
-  return status === "Pending" ? "warning" : "neutral";
 }
 
 function normalizePurchaseAmountCents(amountCents: number | null | undefined): number {

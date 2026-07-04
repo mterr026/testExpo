@@ -25,6 +25,7 @@ import {
 import { mapRepositoryPaycheckToListItem } from "@/features/paychecks/adapters/paycheckViewAdapters";
 import { getPrimaryPaychecks } from "@/features/paychecks/paycheckSchedule";
 import { mapRepositoryPurchaseToPrototype } from "@/features/purchases/adapters/purchaseViewAdapters";
+import { formatDashboardCycleLabel } from "@/features/dashboard/dashboardCycleLabel";
 import { getTodayIsoDate } from "@/shared/dates";
 
 type UseHomeDerivedDataInput = {
@@ -207,16 +208,14 @@ export function useHomeDerivedData({
   }, [activeSnapshot]);
 
   const billCycleLabel = useMemo(() => {
-    if (!activeSnapshot?.activeCycleStartDate || !activeSnapshot.activeCycleEndDate) {
+    if (!activeSnapshot?.activeCycleStartDate) {
       return "No active paycheck cycle";
     }
 
-    const startDate = activeSnapshot.activeCycleStartDate;
-    const nextDate = activeSnapshot.activeCycleEndDate;
-
-    return nextDate !== OPEN_ENDED_PAYCHECK_CYCLE_DATE
-      ? `Paycheck cycle ${startDate} to ${nextDate}`
-      : `Paycheck cycle starting ${startDate}`;
+    return formatDashboardCycleLabel(
+      activeSnapshot.activeCycleStartDate,
+      activeSnapshot.activeCycleEndDate
+    );
   }, [activeSnapshot]);
 
   const nextCyclePreview = useMemo<NextCyclePreview>(() => {
