@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
 import { screenOrder } from "@/features/app/homeData";
@@ -27,6 +28,7 @@ type HomePagerProps = {
   onClearNotificationTarget: () => void;
   onScrollEnd: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   pagerRef: RefObject<ScrollView | null>;
+  pagerScrollEnabled?: boolean;
   width: number;
 };
 
@@ -37,6 +39,7 @@ export function HomePager({
   onClearNotificationTarget,
   onScrollEnd,
   pagerRef,
+  pagerScrollEnabled = true,
   width,
 }: HomePagerProps) {
   return (
@@ -45,6 +48,7 @@ export function HomePager({
       horizontal
       pagingEnabled
       bounces={false}
+      scrollEnabled={pagerScrollEnabled}
       scrollEventThrottle={16}
       showsHorizontalScrollIndicator={false}
       style={styles.screenPane}
@@ -82,6 +86,12 @@ function renderPagerScreen({
     case "Dashboard":
       return (
         <DashboardScreen
+          activeCycleEndDate={
+            controller.dashboardSnapshot?.activeCycleEndDate ?? null
+          }
+          activeCycleStartDate={
+            controller.dashboardSnapshot?.activeCycleStartDate ?? null
+          }
           nextPaycheckLabel={controller.dashboardTotals.nextPaycheckLabel}
           reserveCents={controller.dashboardTotals.reserveCents}
           safeToSpendBreakdown={
@@ -102,7 +112,10 @@ function renderPagerScreen({
           upcomingBills={controller.dashboardUpcomingBills}
           upcomingPaychecks={controller.dashboardUpcomingPaychecks}
           isLoading={controller.dashboardLoading}
+          onOpenBills={() => onChangeScreen("Bills")}
           onOpenPaychecks={() => onChangeScreen("Paychecks")}
+          onOpenPurchases={() => onChangeScreen("Purchases")}
+          onOpenSettings={() => onChangeScreen("Settings")}
         />
       );
     case "Purchases":

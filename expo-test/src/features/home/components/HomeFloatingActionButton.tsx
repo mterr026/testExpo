@@ -16,7 +16,7 @@ export function HomeFloatingActionButton({
   onPress,
   screen,
 }: HomeFloatingActionButtonProps) {
-  if (screen !== "Dashboard") {
+  if (screen !== "Dashboard" && screen !== "Purchases") {
     return null;
   }
 

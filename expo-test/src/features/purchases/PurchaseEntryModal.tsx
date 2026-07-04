@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -31,6 +32,8 @@ type PurchaseEntryModalProps = {
   status: Purchase["status"];
   error: string;
   amountAccessoryId: string;
+  addFormResetKey: number;
+  recentDescriptions: string[];
   envelopesEnabled: boolean;
   envelopes: EnvelopePickerOption[];
   envelopeId: string | null;
@@ -40,6 +43,7 @@ type PurchaseEntryModalProps = {
   onStatusChange: (status: Purchase["status"]) => void;
   onEnvelopeChange: (envelopeId: string | null) => void;
   onSave: () => void | Promise<void>;
+  onSaveAndAddAnother: () => void | Promise<void>;
   onClose: () => void;
 };
 
@@ -52,6 +56,8 @@ export function PurchaseEntryModal({
   status,
   error,
   amountAccessoryId,
+  addFormResetKey,
+  recentDescriptions,
   envelopesEnabled,
   envelopes,
   envelopeId,
@@ -61,9 +67,25 @@ export function PurchaseEntryModal({
   onStatusChange,
   onEnvelopeChange,
   onSave,
+  onSaveAndAddAnother,
   onClose,
 }: PurchaseEntryModalProps) {
   const isEditing = mode === "edit";
+  const amountInputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (!visible || isEditing) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      amountInputRef.current?.focus();
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [visible, isEditing, addFormResetKey]);
 
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -77,22 +99,19 @@ export function PurchaseEntryModal({
             {isEditing ? "Edit Purchase" : "Record Purchase"}
           </Text>
           <Text style={styles.helpText}>
-            Record spending to keep Safe to Spend accurate.
+            {isEditing
+              ? "Update spending to keep Safe to Spend accurate."
+              : "Enter the amount first — description is optional."}
           </Text>
-
-          <Text style={styles.inputLabel}>Description</Text>
-          <TextInput
-            style={[styles.input, styles.purchaseInput]}
-            placeholder="Purchase description"
-            returnKeyType="done"
-            onSubmitEditing={Keyboard.dismiss}
-            value={name}
-            onChangeText={onNameChange}
-          />
 
           <Text style={styles.inputLabel}>Amount</Text>
           <TextInput
-            style={[styles.input, styles.purchaseInput]}
+            ref={amountInputRef}
+            style={[
+              styles.input,
+              styles.purchaseInput,
+              styles.purchaseAmountHeroInput,
+            ]}
             placeholder="0.00"
             keyboardType="decimal-pad"
             inputAccessoryViewID={amountAccessoryId}
@@ -101,6 +120,42 @@ export function PurchaseEntryModal({
             value={amount}
             onChangeText={onAmountChange}
           />
+
+          <Text style={styles.inputLabel}>Description (optional)</Text>
+          <TextInput
+            style={[styles.input, styles.purchaseInput]}
+            placeholder="Coffee, groceries, gas…"
+            returnKeyType="done"
+            onSubmitEditing={Keyboard.dismiss}
+            value={name}
+            onChangeText={onNameChange}
+          />
+
+          {!isEditing && recentDescriptions.length > 0 && (
+            <View style={styles.purchaseRecentMerchantRow}>
+              {recentDescriptions.map((description) => (
+                <Pressable
+                  key={description}
+                  style={({ pressed }) => [
+                    styles.filterChip,
+                    name === description && styles.filterChipActive,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() => onNameChange(description)}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      name === description && styles.filterChipTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {description}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
 
           <DatePickerField
             label="Date"
@@ -166,9 +221,21 @@ export function PurchaseEntryModal({
             onPress={onSave}
           >
             <Text style={styles.primaryButtonText}>
-              Save Purchase
+              {isEditing ? "Save Changes" : "Save Purchase"}
             </Text>
           </Pressable>
+
+          {!isEditing && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                pressed && styles.pressed,
+              ]}
+              onPress={onSaveAndAddAnother}
+            >
+              <Text style={styles.secondaryButtonText}>Save & add another</Text>
+            </Pressable>
+          )}
 
           <Pressable
             style={({ pressed }) => [

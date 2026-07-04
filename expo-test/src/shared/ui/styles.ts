@@ -289,6 +289,84 @@ export const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
     textAlign: "center",
   },
+  dashboardCycleSnapshot: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md + 2,
+    paddingBottom: spacing.md,
+    marginBottom: spacing.xxl,
+    ...shadows.subtle,
+  },
+  dashboardCycleSnapshotHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  dashboardCycleSnapshotTitle: {
+    color: colors.text,
+    fontSize: fontSize.body,
+    lineHeight: lineHeight.body,
+    fontWeight: fontWeight.semibold,
+  },
+  dashboardCycleSnapshotDates: {
+    color: colors.muted,
+    fontSize: fontSize.meta,
+    lineHeight: lineHeight.tight,
+    fontWeight: fontWeight.medium,
+    flexShrink: 1,
+    textAlign: "right",
+  },
+  dashboardCycleSnapshotChipRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  dashboardCycleSnapshotChip: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: colors.rowSurface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md - 1,
+    borderWidth: 1,
+    borderColor: surfaces.cardBorderSoft,
+    alignItems: "center",
+  },
+  dashboardCycleSnapshotChipPressed: {
+    backgroundColor: colors.warm,
+    borderColor: surfaces.dividerWarm,
+  },
+  dashboardCycleSnapshotChipLabel: {
+    color: colors.muted,
+    fontSize: fontSize.caption,
+    lineHeight: lineHeight.tight - 3,
+    fontWeight: fontWeight.medium,
+    textAlign: "center",
+  },
+  dashboardCycleSnapshotChipValue: {
+    color: colors.text,
+    fontSize: fontSize.body,
+    lineHeight: lineHeight.body,
+    fontWeight: fontWeight.semibold,
+    marginTop: spacing.xs,
+    textAlign: "center",
+  },
+  dashboardCycleSnapshotChipValueMuted: {
+    color: colors.muted,
+    fontSize: fontSize.meta,
+    lineHeight: lineHeight.tight,
+    fontWeight: fontWeight.regular,
+  },
+  dashboardCycleSnapshotChipHint: {
+    color: colors.warmText,
+    fontSize: fontSize.caption,
+    lineHeight: lineHeight.tight - 3,
+    fontWeight: fontWeight.regular,
+    marginTop: spacing.xs - 1,
+    textAlign: "center",
+  },
   dashboardHeroReserveText: {
     color: colors.muted,
     fontSize: fontSize.caption,
@@ -1191,6 +1269,28 @@ export const styles = StyleSheet.create({
   dashboardBreakdownRowLast: {
     borderBottomWidth: 0,
   },
+  purchaseCycleHeaderCard: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
+    marginBottom: spacing.md + 2,
+    ...shadows.subtle,
+  },
+  purchaseCycleHeaderTitle: {
+    color: colors.text,
+    fontSize: fontSize.body,
+    lineHeight: lineHeight.body,
+    fontWeight: fontWeight.semibold,
+    marginBottom: spacing.xs,
+  },
+  purchaseCycleHeaderSummary: {
+    color: colors.warmText,
+    fontSize: fontSize.label,
+    lineHeight: lineHeight.tight + 2,
+    fontWeight: fontWeight.semibold,
+    fontVariant: ["tabular-nums"],
+  },
   purchaseSummaryCard: {
     backgroundColor: surfaces.card,
     borderRadius: radius.xl,
@@ -1502,6 +1602,53 @@ export const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 0,
     ...shadows.card,
+  },
+  purchaseSwipeableList: {
+    gap: spacing.sm,
+  },
+  purchaseSwipeableCard: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    ...shadows.card,
+  },
+  purchaseSwipeableRowForeground: {
+    backgroundColor: surfaces.card,
+  },
+  purchaseSwipeActions: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  purchaseSwipeAction: {
+    width: 76,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+  },
+  purchaseSwipeActionAccent: {
+    backgroundColor: colors.accentLight,
+  },
+  purchaseSwipeActionDefault: {
+    backgroundColor: colors.soft,
+  },
+  purchaseSwipeActionDestructive: {
+    backgroundColor: colors.warning,
+  },
+  purchaseSwipeActionIcon: {
+    fontSize: fontSize.bodyLg,
+    lineHeight: lineHeight.body,
+  },
+  purchaseSwipeActionLabel: {
+    color: colors.accentDark,
+    fontSize: fontSize.caption,
+    fontWeight: fontWeight.semibold,
+    lineHeight: lineHeight.tight,
+    textAlign: "center",
+  },
+  purchaseSwipeActionLabelDestructive: {
+    color: colors.warningText,
   },
   purchaseTransactionRow: {
     minHeight: 68,
@@ -2009,6 +2156,19 @@ export const styles = StyleSheet.create({
   purchaseInput: {
     paddingVertical: spacing.sm + 1,
     marginBottom: spacing.sm,
+  },
+  purchaseAmountHeroInput: {
+    fontSize: fontSize.displaySm,
+    lineHeight: lineHeight.displaySm,
+    fontWeight: fontWeight.bold,
+    textAlign: "center",
+    paddingVertical: spacing.md,
+  },
+  purchaseRecentMerchantRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   textArea: {
     height: 110,

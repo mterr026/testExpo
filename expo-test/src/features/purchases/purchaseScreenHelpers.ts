@@ -5,7 +5,7 @@ export const purchaseFilters: PurchaseFilter[] = ["All", "Pending", "Charged"];
 export const PREVIOUS_PURCHASES_PAGE_SIZE = 10;
 
 export function getPurchaseSummaryTitle() {
-  return "This Cycle";
+  return "This cycle";
 }
 
 export function getFilterLabel(filter: PurchaseFilter, pendingCount: number) {

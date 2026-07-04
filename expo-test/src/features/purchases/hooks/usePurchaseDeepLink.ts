@@ -1,8 +1,11 @@
 import { useEffect } from "react";
 import { Linking, Platform } from "react-native";
 
+import type { PurchaseEntryPrefill } from "./usePurchaseEntryController";
+import { parsePurchaseDeepLink } from "./parsePurchaseDeepLink";
+
 type UsePurchaseDeepLinkInput = {
-  onOpenAddPurchase: () => void;
+  onOpenAddPurchase: (prefill?: PurchaseEntryPrefill) => void;
 };
 
 export function usePurchaseDeepLink({
@@ -18,13 +21,10 @@ export function usePurchaseDeepLink({
         return;
       }
 
-      const normalizedUrl = url.toLowerCase();
+      const prefill = parsePurchaseDeepLink(url);
 
-      if (
-        normalizedUrl.includes("add-purchase") ||
-        normalizedUrl.includes("log-purchase")
-      ) {
-        onOpenAddPurchase();
+      if (prefill !== null) {
+        onOpenAddPurchase(prefill);
       }
     }
 

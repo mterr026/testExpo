@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,6 +12,7 @@ import {
   useReminderNotifications,
 } from "@/features/notifications/hooks";
 import { usePurchaseDeepLink } from "@/features/purchases/hooks";
+import { PurchaseRowGestureProvider } from "@/features/purchases/PurchaseRowGestureContext";
 import { TutorialOverlay } from "@/features/tutorial/TutorialOverlay";
 import { TutorialProvider } from "@/features/tutorial/TutorialContext";
 
@@ -41,8 +43,15 @@ export function HomeScreen() {
   });
 
   usePurchaseDeepLink({
-    onOpenAddPurchase: controller.openAddPurchase,
+    onOpenAddPurchase: controller.openAddPurchaseWithPrefill,
   });
+  const [purchaseRowTouchActive, setPurchaseRowTouchActive] = useState(false);
+
+  useEffect(() => {
+    if (screen !== "Purchases") {
+      setPurchaseRowTouchActive(false);
+    }
+  }, [screen]);
 
   return (
     <TutorialProvider
@@ -54,15 +63,18 @@ export function HomeScreen() {
     >
       <View style={[styles.page, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
         <HomeHeader />
-        <HomePager
-          controller={controller}
-          notificationTarget={notificationTarget}
-          onChangeScreen={changeScreen}
-          onClearNotificationTarget={clearNotificationTarget}
-          onScrollEnd={handlePagerScrollEnd}
-          pagerRef={pagerRef}
-          width={width}
-        />
+        <PurchaseRowGestureProvider onRowTouchActiveChange={setPurchaseRowTouchActive}>
+          <HomePager
+            controller={controller}
+            notificationTarget={notificationTarget}
+            onChangeScreen={changeScreen}
+            onClearNotificationTarget={clearNotificationTarget}
+            onScrollEnd={handlePagerScrollEnd}
+            pagerRef={pagerRef}
+            pagerScrollEnabled={screen !== "Purchases" || !purchaseRowTouchActive}
+            width={width}
+          />
+        </PurchaseRowGestureProvider>
         <HomeModals controller={controller} />
         <HomeFloatingActionButton
           bottomInset={insets.bottom}

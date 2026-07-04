@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { SafeToSpendBreakdown } from "@/engine";
 import type { EnvelopeSnapshotEntry } from "@/engine";
+import { formatDashboardCycleLabel } from "@/features/dashboard/dashboardCycleLabel";
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
 import { money } from "@/shared/ui/components";
@@ -25,6 +26,8 @@ type TimelineEvent = {
 };
 
 export function DashboardScreen({
+  activeCycleEndDate,
+  activeCycleStartDate,
   nextPaycheckLabel,
   reserveCents,
   safeToSpendBreakdown,
@@ -38,8 +41,13 @@ export function DashboardScreen({
   upcomingBills,
   upcomingPaychecks,
   isLoading = false,
+  onOpenBills,
   onOpenPaychecks,
+  onOpenPurchases,
+  onOpenSettings,
 }: {
+  activeCycleEndDate: string | null;
+  activeCycleStartDate: string | null;
   nextPaycheckLabel: string;
   reserveCents: number;
   safeToSpendBreakdown: SafeToSpendBreakdown;
@@ -53,7 +61,10 @@ export function DashboardScreen({
   upcomingBills: Bill[];
   upcomingPaychecks: PaycheckListItem[];
   isLoading?: boolean;
+  onOpenBills: () => void;
   onOpenPaychecks: () => void;
+  onOpenPurchases: () => void;
+  onOpenSettings: () => void;
 }) {
   const [showAllTimelineEvents, setShowAllTimelineEvents] = useState(false);
   const { onTutorialScroll, tutorialScrollRef } = useTutorialScrollView("Dashboard");
@@ -68,6 +79,9 @@ export function DashboardScreen({
   const visibleEnvelopeEntries = envelopeEntries.filter((entry) =>
     envelopeNameById.has(entry.envelopeId)
   );
+  const cycleLabel = isLoading
+    ? "Loading cycle"
+    : formatDashboardCycleLabel(activeCycleStartDate, activeCycleEndDate);
 
   return (
     <ScrollView
@@ -97,35 +111,51 @@ export function DashboardScreen({
           Based on current paycheck cycle
         </Text>
         <View style={styles.dashboardHeroStatusLine}>
-          <Text style={styles.dashboardHeroStatusText}>
-            Next paycheck: {formatNextPaycheckLabel(nextPaycheckLabel)}
-          </Text>
+          <Pressable
+            accessibilityHint="Opens the paycheck schedule"
+            accessibilityRole="button"
+            style={({ pressed }) => [pressed && styles.pressed]}
+            onPress={onOpenPaychecks}
+          >
+            <Text style={styles.dashboardHeroStatusText}>
+              Next paycheck: {formatNextPaycheckLabel(nextPaycheckLabel)}
+            </Text>
+          </Pressable>
         </View>
-        <Text style={styles.dashboardHeroReserveText}>
-          {isLoading
-            ? "Loading cycle details"
-            : `${money(unpaidBills)} set aside for upcoming bills`}
-        </Text>
       </View>
       </TutorialTarget>
 
-      <View style={styles.dashboardSummaryPanel}>
-        <View style={styles.dashboardSummaryStrip}>
-          <DashboardSummaryItem
-            label="Upcoming Bills"
+      <View style={styles.dashboardCycleSnapshot}>
+        <View style={styles.dashboardCycleSnapshotHeader}>
+          <Text style={styles.dashboardCycleSnapshotTitle}>This cycle</Text>
+          <Text style={styles.dashboardCycleSnapshotDates}>{cycleLabel}</Text>
+        </View>
+        <View style={styles.dashboardCycleSnapshotChipRow}>
+          <DashboardCycleChip
+            accessibilityHint="Opens bills for this paycheck cycle"
+            hint={
+              unpaidBillCount > 0
+                ? `${unpaidBillCount} bill${unpaidBillCount === 1 ? "" : "s"} due`
+                : undefined
+            }
             isEmpty={unpaidBills <= 0}
-            value={unpaidBills > 0 ? money(unpaidBills) : "None scheduled"}
+            label="Bills"
+            value={unpaidBills > 0 ? money(unpaidBills) : "None due"}
+            onPress={onOpenBills}
           />
-          <DashboardSummaryItem
-            label="Purchases this cycle"
+          <DashboardCycleChip
+            accessibilityHint="Opens purchases for this paycheck cycle"
             isEmpty={purchaseTotal <= 0}
-            value={purchaseTotal > 0 ? money(purchaseTotal) : "None recorded"}
+            label="Purchases"
+            value={purchaseTotal > 0 ? money(purchaseTotal) : "None yet"}
+            onPress={onOpenPurchases}
           />
-          <DashboardSummaryItem
-            label="Reserve"
+          <DashboardCycleChip
+            accessibilityHint="Opens reserve settings"
             isEmpty={reserveCents <= 0}
-            isLast
+            label="Reserve"
             value={reserveCents > 0 ? money(reserveCents) : "Not set"}
+            onPress={onOpenSettings}
           />
         </View>
       </View>
@@ -412,37 +442,47 @@ function formatNextPaycheckLabel(label: string) {
   return formatTimelineDate(label);
 }
 
-function DashboardSummaryItem({
+function DashboardCycleChip({
+  accessibilityHint,
+  hint,
   isEmpty = false,
-  isLast = false,
   label,
+  onPress,
   value,
 }: {
+  accessibilityHint: string;
+  hint?: string;
   isEmpty?: boolean;
-  isLast?: boolean;
   label: string;
+  onPress: () => void;
   value: string;
 }) {
   return (
-    <View
-      style={[
-        styles.dashboardSummaryItem,
-        !isLast && styles.dashboardSummaryItemDivider,
-        isLast && styles.dashboardSummaryItemLast,
+    <Pressable
+      accessibilityHint={accessibilityHint}
+      accessibilityLabel={`${label}, ${value}`}
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        styles.dashboardCycleSnapshotChip,
+        pressed && styles.dashboardCycleSnapshotChipPressed,
       ]}
+      onPress={onPress}
     >
-      <Text style={styles.dashboardSummaryLabel}>{label}</Text>
+      <Text style={styles.dashboardCycleSnapshotChipLabel}>{label}</Text>
       <Text
         style={[
-          styles.dashboardSummaryValue,
-          isEmpty && styles.dashboardSummaryEmptyValue,
+          styles.dashboardCycleSnapshotChipValue,
+          isEmpty && styles.dashboardCycleSnapshotChipValueMuted,
         ]}
         numberOfLines={1}
         adjustsFontSizeToFit
       >
         {value}
       </Text>
-    </View>
+      {hint ? (
+        <Text style={styles.dashboardCycleSnapshotChipHint}>{hint}</Text>
+      ) : null}
+    </Pressable>
   );
 }
 

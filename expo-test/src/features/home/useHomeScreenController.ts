@@ -80,6 +80,7 @@ export function useHomeScreenController({
     markPurchaseCharged,
     markPurchasePending,
     openAddPurchase,
+    openAddPurchaseWithPrefill,
     openPurchaseEdit,
     purchaseEntry,
   } = usePurchaseEntryController({
@@ -147,6 +148,7 @@ export function useHomeScreenController({
     markPurchaseCharged,
     markPurchasePending,
     openAddPurchase,
+    openAddPurchaseWithPrefill,
     openPurchaseEdit,
     openAddPaycheck,
     openPaycheckEdit,

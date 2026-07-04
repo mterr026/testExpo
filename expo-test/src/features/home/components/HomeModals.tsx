@@ -6,6 +6,7 @@ import { ImportLoadingModal } from "@/features/import/components/ImportLoadingMo
 import { OnboardingModal } from "@/features/onboarding/OnboardingModal";
 import { PaycheckEntryModal } from "@/features/paychecks/PaycheckEntryModal";
 import { PurchaseEntryModal } from "@/features/purchases/PurchaseEntryModal";
+import { getRecentPurchaseDescriptions } from "@/features/purchases/recentPurchaseDescriptions";
 import {
   billAmountAccessoryId,
   billEntryAmountAccessoryId,
@@ -110,6 +111,10 @@ export function HomeModals({ controller }: HomeModalsProps) {
         status={controller.purchaseEntry.status}
         error={controller.purchaseEntry.error}
         amountAccessoryId={purchaseAmountAccessoryId}
+        addFormResetKey={controller.purchaseEntry.addFormResetKey}
+        recentDescriptions={getRecentPurchaseDescriptions(
+          controller.visiblePurchases
+        )}
         envelopesEnabled={controller.budgetingPreferences?.envelopesEnabled ?? false}
         envelopes={(controller.dashboardSnapshot?.envelopes ?? [])
           .filter((envelope) => !envelope.isPaused && !envelope.deletedAt)
@@ -124,6 +129,7 @@ export function HomeModals({ controller }: HomeModalsProps) {
         onStatusChange={controller.purchaseEntry.setStatus}
         onEnvelopeChange={controller.purchaseEntry.setEnvelopeId}
         onSave={controller.purchaseEntry.save}
+        onSaveAndAddAnother={controller.purchaseEntry.saveAndAddAnother}
         onClose={controller.purchaseEntry.close}
       />
 
