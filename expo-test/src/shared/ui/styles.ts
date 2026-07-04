@@ -665,6 +665,73 @@ export const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
     textAlign: "center",
   },
+  paycheckNextHeroSection: {
+    marginBottom: spacing.lg,
+  },
+  paycheckNextHeroCard: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    ...shadows.hero,
+  },
+  paycheckNextHeroFocus: {
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  paycheckNextHeroLabel: {
+    color: colors.muted,
+    fontSize: fontSize.meta,
+    fontWeight: fontWeight.semibold,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    textAlign: "center",
+  },
+  paycheckNextHeroAmount: {
+    color: colors.accent,
+    textAlign: "center",
+    marginTop: spacing.xs,
+    letterSpacing: -1.2,
+  },
+  paycheckNextHeroSubcopy: {
+    textAlign: "center",
+    marginTop: spacing.sm,
+  },
+  paycheckNextHeroStatsLine: {
+    marginTop: spacing.sm,
+    color: colors.muted,
+    fontSize: fontSize.meta,
+    lineHeight: lineHeight.tight + 2,
+    fontWeight: fontWeight.medium,
+    textAlign: "center",
+    fontVariant: ["tabular-nums"],
+  },
+  paycheckNextHeroSwipeContainer: {
+    marginHorizontal: -spacing.lg,
+  },
+  paycheckNextHeroSwipeForeground: {
+    backgroundColor: surfaces.card,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+    alignItems: "center",
+  },
+  paycheckCoverageLinkToggle: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 36,
+    paddingVertical: spacing.sm,
+  },
+  paycheckCoverageLinkText: {
+    color: colors.accent,
+    fontSize: fontSize.label,
+    lineHeight: lineHeight.tight + 2,
+    fontWeight: fontWeight.semibold,
+    textAlign: "center",
+  },
+  paycheckCoverageLinkTextPressed: {
+    textDecorationLine: "underline",
+  },
   paycheckSectionTitle: {
     color: colors.muted,
     fontSize: fontSize.meta,

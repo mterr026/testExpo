@@ -4,7 +4,6 @@ import { ScrollView } from "react-native-gesture-handler";
 
 import {
   EmptyState,
-  money,
 } from "@/shared/ui/components";
 import { styles } from "@/shared/ui/styles";
 import type {
@@ -23,7 +22,9 @@ import { useOptionalTutorialContext } from "@/features/tutorial/TutorialContext"
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
 import { pickPaycheckIdForTutorialCoverage } from "@/features/tutorial/paycheckTutorial";
 
+import { NextPaycheckHero } from "./components/NextPaycheckHero";
 import { PaycheckSwipeableHeader } from "./components/PaycheckSwipeableHeader";
+import { PaycheckTimelineRow } from "./components/PaycheckTimelineRow";
 
 type PaychecksScreenProps = {
   nextCyclePreview: NextCyclePreview;
@@ -64,6 +65,7 @@ export function PaychecksScreen({
     previousPaychecks: previousAdditionalPaychecks,
   } = splitPaycheckSchedule(additionalPaychecks);
   const nextExpectedPaycheck = expectedPrimaryPaychecks[0];
+  const laterExpectedPaychecks = expectedPrimaryPaychecks.slice(1);
   const receivedTotalCents = previousPrimaryPaychecks.reduce(
     (total, paycheck) => total + paycheck.amountCents,
     0
@@ -196,30 +198,31 @@ export function PaychecksScreen({
 
       <Text style={styles.settingsGroupTitle}>Paycheck Schedule</Text>
 
-      <TutorialTarget id="paychecks-summary">
-      <View style={styles.paycheckSummaryPanel}>
-        <View style={styles.paycheckSummaryStrip}>
-          <PaycheckSummaryMetric
-            highlight
-            label="Next Paycheck"
-            value={
-              nextExpectedPaycheck
-                ? money(nextExpectedPaycheck.amountCents)
-                : "$0.00"
+      {nextExpectedPaycheck ? (
+        <TutorialTarget id="paychecks-summary">
+          <NextPaycheckHero
+            coverage={coverageByPaycheckId.get(nextExpectedPaycheck.id)}
+            expandedCoverageIds={expandedCoverageIds}
+            isSwipeOpen={openSwipePaycheckId === nextExpectedPaycheck.id}
+            paycheck={nextExpectedPaycheck}
+            receivedTotalCents={receivedTotalCents}
+            showTutorialCoverageTarget={shouldOpenCoverageForTutorial}
+            showTutorialSwipeTarget={
+              shouldHighlightRowSwipeForTutorial &&
+              nextExpectedPaycheck.id === tutorialFocusedPaycheckId
             }
+            showTutorialUpcomingTarget={laterExpectedPaychecks.length === 0}
+            upcomingCount={expectedPrimaryPaychecks.length}
+            onConfirmPaycheck={onConfirmPaycheck}
+            onDeletePaycheck={onDeletePaycheck}
+            onEditPaycheck={onEditPaycheck}
+            onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+            onSwipeClose={() => closeOpenSwipePaycheck(nextExpectedPaycheck.id)}
+            onSwipeOpen={setOpenSwipePaycheckId}
+            onToggleCoverage={togglePaycheckCoverage}
           />
-          <PaycheckSummaryMetric
-            label="Received"
-            value={money(receivedTotalCents)}
-          />
-          <PaycheckSummaryMetric
-            isLast
-            label="Upcoming"
-            value={String(expectedPrimaryPaychecks.length)}
-          />
-        </View>
-      </View>
-      </TutorialTarget>
+        </TutorialTarget>
+      ) : null}
 
       {paychecks.length === 0 ? (
         <TutorialTarget id="paychecks-upcoming">
@@ -230,25 +233,27 @@ export function PaychecksScreen({
         </TutorialTarget>
       ) : (
         <>
-          <TutorialTarget id="paychecks-upcoming">
-          <PaycheckScheduleGroup
-            coverageByPaycheckId={coverageByPaycheckId}
-            expandedCoverageIds={expandedCoverageIds}
-            openSwipePaycheckId={openSwipePaycheckId}
-            onConfirmPaycheck={onConfirmPaycheck}
-            onDeletePaycheck={onDeletePaycheck}
-            onEditPaycheck={onEditPaycheck}
-            onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
-            onSwipeClose={closeOpenSwipePaycheck}
-            onSwipeOpen={setOpenSwipePaycheckId}
-            onToggleCoverage={togglePaycheckCoverage}
-            paychecks={expectedPrimaryPaychecks}
-            showTutorialCoverageTarget={shouldOpenCoverageForTutorial}
-            showTutorialSwipeTarget={shouldHighlightRowSwipeForTutorial}
-            tutorialFocusedPaycheckId={tutorialFocusedPaycheckId}
-            title="Expected income"
-          />
-          </TutorialTarget>
+          {laterExpectedPaychecks.length > 0 ? (
+            <TutorialTarget id="paychecks-upcoming">
+              <PaycheckScheduleGroup
+                coverageByPaycheckId={coverageByPaycheckId}
+                expandedCoverageIds={expandedCoverageIds}
+                openSwipePaycheckId={openSwipePaycheckId}
+                onConfirmPaycheck={onConfirmPaycheck}
+                onDeletePaycheck={onDeletePaycheck}
+                onEditPaycheck={onEditPaycheck}
+                onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+                onSwipeClose={closeOpenSwipePaycheck}
+                onSwipeOpen={setOpenSwipePaycheckId}
+                onToggleCoverage={togglePaycheckCoverage}
+                paychecks={laterExpectedPaychecks}
+                showTutorialCoverageTarget={shouldOpenCoverageForTutorial}
+                showTutorialSwipeTarget={shouldHighlightRowSwipeForTutorial}
+                tutorialFocusedPaycheckId={tutorialFocusedPaycheckId}
+                title="Later paychecks"
+              />
+            </TutorialTarget>
+          ) : null}
           <AdditionalIncomeSection
             expectedPaychecks={expectedAdditionalPaychecks}
             isPreviousExpanded={showPreviousAdditionalIncome}
@@ -562,40 +567,6 @@ function PreviousPaychecksSection({
   );
 }
 
-function PaycheckSummaryMetric({
-  highlight = false,
-  isLast = false,
-  label,
-  value,
-}: {
-  highlight?: boolean;
-  isLast?: boolean;
-  label: string;
-  value: string;
-}) {
-  return (
-    <View
-      style={[
-        styles.paycheckSummaryItem,
-        !isLast && styles.paycheckSummaryItemDivider,
-        isLast && styles.paycheckSummaryItemLast,
-      ]}
-    >
-      <Text style={styles.paycheckSummaryLabel}>{label}</Text>
-      <Text
-        style={[
-          styles.paycheckSummaryValue,
-          highlight && styles.paycheckSummaryValueHighlight,
-        ]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
-
 function PaycheckScheduleGroup({
   coverageByPaycheckId,
   expandedCoverageIds,
@@ -640,280 +611,28 @@ function PaycheckScheduleGroup({
       )}
       <View style={styles.paycheckTimelineGroup}>
         {paychecks.map((paycheck) => (
-          <View
+          <PaycheckTimelineRow
             key={paycheck.id}
-            style={[
-              styles.paycheckTimelineRow,
-              paycheck.isReceived
-                ? styles.paycheckTimelineRowReceived
-                : styles.paycheckTimelineRowExpected,
-            ]}
-          >
-            {/*
-              Bill coverage is derived from existing cycle data; the row stays a
-              presentation surface and does not decide assignment rules.
-            */}
-            {showTutorialSwipeTarget &&
-            paycheck.id === tutorialFocusedPaycheckId ? (
-              <TutorialTarget id="paychecks-row-overflow">
-                <PaycheckSwipeableHeader
-                  isSwipeOpen={openSwipePaycheckId === paycheck.id}
-                  paycheck={paycheck}
-                  onConfirmPaycheck={onConfirmPaycheck}
-                  onDeletePaycheck={onDeletePaycheck}
-                  onEditPaycheck={onEditPaycheck}
-                  onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
-                  onSwipeClose={() => onSwipeClose(paycheck.id)}
-                  onSwipeOpen={onSwipeOpen}
-                >
-                  <Text style={styles.rowMetaText}>
-                    {formatDisplayDate(paycheck.expectedDate)} •{" "}
-                    {formatPaycheckRecurrence(paycheck)}
-                  </Text>
-                </PaycheckSwipeableHeader>
-              </TutorialTarget>
-            ) : (
-              <PaycheckSwipeableHeader
-                isSwipeOpen={openSwipePaycheckId === paycheck.id}
-                paycheck={paycheck}
-                onConfirmPaycheck={onConfirmPaycheck}
-                onDeletePaycheck={onDeletePaycheck}
-                onEditPaycheck={onEditPaycheck}
-                onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
-                onSwipeClose={() => onSwipeClose(paycheck.id)}
-                onSwipeOpen={onSwipeOpen}
-              >
-                <Text style={styles.rowMetaText}>
-                  {formatDisplayDate(paycheck.expectedDate)} •{" "}
-                  {formatPaycheckRecurrence(paycheck)}
-                </Text>
-              </PaycheckSwipeableHeader>
-            )}
-            <PaycheckCoveredBills
-              coverage={coverageByPaycheckId.get(paycheck.id)}
-              isExpanded={expandedCoverageIds.has(paycheck.id)}
-              onToggle={() => onToggleCoverage(paycheck.id)}
-              showTutorialTarget={
-                showTutorialCoverageTarget &&
-                expandedCoverageIds.has(paycheck.id)
-              }
-            />
-          </View>
+            coverage={coverageByPaycheckId.get(paycheck.id)}
+            expandedCoverageIds={expandedCoverageIds}
+            isSwipeOpen={openSwipePaycheckId === paycheck.id}
+            paycheck={paycheck}
+            showTutorialCoverageTarget={showTutorialCoverageTarget}
+            showTutorialSwipeTarget={
+              showTutorialSwipeTarget &&
+              paycheck.id === tutorialFocusedPaycheckId
+            }
+            onConfirmPaycheck={onConfirmPaycheck}
+            onDeletePaycheck={onDeletePaycheck}
+            onEditPaycheck={onEditPaycheck}
+            onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+            onSwipeClose={() => onSwipeClose(paycheck.id)}
+            onSwipeOpen={onSwipeOpen}
+            onToggleCoverage={onToggleCoverage}
+          />
         ))}
       </View>
     </>
-  );
-}
-
-function PaycheckProjectionBreakdown({
-  coverage,
-}: {
-  coverage: PaycheckBillCoverage;
-}) {
-  const reservedBillCount = coverage.coveredBills.filter(
-    (bill) => bill.reservationStatus === "reserved"
-  ).length;
-
-  return (
-    <View style={styles.paycheckProjectionBreakdown}>
-      <Text style={styles.paycheckProjectionBreakdownHelp}>
-        Based on today&apos;s Safe to Spend, which already includes pending
-        purchases.
-      </Text>
-      <View style={styles.paycheckCoverageTotalRow}>
-        <Text style={styles.paycheckCoverageTitle}>Starting Safe to Spend</Text>
-        <Text style={styles.paycheckCoverageAmount}>
-          {money(coverage.startingSafeToSpendCents)}
-        </Text>
-      </View>
-      {coverage.paycheckImpactCents > 0 && (
-        <View style={styles.paycheckCoverageTotalRow}>
-          <Text style={styles.paycheckCoverageTitle}>Expected paycheck</Text>
-          <Text style={[styles.paycheckCoverageAmount, styles.paycheckProjectionCredit]}>
-            +{money(coverage.paycheckImpactCents)}
-          </Text>
-        </View>
-      )}
-      {coverage.billsImpactCents > 0 && (
-        <View style={styles.paycheckCoverageTotalRow}>
-          <Text style={styles.paycheckCoverageTitle}>
-            {coverage.isCurrentCycle
-              ? "Unreserved bills this cycle"
-              : "Bills this cycle"}
-          </Text>
-          <Text style={[styles.paycheckCoverageAmount, styles.paycheckProjectionDeduction]}>
-            -{money(coverage.billsImpactCents)}
-          </Text>
-        </View>
-      )}
-      {coverage.isCurrentCycle && reservedBillCount > 0 && (
-        <Text style={styles.paycheckProjectionBreakdownHelp}>
-          {reservedBillCount === 1
-            ? "1 bill is already reserved in Safe to Spend and is not subtracted again."
-            : `${reservedBillCount} bills are already reserved in Safe to Spend and are not subtracted again.`}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-function formatPaycheckBillMeta(
-  bill: PaycheckBillCoverage["coveredBills"][number]
-) {
-  if (bill.status === "Paid" || bill.reservationStatus === "paid") {
-    return "Paid";
-  }
-
-  if (bill.reservationStatus === "reserved") {
-    return `In Safe to Spend • Due ${formatDisplayDate(bill.dueDate)}`;
-  }
-
-  if (bill.reservationStatus === "projected") {
-    return `Projected • Due ${formatDisplayDate(bill.dueDate)}`;
-  }
-
-  return `Due ${formatDisplayDate(bill.dueDate)}`;
-}
-
-function PaycheckCoveredBills({
-  coverage,
-  isExpanded,
-  onToggle,
-  showTutorialTarget = false,
-}: {
-  coverage: PaycheckBillCoverage | undefined;
-  isExpanded: boolean;
-  onToggle: () => void;
-  showTutorialTarget?: boolean;
-}) {
-  if (!coverage) {
-    return null;
-  }
-
-  if (coverage.coveredBills.length === 0) {
-    return (
-      <View style={styles.paycheckCoverageBlock}>
-        <Text style={styles.rowMetaText}>
-          No bills assigned to this paycheck cycle.
-        </Text>
-      </View>
-    );
-  }
-
-  const coverageSummary =
-    !coverage.canProjectBills
-      ? "Needs next paycheck"
-      : coverage.coveredBills.length === 1
-      ? "1 bill"
-      : `${coverage.coveredBills.length} bills`;
-  const windowText = coverage.nextPaycheckDate
-    ? `Bills due before ${formatDisplayDate(coverage.nextPaycheckDate)}`
-    : "Bills due on or after this paycheck.";
-
-  return (
-    <View style={styles.paycheckCoverageBlock}>
-      {coverage.canProjectBills && coverage.coveredBills.length > 0 && (
-        <Text style={styles.paycheckCoverageSummaryText}>
-          {coverageSummary} assigned • {money(coverage.totalCents)} reserved
-        </Text>
-      )}
-      {isExpanded &&
-        (showTutorialTarget ? (
-          <TutorialTarget id="paychecks-coverage-breakdown">
-            <PaycheckCoverageExpandedContent
-              coverage={coverage}
-              windowText={windowText}
-            />
-          </TutorialTarget>
-        ) : (
-          <PaycheckCoverageExpandedContent
-            coverage={coverage}
-            windowText={windowText}
-          />
-        ))}
-      <Pressable
-        accessibilityHint={
-          isExpanded
-            ? "Collapses the bill breakdown for this paycheck"
-            : "Expands the bill breakdown for this paycheck"
-        }
-        accessibilityLabel={
-          isExpanded ? "Hide paycheck breakdown" : "Show paycheck breakdown"
-        }
-        accessibilityRole="button"
-        style={({ pressed }) => [
-          styles.paycheckCoveredBillsToggle,
-          pressed && styles.pressed,
-        ]}
-        onPress={onToggle}
-      >
-        <Text style={styles.paycheckBreakdownCaret}>{isExpanded ? "⌃" : "⌄"}</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function PaycheckCoverageExpandedContent({
-  coverage,
-  windowText,
-}: {
-  coverage: PaycheckBillCoverage;
-  windowText: string;
-}) {
-  return (
-    <View style={styles.paycheckCoverageExpanded}>
-      <Text style={styles.paycheckCoverageWindowText}>{windowText}</Text>
-      {!coverage.canProjectBills ? (
-        <Text style={styles.paycheckCoverageHelpText}>
-          Add another expected paycheck after this one to calculate covered
-          bills.
-        </Text>
-      ) : (
-        <>
-          <PaycheckProjectionBreakdown coverage={coverage} />
-          <View style={styles.paycheckCoverageBillList}>
-            {coverage.coveredBills.map((bill, index) => (
-              <View
-                key={bill.id}
-                style={[
-                  styles.paycheckCoverageBillRow,
-                  index < coverage.coveredBills.length - 1 &&
-                    styles.paycheckCoverageBillRowDivider,
-                ]}
-              >
-                <View style={styles.itemCopy}>
-                  <Text style={styles.paycheckCoverageName}>{bill.name}</Text>
-                  <Text style={styles.rowMetaText}>
-                    {formatPaycheckBillMeta(bill)}
-                  </Text>
-                </View>
-                <Text style={styles.paycheckCoverageAmount}>
-                  {money(bill.amountCents)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </>
-      )}
-      {coverage.canProjectBills && (
-        <>
-          <View style={styles.paycheckCoverageTotalRow}>
-            <Text style={styles.paycheckCoverageTitle}>Total bills</Text>
-            <Text style={styles.paycheckCoverageAmount}>
-              {money(coverage.totalCents)}
-            </Text>
-          </View>
-          <View style={styles.paycheckProjectionTotalRowPrimary}>
-            <Text style={styles.paycheckProjectionTotalLabel}>
-              Projected Safe to Spend
-            </Text>
-            <Text style={styles.paycheckProjectionTotalValue}>
-              {money(coverage.projectedSafeToSpendCents)}
-            </Text>
-          </View>
-        </>
-      )}
-    </View>
   );
 }
 

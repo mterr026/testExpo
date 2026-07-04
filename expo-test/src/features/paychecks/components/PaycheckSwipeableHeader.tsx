@@ -23,6 +23,7 @@ type PaycheckSwipeableHeaderProps = {
   paycheck: PaycheckListItem;
   rowInset?: "timeline" | "additional";
   showStatusPill?: boolean;
+  variant?: "default" | "hero";
 };
 
 export function PaycheckSwipeableHeader({
@@ -38,10 +39,12 @@ export function PaycheckSwipeableHeader({
   paycheck,
   rowInset = "timeline",
   showStatusPill = true,
+  variant = "default",
 }: PaycheckSwipeableHeaderProps) {
   const swipeableRef = useRef<Swipeable>(null);
   const setRowTouchActive = useSwipeRowGesture();
   const isAdditionalIncome = rowInset === "additional";
+  const isHero = variant === "hero";
   const swipeActions = getPaycheckSwipeActions({
     paycheck,
     onConfirmPaycheck,
@@ -59,7 +62,24 @@ export function PaycheckSwipeableHeader({
     swipeableRef.current?.close();
   }, [isSwipeOpen]);
 
-  const rowContent = (
+  const rowContent = isHero ? (
+    <View style={styles.paycheckNextHeroSwipeForeground}>
+      <View style={styles.paycheckNextHeroFocus}>
+        <Text style={styles.paycheckNextHeroLabel}>Next Paycheck</Text>
+        <Text style={styles.itemTitle}>{paycheck.label}</Text>
+        <Text
+          style={[
+            styles.safeAmount,
+            styles.paycheckNextHeroAmount,
+            paycheck.isReceived && styles.paycheckAmountReceived,
+          ]}
+        >
+          {money(paycheck.amountCents)}
+        </Text>
+      </View>
+      {children}
+    </View>
+  ) : (
     <View
       style={[
         styles.paycheckSwipeableRowForeground,
@@ -122,7 +142,9 @@ export function PaycheckSwipeableHeader({
         overshootFriction={8}
         overshootRight={false}
         containerStyle={
-          isAdditionalIncome
+          isHero
+            ? styles.paycheckNextHeroSwipeContainer
+            : isAdditionalIncome
             ? styles.paycheckSwipeableContainerAdditional
             : styles.paycheckSwipeableContainer
         }

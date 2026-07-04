@@ -30,14 +30,14 @@ export const tutorialSteps: TutorialStep[] = [
   {
     screen: "Paychecks",
     targetId: "paychecks-summary",
-    title: "Paycheck cycle at a glance",
-    body: "Next paycheck, received income, and upcoming deposits for this cycle.",
+    title: "Your next paycheck",
+    body: "The hero card shows your next expected deposit, amount, and date. Swipe it like any other paycheck row.",
     placement: "below",
   },
   {
     screen: "Paychecks",
     targetId: "paychecks-upcoming",
-    title: "Upcoming paychecks",
+    title: "Later paychecks",
     body: "Each expected deposit shows its date, amount, and recurrence.",
     placement: "below",
   },
@@ -45,7 +45,7 @@ export const tutorialSteps: TutorialStep[] = [
     screen: "Paychecks",
     targetId: "paychecks-row-overflow",
     title: "Swipe for paycheck actions",
-    body: "Swipe left on a paycheck row for Confirm, Edit, or Delete. Tap ⌄ at the bottom to expand the bill breakdown — tap Next to see it open.",
+    body: "Swipe left on a paycheck row for Confirm, Edit, or Delete. Tap See how bills fit to expand the bill breakdown — tap Next to see it open.",
     placement: "below",
   },
   {
