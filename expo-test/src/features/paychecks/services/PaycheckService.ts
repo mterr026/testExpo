@@ -16,6 +16,11 @@ import {
   type FinancialEventBus,
 } from "@/shared/events/financialEvents";
 
+import {
+  readSpawnedNextPaycheckId,
+  withSpawnedNextPaycheckId,
+} from "../spawnedPaycheckTracking";
+
 export class PaycheckService {
   constructor(
     private readonly paycheckRepository: PaycheckRepository,
@@ -95,8 +100,16 @@ export class PaycheckService {
   }
 
   async markPaycheckReceived(id: string): Promise<Paycheck> {
-    const paycheck = await this.paycheckRepository.markReceived(id);
-    await this.createNextRecurringPaycheckAfterReceived(paycheck);
+    let paycheck = await this.paycheckRepository.markReceived(id);
+    const spawnedPaycheck = await this.createNextRecurringPaycheckAfterReceived(
+      paycheck
+    );
+
+    if (spawnedPaycheck) {
+      paycheck = await this.paycheckRepository.update(id, {
+        notes: withSpawnedNextPaycheckId(paycheck.notes, spawnedPaycheck.id),
+      });
+    }
 
     await this.activityLogRepository.create({
       profileId: paycheck.profileId,
@@ -117,11 +130,28 @@ export class PaycheckService {
       throw new Error(`Paycheck ${id} not found.`);
     }
 
-    const paycheck = await this.paycheckRepository.markUnreceived(id);
-    await this.deleteGeneratedPaycheckAfterUnreceived(
-      paycheck,
-      receivedPaycheck.receivedAt
+    const spawnedNextPaycheckId = readSpawnedNextPaycheckId(
+      receivedPaycheck.notes
     );
+    let paycheck = await this.paycheckRepository.markUnreceived(id);
+
+    if (spawnedNextPaycheckId) {
+      const spawnedPaycheck =
+        await this.paycheckRepository.findById(spawnedNextPaycheckId);
+
+      if (spawnedPaycheck && !spawnedPaycheck.isReceived) {
+        await this.paycheckRepository.softDelete(spawnedNextPaycheckId);
+      }
+
+      paycheck = await this.paycheckRepository.update(id, {
+        notes: withSpawnedNextPaycheckId(receivedPaycheck.notes, null),
+      });
+    } else {
+      await this.deleteGeneratedPaycheckAfterUnreceived(
+        paycheck,
+        receivedPaycheck.receivedAt
+      );
+    }
 
     await this.activityLogRepository.create({
       profileId: paycheck.profileId,

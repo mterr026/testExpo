@@ -8,6 +8,7 @@ import type { Paycheck } from "@/database/repositories/types";
 import { FINANCIAL_STATE_CHANGED } from "@/shared/events/financialEvents";
 
 import { PaycheckService } from "./PaycheckService";
+import { withSpawnedNextPaycheckId } from "../spawnedPaycheckTracking";
 
 const paycheck: Paycheck = {
   id: "paycheck-1",
@@ -417,6 +418,12 @@ describe("PaycheckService", () => {
       id: "paycheck-4",
       expectedDate: "2026-07-13",
     });
+    mocks.paycheckRepository.update.mockResolvedValue({
+      ...paycheck,
+      isReceived: true,
+      receivedAt: "2026-06-01T12:00:00.000Z",
+      notes: withSpawnedNextPaycheckId(null, "paycheck-4"),
+    });
     const service = createService(mocks);
 
     await service.markPaycheckReceived("paycheck-1");
@@ -424,6 +431,9 @@ describe("PaycheckService", () => {
     expect(mocks.paycheckRepository.markReceived).toHaveBeenCalledWith(
       "paycheck-1"
     );
+    expect(mocks.paycheckRepository.update).toHaveBeenCalledWith("paycheck-1", {
+      notes: withSpawnedNextPaycheckId(null, "paycheck-4"),
+    });
     expect(mocks.paycheckRepository.create).toHaveBeenCalledWith({
       profileId: "profile-1",
       label: "Primary",
@@ -480,6 +490,12 @@ describe("PaycheckService", () => {
       isReceived: false,
       receivedAt: null,
     });
+    mocks.paycheckRepository.update.mockResolvedValue({
+      ...monthlyPaycheck,
+      isReceived: true,
+      receivedAt: "2026-06-20T12:00:00.000Z",
+      notes: withSpawnedNextPaycheckId(null, "monthly-3"),
+    });
     const service = createService(mocks);
 
     await service.markPaycheckReceived("monthly-1");
@@ -522,6 +538,12 @@ describe("PaycheckService", () => {
       expectedDate: "2026-07-01",
       isReceived: false,
       receivedAt: null,
+    });
+    mocks.paycheckRepository.update.mockResolvedValue({
+      ...pensionPaycheck,
+      isReceived: true,
+      receivedAt: "2026-06-01T12:00:00.000Z",
+      notes: withSpawnedNextPaycheckId(null, "pension-2"),
     });
     const service = createService(mocks);
 
@@ -634,11 +656,14 @@ describe("PaycheckService", () => {
     };
     const mocks = createMocks();
 
-    mocks.paycheckRepository.findById.mockResolvedValue({
-      ...paycheck,
-      isReceived: true,
-      receivedAt: "2026-06-01T12:00:00.000Z",
-    });
+    mocks.paycheckRepository.findById
+      .mockResolvedValueOnce({
+        ...paycheck,
+        isReceived: true,
+        receivedAt: "2026-06-01T12:00:00.000Z",
+        notes: withSpawnedNextPaycheckId(null, "paycheck-3"),
+      })
+      .mockResolvedValueOnce(generatedAfterReceivedPaycheck);
     mocks.paycheckRepository.markUnreceived.mockResolvedValue({
       ...paycheck,
       isReceived: false,
@@ -649,6 +674,12 @@ describe("PaycheckService", () => {
       firstFuturePaycheck,
       generatedAfterReceivedPaycheck,
     ]);
+    mocks.paycheckRepository.update.mockResolvedValue({
+      ...paycheck,
+      isReceived: false,
+      receivedAt: null,
+      notes: null,
+    });
     const service = createService(mocks);
 
     await service.markPaycheckUnreceived("paycheck-1");
@@ -706,20 +737,25 @@ describe("PaycheckService", () => {
     };
     const mocks = createMocks();
 
-    mocks.paycheckRepository.findById.mockResolvedValue({
-      ...paycheck,
-      isReceived: true,
-      receivedAt: "2026-06-01T12:00:00.000Z",
-    });
+    mocks.paycheckRepository.findById
+      .mockResolvedValueOnce({
+        ...paycheck,
+        isReceived: true,
+        receivedAt: "2026-06-01T12:00:00.000Z",
+        notes: withSpawnedNextPaycheckId(null, "paycheck-2"),
+      })
+      .mockResolvedValueOnce(generatedAfterReceivedPaycheck);
     mocks.paycheckRepository.markUnreceived.mockResolvedValue({
       ...paycheck,
       isReceived: false,
       receivedAt: null,
     });
-    mocks.paycheckRepository.findAll.mockResolvedValue([
-      { ...paycheck, isReceived: false, receivedAt: null },
-      generatedAfterReceivedPaycheck,
-    ]);
+    mocks.paycheckRepository.update.mockResolvedValue({
+      ...paycheck,
+      isReceived: false,
+      receivedAt: null,
+      notes: null,
+    });
     const service = createService(mocks);
 
     await service.markPaycheckUnreceived("paycheck-1");

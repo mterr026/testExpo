@@ -44,8 +44,8 @@ export const tutorialSteps: TutorialStep[] = [
   {
     screen: "Paychecks",
     targetId: "paychecks-row-overflow",
-    title: "Open the paycheck breakdown",
-    body: "Use ⋯ to edit or confirm a paycheck. Just below each row, tap Show bill window to open the breakdown — tap Next to see it expanded.",
+    title: "Swipe for paycheck actions",
+    body: "Swipe left on a paycheck row for Confirm, Edit, or Delete. Tap ⌄ at the bottom to expand the bill breakdown — tap Next to see it open.",
     placement: "below",
   },
   {

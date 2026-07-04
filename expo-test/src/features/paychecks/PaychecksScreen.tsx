@@ -1,15 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
 
 import {
-  ActionMenu,
   EmptyState,
   money,
-  OverflowButton,
-  StatusPill,
-  type ActionMenuHeader,
-  type ActionMenuItem,
-  type StatusPillTone,
 } from "@/shared/ui/components";
 import { styles } from "@/shared/ui/styles";
 import type {
@@ -27,6 +22,8 @@ import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useOptionalTutorialContext } from "@/features/tutorial/TutorialContext";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
 import { pickPaycheckIdForTutorialCoverage } from "@/features/tutorial/paycheckTutorial";
+
+import { PaycheckSwipeableHeader } from "./components/PaycheckSwipeableHeader";
 
 type PaychecksScreenProps = {
   nextCyclePreview: NextCyclePreview;
@@ -74,19 +71,20 @@ export function PaychecksScreen({
   const coverageByPaycheckId = new Map(
     paycheckBillCoverage.map((coverage) => [coverage.paycheckId, coverage])
   );
-  const [selectedPaycheck, setSelectedPaycheck] =
-    useState<PaycheckListItem | null>(null);
+  const [openSwipePaycheckId, setOpenSwipePaycheckId] = useState<string | null>(
+    null
+  );
   const { onTutorialScroll, tutorialScrollRef } = useTutorialScrollView("Paychecks");
   const tutorialContext = useOptionalTutorialContext();
   const activeTutorialTargetId = tutorialContext?.activeTargetId ?? null;
   const shouldOpenCoverageForTutorial =
     activeTutorialTargetId === "paychecks-coverage-breakdown";
-  const shouldHighlightRowOverflowForTutorial =
+  const shouldHighlightRowSwipeForTutorial =
     activeTutorialTargetId === "paychecks-row-overflow";
   const tutorialFocusedPaycheckId = useMemo(() => {
     if (
       !shouldOpenCoverageForTutorial &&
-      !shouldHighlightRowOverflowForTutorial
+      !shouldHighlightRowSwipeForTutorial
     ) {
       return null;
     }
@@ -98,7 +96,7 @@ export function PaychecksScreen({
   }, [
     expectedPrimaryPaychecks,
     paycheckBillCoverage,
-    shouldHighlightRowOverflowForTutorial,
+    shouldHighlightRowSwipeForTutorial,
     shouldOpenCoverageForTutorial,
   ]);
   const tutorialCoveragePaycheckId = shouldOpenCoverageForTutorial
@@ -146,19 +144,15 @@ export function PaychecksScreen({
       return;
     }
 
-    setSelectedPaycheck(paycheck);
+    setOpenSwipePaycheckId(paycheck.id);
     onClearOpenActionMenuTarget?.();
   }, [onClearOpenActionMenuTarget, openActionMenuForPaycheckId, paychecks]);
 
-  const paycheckActions = selectedPaycheck
-    ? getPaycheckActions({
-        onConfirmPaycheck,
-        onDeletePaycheck,
-        onEditPaycheck,
-        onMarkPaycheckUnreceived,
-        paycheck: selectedPaycheck,
-      })
-    : [];
+  function closeOpenSwipePaycheck(paycheckId: string) {
+    setOpenSwipePaycheckId((currentId) =>
+      currentId === paycheckId ? null : currentId
+    );
+  }
   function togglePaycheckCoverage(paycheckId: string) {
     setExpandedCoverageIds((currentIds) => {
       const nextIds = new Set(currentIds);
@@ -182,6 +176,7 @@ export function PaychecksScreen({
       keyboardShouldPersistTaps="handled"
       scrollEventThrottle={16}
       onScroll={onTutorialScroll}
+      onScrollBeginDrag={() => setOpenSwipePaycheckId(null)}
     >
       <View style={styles.screenHeaderRow}>
         <View style={styles.itemCopy}>
@@ -239,19 +234,31 @@ export function PaychecksScreen({
           <PaycheckScheduleGroup
             coverageByPaycheckId={coverageByPaycheckId}
             expandedCoverageIds={expandedCoverageIds}
+            openSwipePaycheckId={openSwipePaycheckId}
+            onConfirmPaycheck={onConfirmPaycheck}
+            onDeletePaycheck={onDeletePaycheck}
+            onEditPaycheck={onEditPaycheck}
+            onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+            onSwipeClose={closeOpenSwipePaycheck}
+            onSwipeOpen={setOpenSwipePaycheckId}
             onToggleCoverage={togglePaycheckCoverage}
             paychecks={expectedPrimaryPaychecks}
             showTutorialCoverageTarget={shouldOpenCoverageForTutorial}
-            showTutorialOverflowTarget={shouldHighlightRowOverflowForTutorial}
+            showTutorialSwipeTarget={shouldHighlightRowSwipeForTutorial}
             tutorialFocusedPaycheckId={tutorialFocusedPaycheckId}
             title="Expected income"
-            onOpenActions={setSelectedPaycheck}
           />
           </TutorialTarget>
           <AdditionalIncomeSection
             expectedPaychecks={expectedAdditionalPaychecks}
             isPreviousExpanded={showPreviousAdditionalIncome}
-            onOpenActions={setSelectedPaycheck}
+            openSwipePaycheckId={openSwipePaycheckId}
+            onConfirmPaycheck={onConfirmPaycheck}
+            onDeletePaycheck={onDeletePaycheck}
+            onEditPaycheck={onEditPaycheck}
+            onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+            onSwipeClose={closeOpenSwipePaycheck}
+            onSwipeOpen={setOpenSwipePaycheckId}
             onTogglePrevious={() =>
               setShowPreviousAdditionalIncome((isExpanded) => !isExpanded)
             }
@@ -264,7 +271,13 @@ export function PaychecksScreen({
             coverageByPaycheckId={coverageByPaycheckId}
             expandedCoverageIds={expandedCoverageIds}
             isExpanded={showPreviousPaychecks}
-            onOpenActions={setSelectedPaycheck}
+            openSwipePaycheckId={openSwipePaycheckId}
+            onConfirmPaycheck={onConfirmPaycheck}
+            onDeletePaycheck={onDeletePaycheck}
+            onEditPaycheck={onEditPaycheck}
+            onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+            onSwipeClose={closeOpenSwipePaycheck}
+            onSwipeOpen={setOpenSwipePaycheckId}
             onToggle={() =>
               setShowPreviousPaychecks((isExpanded) => !isExpanded)
             }
@@ -273,15 +286,6 @@ export function PaychecksScreen({
           />
         </>
       )}
-      <ActionMenu
-        header={
-          selectedPaycheck ? getPaycheckActionHeader(selectedPaycheck) : undefined
-        }
-        title={selectedPaycheck?.label ?? "Paycheck"}
-        visible={!!selectedPaycheck}
-        actions={paycheckActions}
-        onClose={() => setSelectedPaycheck(null)}
-      />
     </ScrollView>
   );
 }
@@ -289,14 +293,26 @@ export function PaychecksScreen({
 function AdditionalIncomeSection({
   expectedPaychecks,
   isPreviousExpanded,
-  onOpenActions,
+  openSwipePaycheckId,
+  onConfirmPaycheck,
+  onDeletePaycheck,
+  onEditPaycheck,
+  onMarkPaycheckUnreceived,
+  onSwipeClose,
+  onSwipeOpen,
   onTogglePrevious,
   previousPaychecks,
   showTutorialTarget = false,
 }: {
   expectedPaychecks: PaycheckListItem[];
   isPreviousExpanded: boolean;
-  onOpenActions: (paycheck: PaycheckListItem) => void;
+  openSwipePaycheckId: string | null;
+  onConfirmPaycheck: (id: string) => void | Promise<void>;
+  onDeletePaycheck: (id: string) => void | Promise<void>;
+  onEditPaycheck: (paycheck: PaycheckListItem) => void;
+  onMarkPaycheckUnreceived: (id: string) => void | Promise<void>;
+  onSwipeClose: (paycheckId: string) => void;
+  onSwipeOpen: (paycheckId: string) => void;
   onTogglePrevious: () => void;
   previousPaychecks: PaycheckListItem[];
   showTutorialTarget?: boolean;
@@ -318,7 +334,13 @@ function AdditionalIncomeSection({
             <AdditionalIncomeRow
               key={paycheck.id}
               paycheck={paycheck}
-              onOpenActions={onOpenActions}
+              isSwipeOpen={openSwipePaycheckId === paycheck.id}
+              onConfirmPaycheck={onConfirmPaycheck}
+              onDeletePaycheck={onDeletePaycheck}
+              onEditPaycheck={onEditPaycheck}
+              onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+              onSwipeClose={() => onSwipeClose(paycheck.id)}
+              onSwipeOpen={onSwipeOpen}
             />
           ))}
         </View>
@@ -341,7 +363,13 @@ function AdditionalIncomeSection({
         {content}
         <PreviousAdditionalIncomeSection
           isExpanded={isPreviousExpanded}
-          onOpenActions={onOpenActions}
+          openSwipePaycheckId={openSwipePaycheckId}
+          onConfirmPaycheck={onConfirmPaycheck}
+          onDeletePaycheck={onDeletePaycheck}
+          onEditPaycheck={onEditPaycheck}
+          onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+          onSwipeClose={onSwipeClose}
+          onSwipeOpen={onSwipeOpen}
           onToggle={onTogglePrevious}
           paychecks={previousPaychecks}
         />
@@ -352,12 +380,24 @@ function AdditionalIncomeSection({
 
 function PreviousAdditionalIncomeSection({
   isExpanded,
-  onOpenActions,
+  openSwipePaycheckId,
+  onConfirmPaycheck,
+  onDeletePaycheck,
+  onEditPaycheck,
+  onMarkPaycheckUnreceived,
+  onSwipeClose,
+  onSwipeOpen,
   onToggle,
   paychecks,
 }: {
   isExpanded: boolean;
-  onOpenActions: (paycheck: PaycheckListItem) => void;
+  openSwipePaycheckId: string | null;
+  onConfirmPaycheck: (id: string) => void | Promise<void>;
+  onDeletePaycheck: (id: string) => void | Promise<void>;
+  onEditPaycheck: (paycheck: PaycheckListItem) => void;
+  onMarkPaycheckUnreceived: (id: string) => void | Promise<void>;
+  onSwipeClose: (paycheckId: string) => void;
+  onSwipeOpen: (paycheckId: string) => void;
   onToggle: () => void;
   paychecks: PaycheckListItem[];
 }) {
@@ -387,7 +427,13 @@ function PreviousAdditionalIncomeSection({
             <AdditionalIncomeRow
               key={paycheck.id}
               paycheck={paycheck}
-              onOpenActions={onOpenActions}
+              isSwipeOpen={openSwipePaycheckId === paycheck.id}
+              onConfirmPaycheck={onConfirmPaycheck}
+              onDeletePaycheck={onDeletePaycheck}
+              onEditPaycheck={onEditPaycheck}
+              onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+              onSwipeClose={() => onSwipeClose(paycheck.id)}
+              onSwipeOpen={onSwipeOpen}
               received
             />
           ))}
@@ -398,11 +444,23 @@ function PreviousAdditionalIncomeSection({
 }
 
 function AdditionalIncomeRow({
-  onOpenActions,
+  isSwipeOpen,
+  onConfirmPaycheck,
+  onDeletePaycheck,
+  onEditPaycheck,
+  onMarkPaycheckUnreceived,
+  onSwipeClose,
+  onSwipeOpen,
   paycheck,
   received = false,
 }: {
-  onOpenActions: (paycheck: PaycheckListItem) => void;
+  isSwipeOpen: boolean;
+  onConfirmPaycheck: (id: string) => void | Promise<void>;
+  onDeletePaycheck: (id: string) => void | Promise<void>;
+  onEditPaycheck: (paycheck: PaycheckListItem) => void;
+  onMarkPaycheckUnreceived: (id: string) => void | Promise<void>;
+  onSwipeClose: () => void;
+  onSwipeOpen: (paycheckId: string) => void;
   paycheck: PaycheckListItem;
   received?: boolean;
 }) {
@@ -413,24 +471,24 @@ function AdditionalIncomeRow({
         received && styles.additionalIncomeRowReceived,
       ]}
     >
-      <View style={styles.itemCopy}>
-        <Text style={styles.itemTitle}>{paycheck.label}</Text>
+      <PaycheckSwipeableHeader
+        amountStyle={styles.additionalIncomeAmount}
+        isSwipeOpen={isSwipeOpen}
+        paycheck={paycheck}
+        rowInset="additional"
+        showStatusPill={false}
+        onConfirmPaycheck={onConfirmPaycheck}
+        onDeletePaycheck={onDeletePaycheck}
+        onEditPaycheck={onEditPaycheck}
+        onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+        onSwipeClose={onSwipeClose}
+        onSwipeOpen={onSwipeOpen}
+      >
         <Text style={styles.rowMetaText}>
           {formatDisplayDate(paycheck.expectedDate)} •{" "}
           {formatPaycheckRecurrence(paycheck)}
         </Text>
-      </View>
-      <View style={styles.paycheckAmountColumn}>
-        <Text
-          style={[
-            styles.additionalIncomeAmount,
-            received && styles.paycheckAmountReceived,
-          ]}
-        >
-          {money(paycheck.amountCents)}
-        </Text>
-        <OverflowButton onPress={() => onOpenActions(paycheck)} />
-      </View>
+      </PaycheckSwipeableHeader>
     </View>
   );
 }
@@ -439,7 +497,13 @@ function PreviousPaychecksSection({
   coverageByPaycheckId,
   expandedCoverageIds,
   isExpanded,
-  onOpenActions,
+  openSwipePaycheckId,
+  onConfirmPaycheck,
+  onDeletePaycheck,
+  onEditPaycheck,
+  onMarkPaycheckUnreceived,
+  onSwipeClose,
+  onSwipeOpen,
   onToggle,
   onToggleCoverage,
   paychecks,
@@ -447,7 +511,13 @@ function PreviousPaychecksSection({
   coverageByPaycheckId: Map<string, PaycheckBillCoverage>;
   expandedCoverageIds: Set<string>;
   isExpanded: boolean;
-  onOpenActions: (paycheck: PaycheckListItem) => void;
+  openSwipePaycheckId: string | null;
+  onConfirmPaycheck: (id: string) => void | Promise<void>;
+  onDeletePaycheck: (id: string) => void | Promise<void>;
+  onEditPaycheck: (paycheck: PaycheckListItem) => void;
+  onMarkPaycheckUnreceived: (id: string) => void | Promise<void>;
+  onSwipeClose: (paycheckId: string) => void;
+  onSwipeOpen: (paycheckId: string) => void;
   onToggle: () => void;
   onToggleCoverage: (paycheckId: string) => void;
   paychecks: PaycheckListItem[];
@@ -476,10 +546,16 @@ function PreviousPaychecksSection({
         <PaycheckScheduleGroup
           coverageByPaycheckId={coverageByPaycheckId}
           expandedCoverageIds={expandedCoverageIds}
+          openSwipePaycheckId={openSwipePaycheckId}
+          onConfirmPaycheck={onConfirmPaycheck}
+          onDeletePaycheck={onDeletePaycheck}
+          onEditPaycheck={onEditPaycheck}
+          onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+          onSwipeClose={onSwipeClose}
+          onSwipeOpen={onSwipeOpen}
           onToggleCoverage={onToggleCoverage}
           paychecks={paychecks}
           title=""
-          onOpenActions={onOpenActions}
         />
       )}
     </>
@@ -520,34 +596,36 @@ function PaycheckSummaryMetric({
   );
 }
 
-function getPaycheckActionHeader(paycheck: PaycheckListItem): ActionMenuHeader {
-  return {
-    amount: money(paycheck.amountCents),
-    meta: formatDisplayDate(paycheck.expectedDate),
-    status: paycheck.isReceived ? "Received Income" : "Expected Income",
-    statusTone: paycheck.isReceived ? "neutral" : "accent",
-    title: paycheck.label,
-  };
-}
-
 function PaycheckScheduleGroup({
   coverageByPaycheckId,
   expandedCoverageIds,
-  onOpenActions,
+  openSwipePaycheckId,
+  onConfirmPaycheck,
+  onDeletePaycheck,
+  onEditPaycheck,
+  onMarkPaycheckUnreceived,
+  onSwipeClose,
+  onSwipeOpen,
   onToggleCoverage,
   paychecks,
   showTutorialCoverageTarget = false,
-  showTutorialOverflowTarget = false,
+  showTutorialSwipeTarget = false,
   tutorialFocusedPaycheckId = null,
   title,
 }: {
   coverageByPaycheckId: Map<string, PaycheckBillCoverage>;
   expandedCoverageIds: Set<string>;
-  onOpenActions: (paycheck: PaycheckListItem) => void;
+  openSwipePaycheckId: string | null;
+  onConfirmPaycheck: (id: string) => void | Promise<void>;
+  onDeletePaycheck: (id: string) => void | Promise<void>;
+  onEditPaycheck: (paycheck: PaycheckListItem) => void;
+  onMarkPaycheckUnreceived: (id: string) => void | Promise<void>;
+  onSwipeClose: (paycheckId: string) => void;
+  onSwipeOpen: (paycheckId: string) => void;
   onToggleCoverage: (paycheckId: string) => void;
   paychecks: PaycheckListItem[];
   showTutorialCoverageTarget?: boolean;
-  showTutorialOverflowTarget?: boolean;
+  showTutorialSwipeTarget?: boolean;
   tutorialFocusedPaycheckId?: string | null;
   title: string;
 }) {
@@ -575,39 +653,42 @@ function PaycheckScheduleGroup({
               Bill coverage is derived from existing cycle data; the row stays a
               presentation surface and does not decide assignment rules.
             */}
-            <View style={styles.paycheckRowHeader}>
-              <View style={styles.itemCopy}>
-                <View style={styles.paycheckTitleRow}>
-                  <Text style={styles.itemTitle}>{paycheck.label}</Text>
-                  <StatusPill
-                    label={paycheck.isReceived ? "Received" : "Expected"}
-                    tone={paycheck.isReceived ? "neutral" : "accent"}
-                  />
-                </View>
+            {showTutorialSwipeTarget &&
+            paycheck.id === tutorialFocusedPaycheckId ? (
+              <TutorialTarget id="paychecks-row-overflow">
+                <PaycheckSwipeableHeader
+                  isSwipeOpen={openSwipePaycheckId === paycheck.id}
+                  paycheck={paycheck}
+                  onConfirmPaycheck={onConfirmPaycheck}
+                  onDeletePaycheck={onDeletePaycheck}
+                  onEditPaycheck={onEditPaycheck}
+                  onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+                  onSwipeClose={() => onSwipeClose(paycheck.id)}
+                  onSwipeOpen={onSwipeOpen}
+                >
+                  <Text style={styles.rowMetaText}>
+                    {formatDisplayDate(paycheck.expectedDate)} •{" "}
+                    {formatPaycheckRecurrence(paycheck)}
+                  </Text>
+                </PaycheckSwipeableHeader>
+              </TutorialTarget>
+            ) : (
+              <PaycheckSwipeableHeader
+                isSwipeOpen={openSwipePaycheckId === paycheck.id}
+                paycheck={paycheck}
+                onConfirmPaycheck={onConfirmPaycheck}
+                onDeletePaycheck={onDeletePaycheck}
+                onEditPaycheck={onEditPaycheck}
+                onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+                onSwipeClose={() => onSwipeClose(paycheck.id)}
+                onSwipeOpen={onSwipeOpen}
+              >
                 <Text style={styles.rowMetaText}>
                   {formatDisplayDate(paycheck.expectedDate)} •{" "}
                   {formatPaycheckRecurrence(paycheck)}
                 </Text>
-              </View>
-              <View style={styles.paycheckAmountColumn}>
-                <Text
-                  style={[
-                    styles.paycheckAmount,
-                    paycheck.isReceived && styles.paycheckAmountReceived,
-                  ]}
-                >
-                  {money(paycheck.amountCents)}
-                </Text>
-                {showTutorialOverflowTarget &&
-                paycheck.id === tutorialFocusedPaycheckId ? (
-                  <TutorialTarget id="paychecks-row-overflow">
-                    <OverflowButton onPress={() => onOpenActions(paycheck)} />
-                  </TutorialTarget>
-                ) : (
-                  <OverflowButton onPress={() => onOpenActions(paycheck)} />
-                )}
-              </View>
-            </View>
+              </PaycheckSwipeableHeader>
+            )}
             <PaycheckCoveredBills
               coverage={coverageByPaycheckId.get(paycheck.id)}
               isExpanded={expandedCoverageIds.has(paycheck.id)}
@@ -736,33 +817,38 @@ function PaycheckCoveredBills({
           {coverageSummary} assigned • {money(coverage.totalCents)} reserved
         </Text>
       )}
+      {isExpanded &&
+        (showTutorialTarget ? (
+          <TutorialTarget id="paychecks-coverage-breakdown">
+            <PaycheckCoverageExpandedContent
+              coverage={coverage}
+              windowText={windowText}
+            />
+          </TutorialTarget>
+        ) : (
+          <PaycheckCoverageExpandedContent
+            coverage={coverage}
+            windowText={windowText}
+          />
+        ))}
       <Pressable
+        accessibilityHint={
+          isExpanded
+            ? "Collapses the bill breakdown for this paycheck"
+            : "Expands the bill breakdown for this paycheck"
+        }
+        accessibilityLabel={
+          isExpanded ? "Hide paycheck breakdown" : "Show paycheck breakdown"
+        }
         accessibilityRole="button"
         style={({ pressed }) => [
-          styles.paycheckCoverageToggle,
+          styles.paycheckCoveredBillsToggle,
           pressed && styles.pressed,
         ]}
         onPress={onToggle}
       >
-        <Text style={styles.paycheckCoverageTitle}>
-          {isExpanded ? "Hide bill window" : "Show bill window"}
-        </Text>
-        <Text style={styles.paycheckCoverageTotal}>
-          {coverage.canProjectBills
-            ? `${coverageSummary} • ${money(coverage.totalCents)}`
-            : coverageSummary}{" "}
-          {isExpanded ? "⌃" : "⌄"}
-        </Text>
+        <Text style={styles.paycheckBreakdownCaret}>{isExpanded ? "⌃" : "⌄"}</Text>
       </Pressable>
-      {isExpanded && (
-        showTutorialTarget ? (
-          <TutorialTarget id="paychecks-coverage-breakdown">
-            <PaycheckCoverageExpandedContent coverage={coverage} windowText={windowText} />
-          </TutorialTarget>
-        ) : (
-          <PaycheckCoverageExpandedContent coverage={coverage} windowText={windowText} />
-        )
-      )}
     </View>
   );
 }
@@ -829,62 +915,6 @@ function PaycheckCoverageExpandedContent({
       )}
     </View>
   );
-}
-
-function getPaycheckActions({
-  paycheck,
-  onConfirmPaycheck,
-  onDeletePaycheck,
-  onEditPaycheck,
-  onMarkPaycheckUnreceived,
-}: {
-  paycheck: PaycheckListItem;
-  onConfirmPaycheck: (id: string) => void | Promise<void>;
-  onDeletePaycheck: (id: string) => void | Promise<void>;
-  onEditPaycheck: (paycheck: PaycheckListItem) => void;
-  onMarkPaycheckUnreceived: (id: string) => void | Promise<void>;
-}): ActionMenuItem[] {
-  const actions: ActionMenuItem[] = [];
-
-  if (paycheck.isReceived) {
-    return [
-      {
-        icon: "↩",
-        label: "Mark unreceived",
-        onPress: () => {
-          void onMarkPaycheckUnreceived(paycheck.id);
-        },
-      },
-    ];
-  }
-
-  actions.push(
-    {
-      icon: "✓",
-      label: "Mark Received",
-      onPress: () => {
-        void onConfirmPaycheck(paycheck.id);
-      },
-    },
-    {
-      icon: "✏️",
-      label: "Edit Paycheck",
-      closeBeforeAction: true,
-      onPress: () => onEditPaycheck(paycheck),
-    },
-    {
-      icon: "🗑",
-      label: paycheck.recurrenceInterval
-        ? "Delete Recurring Paychecks"
-        : "Delete Paycheck",
-      destructive: true,
-      onPress: () => {
-        void onDeletePaycheck(paycheck.id);
-      },
-    }
-  );
-
-  return actions;
 }
 
 function formatPaycheckRecurrence(paycheck: PaycheckListItem) {

@@ -12,7 +12,7 @@ import {
   useReminderNotifications,
 } from "@/features/notifications/hooks";
 import { usePurchaseDeepLink } from "@/features/purchases/hooks";
-import { PurchaseRowGestureProvider } from "@/features/purchases/PurchaseRowGestureContext";
+import { SwipeRowGestureProvider } from "@/features/home/SwipeRowGestureContext";
 import { TutorialOverlay } from "@/features/tutorial/TutorialOverlay";
 import { TutorialProvider } from "@/features/tutorial/TutorialContext";
 
@@ -45,11 +45,11 @@ export function HomeScreen() {
   usePurchaseDeepLink({
     onOpenAddPurchase: controller.openAddPurchaseWithPrefill,
   });
-  const [purchaseRowTouchActive, setPurchaseRowTouchActive] = useState(false);
+  const [swipeRowTouchActive, setSwipeRowTouchActive] = useState(false);
 
   useEffect(() => {
-    if (screen !== "Purchases") {
-      setPurchaseRowTouchActive(false);
+    if (screen !== "Purchases" && screen !== "Paychecks") {
+      setSwipeRowTouchActive(false);
     }
   }, [screen]);
 
@@ -63,7 +63,7 @@ export function HomeScreen() {
     >
       <View style={[styles.page, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
         <HomeHeader />
-        <PurchaseRowGestureProvider onRowTouchActiveChange={setPurchaseRowTouchActive}>
+        <SwipeRowGestureProvider onRowTouchActiveChange={setSwipeRowTouchActive}>
           <HomePager
             controller={controller}
             notificationTarget={notificationTarget}
@@ -71,10 +71,13 @@ export function HomeScreen() {
             onClearNotificationTarget={clearNotificationTarget}
             onScrollEnd={handlePagerScrollEnd}
             pagerRef={pagerRef}
-            pagerScrollEnabled={screen !== "Purchases" || !purchaseRowTouchActive}
+            pagerScrollEnabled={
+              (screen !== "Purchases" && screen !== "Paychecks") ||
+              !swipeRowTouchActive
+            }
             width={width}
           />
-        </PurchaseRowGestureProvider>
+        </SwipeRowGestureProvider>
         <HomeModals controller={controller} />
         <HomeFloatingActionButton
           bottomInset={insets.bottom}

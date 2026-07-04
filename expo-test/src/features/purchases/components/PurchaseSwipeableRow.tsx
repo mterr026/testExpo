@@ -6,7 +6,7 @@ import { money, StatusPill, type StatusPillTone } from "@/shared/ui/components";
 import { styles } from "@/shared/ui/styles";
 import type { Purchase } from "@/shared/ui/types";
 
-import { usePurchaseRowGesture } from "../PurchaseRowGestureContext";
+import { useSwipeRowGesture } from "@/features/home/SwipeRowGestureContext";
 import { getPurchaseSwipeActions } from "../purchaseActions";
 
 type PurchaseSwipeableRowProps = {
@@ -31,7 +31,7 @@ export function PurchaseSwipeableRow({
   purchase,
 }: PurchaseSwipeableRowProps) {
   const swipeableRef = useRef<Swipeable>(null);
-  const setRowTouchActive = usePurchaseRowGesture();
+  const setRowTouchActive = useSwipeRowGesture();
   const isPending = purchase.status === "Pending";
   const swipeActions = getPurchaseSwipeActions({
     purchase,
