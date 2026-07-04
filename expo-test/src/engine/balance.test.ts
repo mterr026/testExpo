@@ -141,6 +141,26 @@ describe("balance engine", () => {
     ).toBe(390100);
   });
 
+  it("counts same-day paycheck when receivedAt is after the opening balance anchor", () => {
+    const paychecks = [
+      {
+        amountCents: 248675,
+        expectedDate: "2026-07-03",
+        isReceived: true,
+        receivedAt: "2026-07-03T19:00:00.000Z",
+      },
+      {
+        amountCents: 248675,
+        expectedDate: "2026-07-17",
+        isReceived: true,
+      },
+    ];
+
+    expect(sumConfirmedIncome(paychecks, "2026-07-03T14:00:00.000Z")).toBe(
+      497350
+    );
+  });
+
   it("excludes paid bills on or before the opening balance anchor date", () => {
     const billInstances = [
       { cycleAmountCents: 14255, dueDate: "2026-07-03", isPaid: true },

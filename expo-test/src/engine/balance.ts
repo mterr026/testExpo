@@ -35,9 +35,20 @@ export function shouldCountPaycheckTowardConfirmedIncome(
     return true;
   }
 
-  return (
-    paycheck.expectedDate > openingBalanceAnchorDate(openingBalanceAsOfDate)
-  );
+  const anchorDate = openingBalanceAnchorDate(openingBalanceAsOfDate);
+
+  if (paycheck.expectedDate > anchorDate) {
+    return true;
+  }
+
+  if (paycheck.receivedAt) {
+    return (
+      paycheck.receivedAt >
+      openingBalanceAnchorInstant(openingBalanceAsOfDate)
+    );
+  }
+
+  return false;
 }
 
 export function sumConfirmedIncome(

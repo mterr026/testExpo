@@ -133,6 +133,7 @@ export type EnginePaycheck = {
   amountCents: Cents;
   expectedDate?: string;
   isReceived: boolean;
+  receivedAt?: string | null;
   deletedAt?: string | null;
 };
 

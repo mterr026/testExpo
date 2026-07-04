@@ -231,6 +231,43 @@ describe("safe-to-spend engine", () => {
     expect(result.safeToSpendCents).toBe(398600);
   });
 
+  it("counts_same_day_paycheck_when_confirmed_after_opening_balance_anchor", () => {
+    const sharedInput = {
+      purchases: [],
+      billInstances: [],
+      balanceAdjustments: [],
+      openingBalanceCents: 398600,
+      openingBalanceAsOfDate: "2026-07-03T14:00:00.000Z",
+      essentialReserveCents: 0,
+    };
+    const beforeConfirm = calculateSafeToSpend({
+      ...sharedInput,
+      paychecks: [
+        {
+          amountCents: 248675,
+          expectedDate: "2026-07-03",
+          isReceived: false,
+        },
+      ],
+    });
+    const afterConfirm = calculateSafeToSpend({
+      ...sharedInput,
+      paychecks: [
+        {
+          amountCents: 248675,
+          expectedDate: "2026-07-03",
+          isReceived: true,
+          receivedAt: "2026-07-03T19:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(beforeConfirm.confirmedIncomeCents).toBe(0);
+    expect(beforeConfirm.safeToSpendCents).toBe(398600);
+    expect(afterConfirm.confirmedIncomeCents).toBe(248675);
+    expect(afterConfirm.safeToSpendCents).toBe(647275);
+  });
+
   it("scenario_f_counts_multiple_income_sources_only_after_each_is_received", () => {
     const baseInput = {
       purchases: [{ amountCents: 12000, state: "charged" as const }],
