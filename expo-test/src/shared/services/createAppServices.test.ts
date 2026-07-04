@@ -6,6 +6,8 @@ import {
   BackupMetadataRepository,
   BillCycleInstanceRepository,
   BillRepository,
+  BudgetingPreferencesRepository,
+  EnvelopeRepository,
   ImportSuggestionRepository,
   NotificationSettingsRepository,
   PaycheckRepository,
@@ -15,6 +17,10 @@ import {
 } from "@/database/repositories";
 import { BackupService } from "@/features/backup/services";
 import { BillService } from "@/features/bills/services";
+import {
+  BudgetingPreferencesService,
+  EnvelopeService,
+} from "@/features/budgeting/services";
 import { DashboardService } from "@/features/dashboard/services";
 import { ImportService } from "@/features/import/services";
 import { NotificationService } from "@/features/notifications/services";
@@ -47,6 +53,12 @@ describe("createAppServices", () => {
       BillCycleInstanceRepository
     );
     expect(container.repositories.billRepository).toBeInstanceOf(BillRepository);
+    expect(container.repositories.budgetingPreferencesRepository).toBeInstanceOf(
+      BudgetingPreferencesRepository
+    );
+    expect(container.repositories.envelopeRepository).toBeInstanceOf(
+      EnvelopeRepository
+    );
     expect(container.repositories.importSuggestionRepository).toBeInstanceOf(
       ImportSuggestionRepository
     );
@@ -68,7 +80,11 @@ describe("createAppServices", () => {
 
     expect(container.services.backupService).toBeInstanceOf(BackupService);
     expect(container.services.billService).toBeInstanceOf(BillService);
+    expect(container.services.budgetingPreferencesService).toBeInstanceOf(
+      BudgetingPreferencesService
+    );
     expect(container.services.dashboardService).toBeInstanceOf(DashboardService);
+    expect(container.services.envelopeService).toBeInstanceOf(EnvelopeService);
     expect(container.services.importService).toBeInstanceOf(ImportService);
     expect(container.services.notificationService).toBeInstanceOf(
       NotificationService

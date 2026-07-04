@@ -3,6 +3,8 @@ export * from "./BalanceAdjustmentRepository";
 export * from "./BackupMetadataRepository";
 export * from "./BillCycleInstanceRepository";
 export * from "./BillRepository";
+export * from "./BudgetingPreferencesRepository";
+export * from "./EnvelopeRepository";
 export * from "./ImportSuggestionRepository";
 export * from "./NotificationSettingsRepository";
 export * from "./PaycheckRepository";

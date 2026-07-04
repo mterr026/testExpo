@@ -21,6 +21,7 @@ describe("financial fixtures", () => {
       balanceAdjustmentsCents: 0,
       runningBalanceCents: 436900,
       essentialReserveCents: 25000,
+      envelopeReservedCents: 0,
       safeToSpendCents: 46400,
     });
   });

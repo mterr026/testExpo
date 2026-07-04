@@ -4,6 +4,8 @@ import {
   BackupMetadataRepository,
   BillCycleInstanceRepository,
   BillRepository,
+  BudgetingPreferencesRepository,
+  EnvelopeRepository,
   ImportSuggestionRepository,
   NotificationSettingsRepository,
   PaycheckRepository,
@@ -14,6 +16,10 @@ import {
 import type { TransactionalDatabaseExecutor } from "@/database/repositories/types";
 import { BackupService } from "@/features/backup/services";
 import { BillService } from "@/features/bills/services";
+import {
+  BudgetingPreferencesService,
+  EnvelopeService,
+} from "@/features/budgeting/services";
 import { DashboardService } from "@/features/dashboard/services";
 import { ImportService } from "@/features/import/services";
 import { PaycheckService } from "@/features/paychecks/services";
@@ -32,6 +38,8 @@ export type AppRepositories = {
   backupMetadataRepository: BackupMetadataRepository;
   billCycleInstanceRepository: BillCycleInstanceRepository;
   billRepository: BillRepository;
+  budgetingPreferencesRepository: BudgetingPreferencesRepository;
+  envelopeRepository: EnvelopeRepository;
   importSuggestionRepository: ImportSuggestionRepository;
   notificationSettingsRepository: NotificationSettingsRepository;
   paycheckRepository: PaycheckRepository;
@@ -43,7 +51,9 @@ export type AppRepositories = {
 export type AppServices = {
   backupService: BackupService;
   billService: BillService;
+  budgetingPreferencesService: BudgetingPreferencesService;
   dashboardService: DashboardService;
+  envelopeService: EnvelopeService;
   importService: ImportService;
   notificationService: NotificationService;
   onboardingService: OnboardingService;
@@ -98,7 +108,17 @@ export function createAppServices(
         repositories.purchaseRepository,
         repositories.billRepository,
         repositories.billCycleInstanceRepository,
-        repositories.balanceAdjustmentRepository
+        repositories.balanceAdjustmentRepository,
+        repositories.budgetingPreferencesRepository,
+        repositories.envelopeRepository
+      ),
+      envelopeService: new EnvelopeService(
+        repositories.envelopeRepository,
+        eventBus
+      ),
+      budgetingPreferencesService: new BudgetingPreferencesService(
+        repositories.budgetingPreferencesRepository,
+        eventBus
       ),
       importService: new ImportService(
         repositories.importSuggestionRepository,
@@ -117,7 +137,7 @@ export function createAppServices(
       paycheckService,
       purchaseService: new PurchaseService(
         repositories.purchaseRepository,
-        paycheckService,
+        repositories.paycheckRepository,
         repositories.activityLogRepository,
         eventBus
       ),
@@ -142,6 +162,11 @@ function createRepositories(db: TransactionalDatabaseExecutor): AppRepositories 
       createLocalId
     ),
     billRepository: new BillRepository(db, createLocalId),
+    budgetingPreferencesRepository: new BudgetingPreferencesRepository(
+      db,
+      createLocalId
+    ),
+    envelopeRepository: new EnvelopeRepository(db, createLocalId),
     importSuggestionRepository: new ImportSuggestionRepository(db, createLocalId),
     notificationSettingsRepository: new NotificationSettingsRepository(
       db,

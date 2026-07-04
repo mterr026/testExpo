@@ -1,3 +1,4 @@
+import { EnvelopeEntryModal } from "@/features/budgeting/EnvelopeEntryModal";
 import { BillConfirmationModal } from "@/features/bills/BillConfirmationModal";
 import { BillEntryModal } from "@/features/bills/BillEntryModal";
 import { ImportSuggestionConfirmModal } from "@/features/import/ImportSuggestionConfirmModal";
@@ -8,6 +9,7 @@ import { PurchaseEntryModal } from "@/features/purchases/PurchaseEntryModal";
 import {
   billAmountAccessoryId,
   billEntryAmountAccessoryId,
+  envelopeAmountAccessoryId,
   paycheckAmountAccessoryId,
   purchaseAmountAccessoryId,
   settingsMoneyAccessoryId,
@@ -108,12 +110,36 @@ export function HomeModals({ controller }: HomeModalsProps) {
         status={controller.purchaseEntry.status}
         error={controller.purchaseEntry.error}
         amountAccessoryId={purchaseAmountAccessoryId}
+        envelopesEnabled={controller.budgetingPreferences?.envelopesEnabled ?? false}
+        envelopes={(controller.dashboardSnapshot?.envelopes ?? [])
+          .filter((envelope) => !envelope.isPaused && !envelope.deletedAt)
+          .map((envelope) => ({
+            id: envelope.id,
+            name: envelope.name,
+          }))}
+        envelopeId={controller.purchaseEntry.envelopeId}
         onNameChange={controller.purchaseEntry.setName}
         onAmountChange={controller.purchaseEntry.setAmount}
         onDateChange={controller.purchaseEntry.setDate}
         onStatusChange={controller.purchaseEntry.setStatus}
+        onEnvelopeChange={controller.purchaseEntry.setEnvelopeId}
         onSave={controller.purchaseEntry.save}
         onClose={controller.purchaseEntry.close}
+      />
+
+      <EnvelopeEntryModal
+        visible={controller.envelopeEntry.visible}
+        mode={controller.envelopeEntry.mode}
+        name={controller.envelopeEntry.name}
+        allocation={controller.envelopeEntry.allocation}
+        isPaused={controller.envelopeEntry.isPaused}
+        error={controller.envelopeEntry.error}
+        amountAccessoryId={envelopeAmountAccessoryId}
+        onNameChange={controller.envelopeEntry.setName}
+        onAllocationChange={controller.envelopeEntry.setAllocation}
+        onIsPausedChange={controller.envelopeEntry.setIsPaused}
+        onSave={controller.envelopeEntry.save}
+        onClose={controller.envelopeEntry.close}
       />
 
       <BillConfirmationModal

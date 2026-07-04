@@ -164,6 +164,7 @@ export type SafeToSpendInput = {
   openingBalanceCents?: Cents;
   openingBalanceAsOfDate?: string | null;
   essentialReserveCents: Cents;
+  envelopeReservedCents?: Cents;
 };
 
 export type SafeToSpendBreakdown = {
@@ -176,5 +177,6 @@ export type SafeToSpendBreakdown = {
   balanceAdjustmentsCents: Cents;
   runningBalanceCents: Cents;
   essentialReserveCents: Cents;
+  envelopeReservedCents: Cents;
   safeToSpendCents: Cents;
 };

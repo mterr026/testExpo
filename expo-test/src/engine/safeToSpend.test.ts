@@ -31,6 +31,7 @@ describe("safe-to-spend engine", () => {
       balanceAdjustmentsCents: 10000,
       runningBalanceCents: 247500,
       essentialReserveCents: 25000,
+      envelopeReservedCents: 0,
       safeToSpendCents: 172500,
     });
   });
@@ -304,5 +305,28 @@ describe("safe-to-spend engine", () => {
     expect(afterPrimaryReceived.safeToSpendCents).toBe(98000);
     expect(afterBothReceived.confirmedIncomeCents).toBe(245000);
     expect(afterBothReceived.safeToSpendCents).toBe(163000);
+  });
+
+  it("subtracts_envelope_reserved_cents_from_safe_to_spend", () => {
+    const withoutEnvelopes = calculateSafeToSpend({
+      paychecks: [{ amountCents: 100000, isReceived: true }],
+      purchases: [],
+      billInstances: [],
+      balanceAdjustments: [],
+      essentialReserveCents: 10000,
+    });
+    const withEnvelopes = calculateSafeToSpend({
+      paychecks: [{ amountCents: 100000, isReceived: true }],
+      purchases: [],
+      billInstances: [],
+      balanceAdjustments: [],
+      essentialReserveCents: 10000,
+      envelopeReservedCents: 25000,
+    });
+
+    expect(withoutEnvelopes.envelopeReservedCents).toBe(0);
+    expect(withoutEnvelopes.safeToSpendCents).toBe(90000);
+    expect(withEnvelopes.envelopeReservedCents).toBe(25000);
+    expect(withEnvelopes.safeToSpendCents).toBe(65000);
   });
 });

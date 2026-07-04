@@ -123,6 +123,14 @@ function createSnapshot(): DashboardSnapshot {
       balanceAdjustments: [],
       essentialReserveCents: 0,
     }),
+    budgetingPreferences: null,
+    envelopes: [],
+    envelopeSnapshot: {
+      envelopesEnabled: false,
+      activeCyclePaycheckId: "paycheck-1",
+      entries: [],
+      totalReservedCents: 0,
+    },
   };
 }
 

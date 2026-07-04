@@ -8,18 +8,29 @@ import { colors, styles } from "@/shared/ui/styles";
 
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
+import { EnvelopesSettingsSection } from "@/features/budgeting/components/EnvelopesSettingsSection";
+import type { Envelope } from "@/database/repositories/types";
+import type { EnvelopeSnapshotEntry } from "@/engine";
 
 export function SettingsScreen({
   backupExportError,
   backupExportMessage,
   balanceCents,
   reserveCents,
+  envelopes,
+  envelopeEntries,
+  envelopesEnabled,
+  envelopeToggleError,
   isBackupExporting,
+  isEnvelopesToggleSaving,
   isNotificationSaving,
   notificationError,
   notificationsEnabled,
+  onAddEnvelope,
   onBackupExport,
   onBalanceChange,
+  onEditEnvelope,
+  onEnvelopesToggle,
   onNotificationsToggle,
   onReserveChange,
   isSettingsReady,
@@ -30,13 +41,21 @@ export function SettingsScreen({
   backupExportMessage: string;
   balanceCents: number;
   reserveCents: number;
+  envelopes: Envelope[];
+  envelopeEntries: EnvelopeSnapshotEntry[];
+  envelopesEnabled: boolean | null;
+  envelopeToggleError: string;
   isBackupExporting: boolean;
+  isEnvelopesToggleSaving: boolean;
   isNotificationSaving: boolean;
   isSettingsReady: boolean;
   notificationError: string;
   notificationsEnabled: boolean | null;
+  onAddEnvelope: () => void;
   onBackupExport: () => void | Promise<void>;
   onBalanceChange: (value: number) => void | Promise<void>;
+  onEditEnvelope: (envelope: Envelope) => void;
+  onEnvelopesToggle: () => void | Promise<void>;
   onNotificationsToggle: () => void | Promise<void>;
   onReserveChange: (value: number) => void | Promise<void>;
   moneyInputAccessoryId: string;
@@ -215,6 +234,39 @@ export function SettingsScreen({
             />
           </View>
         </View>
+        <View style={[styles.settingsPreferenceRow, styles.settingsPreferenceDivider]}>
+          <View style={styles.itemCopy}>
+            <Text style={styles.itemTitle}>Envelope budgeting</Text>
+            <Text style={styles.rowMetaText}>
+              Partition Safe to Spend into category envelopes
+            </Text>
+            {!!envelopeToggleError && (
+              <Text style={styles.errorText}>{envelopeToggleError}</Text>
+            )}
+          </View>
+          <View style={styles.settingsInlineControl}>
+            <Text style={styles.settingsValue}>
+              {envelopesEnabled == null
+                ? "Loading"
+                : envelopesEnabled
+                  ? "On"
+                  : "Off"}
+            </Text>
+            <Switch
+              disabled={envelopesEnabled == null || isEnvelopesToggleSaving}
+              ios_backgroundColor={colors.border}
+              thumbColor={colors.card}
+              trackColor={{
+                false: colors.border,
+                true: colors.accent,
+              }}
+              value={!!envelopesEnabled}
+              onValueChange={() => {
+                void onEnvelopesToggle();
+              }}
+            />
+          </View>
+        </View>
         <View style={styles.settingsPreferenceRow}>
           <View style={styles.itemCopy}>
             <Text style={styles.itemTitle}>Backup</Text>
@@ -244,6 +296,14 @@ export function SettingsScreen({
         </View>
       </View>
       </TutorialTarget>
+
+      <EnvelopesSettingsSection
+        envelopes={envelopes}
+        envelopeEntries={envelopeEntries}
+        envelopesEnabled={!!envelopesEnabled}
+        onAddEnvelope={onAddEnvelope}
+        onEditEnvelope={onEditEnvelope}
+      />
 
       {afterContent}
     </ScrollView>

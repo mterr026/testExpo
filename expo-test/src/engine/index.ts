@@ -2,6 +2,7 @@ export * from "./activityLog";
 export * from "./billInstances";
 export * from "./balance";
 export * from "./cycleBoundaries";
+export * from "./envelopes";
 export * from "./paycheckRecurrence";
 export * from "./safeToSpend";
 export * from "./types";

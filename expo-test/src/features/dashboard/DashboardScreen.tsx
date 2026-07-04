@@ -2,11 +2,18 @@ import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { SafeToSpendBreakdown } from "@/engine";
+import type { EnvelopeSnapshotEntry } from "@/engine";
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
 import { money } from "@/shared/ui/components";
 import { styles } from "@/shared/ui/styles";
 import type { Bill, PaycheckListItem } from "@/shared/ui/types";
+
+type DashboardEnvelope = {
+  id: string;
+  name: string;
+  isPaused: boolean;
+};
 
 type TimelineEvent = {
   id: string;
@@ -21,6 +28,9 @@ export function DashboardScreen({
   nextPaycheckLabel,
   reserveCents,
   safeToSpendBreakdown,
+  envelopeEntries,
+  envelopes,
+  envelopesEnabled,
   unpaidBills,
   unpaidBillCount,
   purchaseTotal,
@@ -33,6 +43,9 @@ export function DashboardScreen({
   nextPaycheckLabel: string;
   reserveCents: number;
   safeToSpendBreakdown: SafeToSpendBreakdown;
+  envelopeEntries: EnvelopeSnapshotEntry[];
+  envelopes: DashboardEnvelope[];
+  envelopesEnabled: boolean;
   unpaidBills: number;
   unpaidBillCount: number;
   purchaseTotal: number;
@@ -51,6 +64,10 @@ export function DashboardScreen({
     ? timelineEvents
     : timelinePreview;
   const hiddenTimelineCount = Math.max(0, timelineEvents.length - timelinePreview.length);
+  const envelopeNameById = new Map(envelopes.map((envelope) => [envelope.id, envelope.name]));
+  const visibleEnvelopeEntries = envelopeEntries.filter((entry) =>
+    envelopeNameById.has(entry.envelopeId)
+  );
 
   return (
     <ScrollView
@@ -112,6 +129,24 @@ export function DashboardScreen({
           />
         </View>
       </View>
+
+      {envelopesEnabled && visibleEnvelopeEntries.length > 0 && (
+        <>
+          <View style={styles.dashboardSectionHeader}>
+            <Text style={styles.sectionTitleCompact}>Envelopes</Text>
+          </View>
+          <View style={styles.dashboardBreakdownCard}>
+            {visibleEnvelopeEntries.map((entry) => (
+              <DashboardBreakdownRow
+                key={entry.envelopeId}
+                label={envelopeNameById.get(entry.envelopeId) ?? "Envelope"}
+                tone={entry.remainingCents < 0 ? "deduction" : "default"}
+                value={`${money(entry.remainingCents)} left`}
+              />
+            ))}
+          </View>
+        </>
+      )}
 
       <View style={styles.dashboardSectionHeader}>
         <Text style={styles.sectionTitleCompact}>Upcoming Bills & Income</Text>
@@ -213,6 +248,13 @@ export function DashboardScreen({
           tone="deduction"
           value={`-${money(safeToSpendBreakdown.essentialReserveCents)}`}
         />
+        {safeToSpendBreakdown.envelopeReservedCents > 0 && (
+          <DashboardBreakdownRow
+            label="Envelope reserve"
+            tone="deduction"
+            value={`-${money(safeToSpendBreakdown.envelopeReservedCents)}`}
+          />
+        )}
         <DashboardBreakdownRow
           isTotal
           label="Safe to Spend"

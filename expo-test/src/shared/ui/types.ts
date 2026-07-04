@@ -86,4 +86,5 @@ export type Purchase = {
   date: string;
   purchaseDate: string;
   paycheckCycleId: string | null;
+  envelopeId: string | null;
 };

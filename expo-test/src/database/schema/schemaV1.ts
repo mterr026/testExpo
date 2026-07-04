@@ -1,4 +1,4 @@
-export const DATABASE_VERSION = 8;
+export const DATABASE_VERSION = 9;
 
 export const schemaV2 = `
 CREATE UNIQUE INDEX IF NOT EXISTS idx_bill_instances_uniqueness ON bill_cycle_instances(bill_id, paycheck_cycle_id, due_date) WHERE deleted_at IS NULL;
@@ -36,6 +36,56 @@ SET opening_balance_as_of_date = updated_at
 WHERE onboarding_complete = 1
   AND opening_balance_as_of_date IS NOT NULL
   AND length(opening_balance_as_of_date) = 10;
+`;
+
+export const schemaV9 = `
+CREATE TABLE IF NOT EXISTS budgeting_preferences (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL UNIQUE REFERENCES profiles(id),
+  envelopes_enabled INTEGER NOT NULL DEFAULT 0 CHECK (envelopes_enabled IN (0, 1)),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  sync_status TEXT NOT NULL DEFAULT 'local' CHECK (sync_status IN ('local', 'pending', 'synced'))
+);
+
+CREATE TABLE IF NOT EXISTS envelopes (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL REFERENCES profiles(id),
+  name TEXT NOT NULL,
+  allocation_cents INTEGER NOT NULL CHECK (allocation_cents >= 0),
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_paused INTEGER NOT NULL DEFAULT 0 CHECK (is_paused IN (0, 1)),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'local' CHECK (sync_status IN ('local', 'pending', 'synced'))
+);
+
+ALTER TABLE purchases ADD COLUMN envelope_id TEXT REFERENCES envelopes(id);
+
+CREATE TABLE sync_queue_v9 (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL REFERENCES profiles(id),
+  entity_type TEXT NOT NULL CHECK (entity_type IN ('profile', 'paycheck', 'bill', 'bill_cycle_instance', 'purchase', 'balance_adjustment', 'notification_settings', 'budgeting_preferences', 'envelope')),
+  entity_id TEXT NOT NULL,
+  operation TEXT NOT NULL CHECK (operation IN ('create', 'update', 'delete')),
+  payload_json TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'syncing', 'synced', 'failed')),
+  attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+  last_attempt_at TEXT,
+  error_message TEXT,
+  created_at TEXT NOT NULL
+);
+
+INSERT INTO sync_queue_v9 SELECT * FROM sync_queue;
+DROP TABLE sync_queue;
+ALTER TABLE sync_queue_v9 RENAME TO sync_queue;
+
+CREATE INDEX IF NOT EXISTS idx_budgeting_preferences_profile ON budgeting_preferences(profile_id);
+CREATE INDEX IF NOT EXISTS idx_envelopes_profile ON envelopes(profile_id, deleted_at, sort_order);
+CREATE INDEX IF NOT EXISTS idx_purchases_envelope ON purchases(envelope_id, deleted_at);
+CREATE INDEX IF NOT EXISTS idx_sync_queue_pending ON sync_queue(profile_id, status, created_at);
+CREATE INDEX IF NOT EXISTS idx_sync_queue_entity ON sync_queue(entity_type, entity_id);
 `;
 
 export const schemaV1 = `
@@ -118,6 +168,7 @@ CREATE TABLE IF NOT EXISTS purchases (
   description TEXT,
   purchase_date TEXT NOT NULL,
   paycheck_cycle_id TEXT REFERENCES paychecks(id),
+  envelope_id TEXT REFERENCES envelopes(id),
   resolved_at TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
@@ -161,6 +212,28 @@ CREATE TABLE IF NOT EXISTS notification_settings (
   sync_status TEXT NOT NULL DEFAULT 'local' CHECK (sync_status IN ('local', 'pending', 'synced'))
 );
 
+CREATE TABLE IF NOT EXISTS budgeting_preferences (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL UNIQUE REFERENCES profiles(id),
+  envelopes_enabled INTEGER NOT NULL DEFAULT 0 CHECK (envelopes_enabled IN (0, 1)),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  sync_status TEXT NOT NULL DEFAULT 'local' CHECK (sync_status IN ('local', 'pending', 'synced'))
+);
+
+CREATE TABLE IF NOT EXISTS envelopes (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL REFERENCES profiles(id),
+  name TEXT NOT NULL,
+  allocation_cents INTEGER NOT NULL CHECK (allocation_cents >= 0),
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_paused INTEGER NOT NULL DEFAULT 0 CHECK (is_paused IN (0, 1)),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'local' CHECK (sync_status IN ('local', 'pending', 'synced'))
+);
+
 CREATE TABLE IF NOT EXISTS import_suggestions (
   id TEXT PRIMARY KEY,
   profile_id TEXT NOT NULL REFERENCES profiles(id),
@@ -190,7 +263,7 @@ CREATE TABLE IF NOT EXISTS backup_metadata (
 CREATE TABLE IF NOT EXISTS sync_queue (
   id TEXT PRIMARY KEY,
   profile_id TEXT NOT NULL REFERENCES profiles(id),
-  entity_type TEXT NOT NULL CHECK (entity_type IN ('profile', 'paycheck', 'bill', 'bill_cycle_instance', 'purchase', 'balance_adjustment', 'notification_settings')),
+  entity_type TEXT NOT NULL CHECK (entity_type IN ('profile', 'paycheck', 'bill', 'bill_cycle_instance', 'purchase', 'balance_adjustment', 'notification_settings', 'budgeting_preferences', 'envelope')),
   entity_id TEXT NOT NULL,
   operation TEXT NOT NULL CHECK (operation IN ('create', 'update', 'delete')),
   payload_json TEXT NOT NULL,
@@ -212,6 +285,9 @@ CREATE INDEX IF NOT EXISTS idx_purchases_cycle ON purchases(paycheck_cycle_id, d
 CREATE INDEX IF NOT EXISTS idx_import_suggestions_session ON import_suggestions(import_session_id, status);
 CREATE INDEX IF NOT EXISTS idx_activity_log_profile ON activity_log(profile_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_notification_settings_profile ON notification_settings(profile_id);
+CREATE INDEX IF NOT EXISTS idx_budgeting_preferences_profile ON budgeting_preferences(profile_id);
+CREATE INDEX IF NOT EXISTS idx_envelopes_profile ON envelopes(profile_id, deleted_at, sort_order);
+CREATE INDEX IF NOT EXISTS idx_purchases_envelope ON purchases(envelope_id, deleted_at);
 CREATE INDEX IF NOT EXISTS idx_sync_queue_pending ON sync_queue(profile_id, status, created_at);
 CREATE INDEX IF NOT EXISTS idx_sync_queue_entity ON sync_queue(entity_type, entity_id);
 `;

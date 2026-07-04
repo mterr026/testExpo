@@ -1,5 +1,6 @@
 import type {
   ActivityLogRepository,
+  PaycheckRepository,
   PurchaseRepository,
 } from "@/database/repositories";
 import type {
@@ -13,14 +14,14 @@ import {
   type FinancialEventBus,
 } from "@/shared/events/financialEvents";
 
-import type { PaycheckService } from "@/features/paychecks/services/PaycheckService";
+import { findActivePaycheckCycle } from "@/features/paychecks/activePaycheckCycle";
 
 export type CreatePurchaseInput = Omit<NewPurchase, "paycheckCycleId">;
 
 export class PurchaseService {
   constructor(
     private readonly purchaseRepository: PurchaseRepository,
-    private readonly paycheckService: PaycheckService,
+    private readonly paycheckRepository: PaycheckRepository,
     private readonly activityLogRepository: ActivityLogRepository,
     private readonly eventBus: FinancialEventBus
   ) {}
@@ -30,13 +31,14 @@ export class PurchaseService {
       ...input,
       ...(input.state === "charged" ? { resolvedAt: new Date().toISOString() } : {}),
     };
-    const cycle = await this.paycheckService.findCycleForDate(
-      normalizedInput.profileId,
+    const paychecks = await this.paycheckRepository.findAll(normalizedInput.profileId);
+    const cycle = findActivePaycheckCycle(
+      paychecks,
       normalizedInput.purchaseDate
     );
     const purchase = await this.purchaseRepository.create({
       ...normalizedInput,
-      paycheckCycleId: cycle?.cycleAnchor.id ?? null,
+      paycheckCycleId: cycle?.paycheckCycleId ?? null,
     });
 
     await this.activityLogRepository.create({
@@ -55,6 +57,12 @@ export class PurchaseService {
     id: string,
     changes: PurchaseChanges
   ): Promise<Purchase> {
+    const purchase = await this.purchaseRepository.findById(id);
+
+    if (!purchase) {
+      throw new Error(`Purchase ${id} not found.`);
+    }
+
     const normalizedChanges = {
       ...changes,
       ...("state" in changes
@@ -64,18 +72,28 @@ export class PurchaseService {
           }
         : {}),
     };
-    const purchase = await this.purchaseRepository.update(id, normalizedChanges);
+
+    if ("purchaseDate" in changes && changes.purchaseDate) {
+      const paychecks = await this.paycheckRepository.findAll(purchase.profileId);
+      const cycle = findActivePaycheckCycle(paychecks, changes.purchaseDate);
+      normalizedChanges.paycheckCycleId = cycle?.paycheckCycleId ?? null;
+    }
+
+    const updatedPurchase = await this.purchaseRepository.update(
+      id,
+      normalizedChanges
+    );
 
     await this.activityLogRepository.create({
       profileId: purchase.profileId,
       eventType: "purchase_updated",
       entityType: "purchase",
       entityId: purchase.id,
-      summary: `Updated purchase: ${formatCurrency(purchase.amountCents)}`,
+      summary: `Updated purchase: ${formatCurrency(updatedPurchase.amountCents)}`,
     });
     this.emitFinancialStateChanged(purchase.profileId);
 
-    return purchase;
+    return updatedPurchase;
   }
 
   async markPurchaseCharged(id: string): Promise<Purchase> {

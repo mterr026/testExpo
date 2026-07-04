@@ -87,6 +87,14 @@ function renderPagerScreen({
           safeToSpendBreakdown={
             controller.dashboardSnapshot?.safeToSpend ?? emptySafeToSpendBreakdown
           }
+          envelopeEntries={
+            controller.dashboardSnapshot?.envelopeSnapshot.entries ?? []
+          }
+          envelopes={controller.dashboardSnapshot?.envelopes ?? []}
+          envelopesEnabled={
+            controller.dashboardSnapshot?.envelopeSnapshot.envelopesEnabled ??
+            false
+          }
           unpaidBills={controller.dashboardTotals.unpaidBills}
           unpaidBillCount={controller.dashboardTotals.unpaidBillCount}
           purchaseTotal={controller.dashboardTotals.purchaseTotal}
@@ -160,7 +168,14 @@ function renderPagerScreen({
           backupExportMessage={controller.backupExportMessage}
           balanceCents={controller.dashboardTotals.runningBalanceCents}
           reserveCents={controller.dashboardTotals.reserveCents}
+          envelopes={controller.dashboardSnapshot?.envelopes ?? []}
+          envelopeEntries={
+            controller.dashboardSnapshot?.envelopeSnapshot.entries ?? []
+          }
+          envelopesEnabled={controller.budgetingPreferences?.envelopesEnabled ?? null}
+          envelopeToggleError={controller.envelopeToggleError}
           isBackupExporting={controller.isBackupExporting}
+          isEnvelopesToggleSaving={controller.isEnvelopesToggleSaving}
           isNotificationSaving={controller.isNotificationSaving}
           isSettingsReady={
             !controller.dashboardLoading && controller.dashboardSnapshot != null
@@ -170,8 +185,11 @@ function renderPagerScreen({
             controller.notificationSettings?.notificationsEnabled ?? null
           }
           moneyInputAccessoryId={settingsMoneyAccessoryId}
+          onAddEnvelope={controller.openAddEnvelope}
           onBackupExport={controller.exportBackup}
           onBalanceChange={controller.updateBalance}
+          onEditEnvelope={controller.openEnvelopeEdit}
+          onEnvelopesToggle={controller.toggleEnvelopes}
           onNotificationsToggle={controller.toggleNotifications}
           onReserveChange={controller.updateReserve}
           afterContent={<SettingsImportReview controller={controller} />}

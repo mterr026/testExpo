@@ -19,5 +19,6 @@ export function mapRepositoryPurchaseToPrototype(
         : purchaseDate,
     purchaseDate,
     paycheckCycleId: purchase.paycheckCycleId,
+    envelopeId: purchase.envelopeId,
   };
 }

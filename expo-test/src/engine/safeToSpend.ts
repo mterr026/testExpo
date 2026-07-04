@@ -41,10 +41,12 @@ export function calculateSafeToSpend(input: SafeToSpendInput): SafeToSpendBreakd
     ...input,
     openingBalanceCents,
   });
+  const envelopeReservedCents = input.envelopeReservedCents ?? 0;
   const safeToSpendCents =
     runningBalanceCents -
     unpaidBillsCents -
-    input.essentialReserveCents;
+    input.essentialReserveCents -
+    envelopeReservedCents;
 
   return {
     openingBalanceCents,
@@ -56,6 +58,7 @@ export function calculateSafeToSpend(input: SafeToSpendInput): SafeToSpendBreakd
     balanceAdjustmentsCents,
     runningBalanceCents,
     essentialReserveCents: input.essentialReserveCents,
+    envelopeReservedCents,
     safeToSpendCents,
   };
 }

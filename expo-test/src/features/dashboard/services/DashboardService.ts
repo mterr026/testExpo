@@ -2,6 +2,8 @@ import type {
   BalanceAdjustmentRepository,
   BillCycleInstanceRepository,
   BillRepository,
+  BudgetingPreferencesRepository,
+  EnvelopeRepository,
   PaycheckRepository,
   ProfileRepository,
   PurchaseRepository,
@@ -9,6 +11,8 @@ import type {
 import type {
   Bill,
   BillCycleInstance,
+  BudgetingPreferences,
+  Envelope,
   Paycheck,
   Profile,
   Purchase,
@@ -22,9 +26,17 @@ import {
   OPEN_ENDED_PAYCHECK_CYCLE_DATE,
   projectedBillCycleInstanceId,
   resolvePaycheckCycleWindow,
+  type EnvelopeSnapshot,
   type GeneratedBillCycleInstance,
   type SafeToSpendBreakdown,
 } from "@/engine";
+import { buildEnvelopeSnapshot } from "@/features/budgeting/envelopeSnapshot";
+import {
+  findActivePaycheckCycle,
+  type ActivePaycheckCycle,
+} from "@/features/paychecks/activePaycheckCycle";
+
+export { findActivePaycheckCycle } from "@/features/paychecks/activePaycheckCycle";
 
 export type DashboardSnapshot = {
   activeCycleEndDate: string | null;
@@ -38,6 +50,9 @@ export type DashboardSnapshot = {
   purchases: Purchase[];
   allBillInstances: BillCycleInstance[];
   billInstances: BillCycleInstance[];
+  budgetingPreferences: BudgetingPreferences | null;
+  envelopes: Envelope[];
+  envelopeSnapshot: EnvelopeSnapshot;
   safeToSpend: SafeToSpendBreakdown;
 };
 
@@ -48,7 +63,9 @@ export class DashboardService {
     private readonly purchaseRepository: PurchaseRepository,
     private readonly billRepository: BillRepository,
     private readonly billCycleInstanceRepository: BillCycleInstanceRepository,
-    private readonly balanceAdjustmentRepository: BalanceAdjustmentRepository
+    private readonly balanceAdjustmentRepository: BalanceAdjustmentRepository,
+    private readonly budgetingPreferencesRepository: BudgetingPreferencesRepository,
+    private readonly envelopeRepository: EnvelopeRepository
   ) {}
 
   async loadDashboardSnapshot(date: string): Promise<DashboardSnapshot> {
@@ -62,11 +79,14 @@ export class DashboardService {
       return createEmptySnapshot();
     }
 
-    const [paychecks, bills, purchases, balanceAdjustments] = await Promise.all([
+    const [paychecks, bills, purchases, balanceAdjustments, budgetingPreferences, envelopes] =
+      await Promise.all([
       this.paycheckRepository.findAll(profile.id),
       this.billRepository.findAll(profile.id),
       this.purchaseRepository.findAll(profile.id),
       this.balanceAdjustmentRepository.findAll(profile.id),
+      this.budgetingPreferencesRepository.findByProfileId(profile.id),
+      this.envelopeRepository.findAll(profile.id),
     ]);
     const allExistingBillInstances =
       await this.billCycleInstanceRepository.findByProfile(profile.id);
@@ -92,6 +112,15 @@ export class DashboardService {
       allBillInstances,
       cycle
     );
+    const envelopeSnapshot = buildEnvelopeSnapshot({
+      envelopes,
+      purchases,
+      paychecks,
+      activeCyclePaycheckId: cycle?.paycheckCycleId ?? null,
+      activeCycleStartDate: cycle?.startDate ?? null,
+      activeCycleEndDate: cycle?.nextStartDate ?? null,
+      envelopesEnabled: budgetingPreferences?.envelopesEnabled ?? false,
+    });
     const safeToSpend = calculateSafeToSpend({
       paychecks,
       purchases,
@@ -102,6 +131,7 @@ export class DashboardService {
       openingBalanceCents: profile.openingBalanceCents,
       openingBalanceAsOfDate: profile.openingBalanceAsOfDate,
       essentialReserveCents: profile.essentialReserveCents,
+      envelopeReservedCents: envelopeSnapshot.totalReservedCents,
     });
 
     return {
@@ -116,6 +146,9 @@ export class DashboardService {
       purchases,
       allBillInstances,
       billInstances,
+      budgetingPreferences,
+      envelopes,
+      envelopeSnapshot,
       safeToSpend,
     };
   }
@@ -325,116 +358,14 @@ function createEmptySnapshot(): DashboardSnapshot {
     purchases: [],
     allBillInstances: [],
     billInstances: [],
+    budgetingPreferences: null,
+    envelopes: [],
+    envelopeSnapshot: {
+      envelopesEnabled: false,
+      activeCyclePaycheckId: null,
+      entries: [],
+      totalReservedCents: 0,
+    },
     safeToSpend: createEmptySafeToSpendBreakdown(),
   };
-}
-
-type ActivePaycheckCycle = {
-  cycleAnchor: Paycheck | null;
-  nextCycleAnchor: Paycheck | null;
-  nextStartDate: string;
-  paycheckCycleId: string;
-  startDate: string;
-};
-
-export function findActivePaycheckCycle(
-  paychecks: Paycheck[],
-  date: string
-): ActivePaycheckCycle | null {
-  const cyclePaychecks = paychecksForCycleAnchor(paychecks);
-  const sortedPaychecks = [...cyclePaychecks].sort((first, second) =>
-    first.expectedDate.localeCompare(second.expectedDate)
-  );
-
-  if (sortedPaychecks.length === 0) {
-    return null;
-  }
-
-  const nextExpectedPaycheck = sortedPaychecks.find(
-    (paycheck) => !paycheck.isReceived && paycheck.expectedDate >= date
-  );
-  const latestReceivedPaycheck = [...sortedPaychecks]
-    .reverse()
-    .find((paycheck) => paycheck.isReceived && paycheck.expectedDate <= date);
-
-  if (latestReceivedPaycheck) {
-    const nextExpectedAfterReceived = sortedPaychecks.find(
-      (paycheck) =>
-        !paycheck.isReceived &&
-        paycheck.expectedDate > latestReceivedPaycheck.expectedDate
-    );
-
-    return {
-      cycleAnchor: latestReceivedPaycheck,
-      nextCycleAnchor: nextExpectedAfterReceived ?? null,
-      nextStartDate: resolvePaycheckCycleWindow({
-        expectedDate: latestReceivedPaycheck.expectedDate,
-        recurrenceInterval: latestReceivedPaycheck.recurrenceInterval,
-        nextPaycheckExpectedDate: nextExpectedAfterReceived?.expectedDate ?? null,
-      }).nextStartDate,
-      paycheckCycleId: latestReceivedPaycheck.id,
-      startDate: latestReceivedPaycheck.expectedDate,
-    };
-  }
-
-  const overdueUnreceivedPaycheck = [...sortedPaychecks]
-    .reverse()
-    .find(
-      (paycheck) => !paycheck.isReceived && paycheck.expectedDate < date
-    );
-
-  if (overdueUnreceivedPaycheck) {
-    const nextUnreceivedAfterOverdue = sortedPaychecks.find(
-      (paycheck) =>
-        !paycheck.isReceived &&
-        paycheck.expectedDate > overdueUnreceivedPaycheck.expectedDate
-    );
-
-    return {
-      cycleAnchor: overdueUnreceivedPaycheck,
-      nextCycleAnchor: nextUnreceivedAfterOverdue ?? null,
-      nextStartDate: resolvePaycheckCycleWindow({
-        expectedDate: overdueUnreceivedPaycheck.expectedDate,
-        recurrenceInterval: overdueUnreceivedPaycheck.recurrenceInterval,
-        nextPaycheckExpectedDate: nextUnreceivedAfterOverdue?.expectedDate ?? null,
-      }).nextStartDate,
-      paycheckCycleId: overdueUnreceivedPaycheck.id,
-      startDate: overdueUnreceivedPaycheck.expectedDate,
-    };
-  }
-
-  if (!nextExpectedPaycheck) {
-    return null;
-  }
-
-  const nextCycleAnchor =
-    nextExpectedPaycheck.expectedDate === date
-      ? sortedPaychecks.find(
-          (paycheck) =>
-            !paycheck.isReceived &&
-            paycheck.expectedDate > nextExpectedPaycheck.expectedDate
-        ) ?? null
-      : nextExpectedPaycheck;
-
-  const isPaydayAnchor = nextExpectedPaycheck.expectedDate === date;
-
-  return {
-    cycleAnchor: isPaydayAnchor ? nextExpectedPaycheck : null,
-    nextCycleAnchor,
-    nextStartDate: isPaydayAnchor
-      ? resolvePaycheckCycleWindow({
-          expectedDate: nextExpectedPaycheck.expectedDate,
-          recurrenceInterval: nextExpectedPaycheck.recurrenceInterval,
-          nextPaycheckExpectedDate: nextCycleAnchor?.expectedDate ?? null,
-        }).nextStartDate
-      : (nextCycleAnchor?.expectedDate ?? OPEN_ENDED_PAYCHECK_CYCLE_DATE),
-    paycheckCycleId: nextExpectedPaycheck.id,
-    startDate: isPaydayAnchor ? nextExpectedPaycheck.expectedDate : date,
-  };
-}
-
-function paychecksForCycleAnchor(paychecks: Paycheck[]) {
-  const primaryPaychecks = paychecks.filter((paycheck) => paycheck.isPrimary);
-
-  return primaryPaychecks.length > 0 ? primaryPaychecks : paychecks;
 }

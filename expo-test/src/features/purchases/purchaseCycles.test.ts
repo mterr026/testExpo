@@ -52,6 +52,7 @@ const currentCyclePurchase: Purchase = {
   date: "2026-06-03",
   purchaseDate: "2026-06-03",
   paycheckCycleId: "paycheck-jun",
+  envelopeId: null,
 };
 
 const priorCyclePurchase: Purchase = {
@@ -62,6 +63,7 @@ const priorCyclePurchase: Purchase = {
   date: "2026-05-10",
   purchaseDate: "2026-05-10",
   paycheckCycleId: "paycheck-may",
+  envelopeId: null,
 };
 
 const staleCycleIdPurchase: Purchase = {
@@ -72,6 +74,7 @@ const staleCycleIdPurchase: Purchase = {
   date: "2026-05-20",
   purchaseDate: "2026-05-20",
   paycheckCycleId: "paycheck-may",
+  envelopeId: null,
 };
 
 describe("getPaycheckCycleWindow", () => {
@@ -324,6 +327,7 @@ describe("filterPreviousCyclePurchases", () => {
       date: "2020-01-01",
       purchaseDate: "2020-01-01",
       paycheckCycleId: null,
+      envelopeId: null,
     };
 
     expect(
@@ -373,6 +377,7 @@ describe("getArchivedPurchaseCycleOptions", () => {
       date: "2020-01-01",
       purchaseDate: "2020-01-01",
       paycheckCycleId: null,
+      envelopeId: null,
     };
     const options = buildPurchaseCycleOptions(
       [currentCyclePurchase, priorCyclePurchase, unassignedPurchase],

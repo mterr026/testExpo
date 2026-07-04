@@ -25,7 +25,9 @@ export type SyncQueueEntityType =
   | "bill_cycle_instance"
   | "purchase"
   | "balance_adjustment"
-  | "notification_settings";
+  | "notification_settings"
+  | "budgeting_preferences"
+  | "envelope";
 export type SyncQueueOperation = "create" | "update" | "delete";
 
 export type SyncQueueEntry = {
@@ -245,6 +247,7 @@ export type Purchase = {
   description: string | null;
   purchaseDate: string;
   paycheckCycleId: string | null;
+  envelopeId: string | null;
   resolvedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -259,6 +262,7 @@ export type NewPurchase = {
   description?: string | null;
   purchaseDate: string;
   paycheckCycleId?: string | null;
+  envelopeId?: string | null;
   resolvedAt?: string | null;
 };
 
@@ -270,6 +274,7 @@ export type PurchaseChanges = Partial<
     | "description"
     | "purchaseDate"
     | "paycheckCycleId"
+    | "envelopeId"
     | "resolvedAt"
   >
 >;
@@ -327,6 +332,49 @@ export type NotificationSettingsChanges = Partial<
     | "upcomingBillReminder"
     | "billReminderDaysBefore"
   >
+>;
+
+export type BudgetingPreferences = {
+  id: string;
+  profileId: string;
+  envelopesEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  syncStatus: SyncStatus;
+};
+
+export type NewBudgetingPreferences = {
+  profileId: string;
+  envelopesEnabled?: boolean;
+};
+
+export type BudgetingPreferencesChanges = Partial<
+  Pick<BudgetingPreferences, "envelopesEnabled">
+>;
+
+export type Envelope = {
+  id: string;
+  profileId: string;
+  name: string;
+  allocationCents: number;
+  sortOrder: number;
+  isPaused: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  syncStatus: SyncStatus;
+};
+
+export type NewEnvelope = {
+  profileId: string;
+  name: string;
+  allocationCents: number;
+  sortOrder?: number;
+  isPaused?: boolean;
+};
+
+export type EnvelopeChanges = Partial<
+  Pick<Envelope, "name" | "allocationCents" | "sortOrder" | "isPaused">
 >;
 
 export type ImportSuggestionInterval =

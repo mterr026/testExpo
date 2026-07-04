@@ -8,10 +8,12 @@ import { getOrCreateActiveProfile } from "@/shared/services/activeProfile";
 import { getTodayIsoDate } from "@/shared/dates";
 
 type UsePurchaseEntryControllerInput = {
+  envelopesEnabled?: boolean;
   onPurchasesChanged?: () => void | Promise<void>;
 };
 
 export function usePurchaseEntryController({
+  envelopesEnabled = false,
   onPurchasesChanged,
 }: UsePurchaseEntryControllerInput = {}) {
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
@@ -21,6 +23,9 @@ export function usePurchaseEntryController({
   const [purchaseDate, setPurchaseDate] = useState(getTodayIsoDate());
   const [purchaseStatus, setPurchaseStatus] =
     useState<Purchase["status"]>("Pending");
+  const [purchaseEnvelopeId, setPurchaseEnvelopeId] = useState<string | null>(
+    null
+  );
   const [purchaseError, setPurchaseError] = useState("");
 
   async function savePurchase() {
@@ -40,12 +45,15 @@ export function usePurchaseEntryController({
       const runtime = await getAppRuntime();
       const state = purchaseStatus === "Pending" ? "pending" : "charged";
 
+      const envelopeId = purchaseEnvelopeId;
+
       if (editingPurchase) {
         await runtime.services.purchaseService.updatePurchase(editingPurchase.id, {
           amountCents,
           description: purchaseName.trim(),
           purchaseDate,
           state,
+          envelopeId,
         });
       } else {
         const profile = await getOrCreateActiveProfile(runtime);
@@ -56,6 +64,7 @@ export function usePurchaseEntryController({
           state,
           description: purchaseName.trim(),
           purchaseDate,
+          envelopeId,
         });
       }
       closePurchaseModal();
@@ -71,6 +80,7 @@ export function usePurchaseEntryController({
     setPurchaseAmount("");
     setPurchaseDate(getTodayIsoDate());
     setPurchaseStatus("Pending");
+    setPurchaseEnvelopeId(null);
     setPurchaseError("");
     setPurchaseModalOpen(false);
   }
@@ -81,6 +91,7 @@ export function usePurchaseEntryController({
     setPurchaseAmount("");
     setPurchaseDate(getTodayIsoDate());
     setPurchaseStatus("Pending");
+    setPurchaseEnvelopeId(null);
     setPurchaseError("");
     setPurchaseModalOpen(true);
   }
@@ -91,6 +102,7 @@ export function usePurchaseEntryController({
     setPurchaseAmount((purchase.amountCents / 100).toFixed(2));
     setPurchaseDate(purchase.purchaseDate);
     setPurchaseStatus(purchase.status);
+    setPurchaseEnvelopeId(purchase.envelopeId);
     setPurchaseError("");
     setPurchaseModalOpen(true);
   }
@@ -158,6 +170,11 @@ export function usePurchaseEntryController({
         setPurchaseStatus(status);
         setPurchaseError("");
       },
+      setEnvelopeId: (envelopeId: string | null) => {
+        setPurchaseEnvelopeId(envelopeId);
+        setPurchaseError("");
+      },
+      envelopeId: purchaseEnvelopeId,
       status: purchaseStatus,
       visible: purchaseModalOpen,
     },

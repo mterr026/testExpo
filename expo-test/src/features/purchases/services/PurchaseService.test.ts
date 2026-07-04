@@ -2,13 +2,31 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   ActivityLogRepository,
+  PaycheckRepository,
   PurchaseRepository,
 } from "@/database/repositories";
-import type { Purchase } from "@/database/repositories/types";
-import type { PaycheckService } from "@/features/paychecks/services/PaycheckService";
+import type { Paycheck, Purchase } from "@/database/repositories/types";
 import { FINANCIAL_STATE_CHANGED } from "@/shared/events/financialEvents";
 
 import { PurchaseService } from "./PurchaseService";
+
+const receivedPaycheck: Paycheck = {
+  id: "paycheck-1",
+  profileId: "profile-1",
+  label: "Primary",
+  amountCents: 200000,
+  expectedDate: "2026-06-01",
+  isReceived: true,
+  receivedAt: "2026-06-01T12:00:00.000Z",
+  isRecurring: true,
+  recurrenceInterval: "biweekly",
+  isPrimary: true,
+  notes: null,
+  createdAt: "2026-06-01T12:00:00.000Z",
+  updatedAt: "2026-06-01T12:00:00.000Z",
+  deletedAt: null,
+  syncStatus: "local",
+};
 
 const purchase: Purchase = {
   id: "purchase-1",
@@ -18,6 +36,7 @@ const purchase: Purchase = {
   description: "Coffee",
   purchaseDate: "2026-06-01",
   paycheckCycleId: "paycheck-1",
+  envelopeId: null,
   resolvedAt: null,
   createdAt: "2026-06-01T12:00:00.000Z",
   updatedAt: "2026-06-01T12:00:00.000Z",
@@ -35,8 +54,8 @@ function createMocks() {
       findById: vi.fn(),
       softDelete: vi.fn(),
     },
-    paycheckService: {
-      findCycleForDate: vi.fn(),
+    paycheckRepository: {
+      findAll: vi.fn(),
     },
     activityLogRepository: {
       create: vi.fn(),
@@ -47,44 +66,42 @@ function createMocks() {
   };
 }
 
+function createService(mocks: ReturnType<typeof createMocks>) {
+  return new PurchaseService(
+    mocks.purchaseRepository as unknown as PurchaseRepository,
+    mocks.paycheckRepository as unknown as PaycheckRepository,
+    mocks.activityLogRepository as unknown as ActivityLogRepository,
+    mocks.eventBus
+  );
+}
+
 describe("PurchaseService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("createPurchase_assigns_paycheck_cycle_logs_activity_and_emits_change", async () => {
+  it("createPurchase_assigns_active_paycheck_cycle_logs_activity_and_emits_change", async () => {
     const mocks = createMocks();
-    mocks.paycheckService.findCycleForDate.mockResolvedValue({
-      cycleAnchor: { id: "paycheck-1" },
-      nextCycleAnchor: null,
-    });
+    mocks.paycheckRepository.findAll.mockResolvedValue([receivedPaycheck]);
     mocks.purchaseRepository.create.mockResolvedValue(purchase);
-    const service = new PurchaseService(
-      mocks.purchaseRepository as unknown as PurchaseRepository,
-      mocks.paycheckService as unknown as PaycheckService,
-      mocks.activityLogRepository as unknown as ActivityLogRepository,
-      mocks.eventBus
-    );
+    const service = createService(mocks);
 
     const created = await service.createPurchase({
       profileId: "profile-1",
       amountCents: 1234,
       state: "pending",
       description: "Coffee",
-      purchaseDate: "2026-06-01",
+      purchaseDate: "2026-06-10",
     });
 
     expect(created).toBe(purchase);
-    expect(mocks.paycheckService.findCycleForDate).toHaveBeenCalledWith(
-      "profile-1",
-      "2026-06-01"
-    );
+    expect(mocks.paycheckRepository.findAll).toHaveBeenCalledWith("profile-1");
     expect(mocks.purchaseRepository.create).toHaveBeenCalledWith({
       profileId: "profile-1",
       amountCents: 1234,
       state: "pending",
       description: "Coffee",
-      purchaseDate: "2026-06-01",
+      purchaseDate: "2026-06-10",
       paycheckCycleId: "paycheck-1",
     });
     expect(mocks.activityLogRepository.create).toHaveBeenCalledWith({
@@ -102,17 +119,12 @@ describe("PurchaseService", () => {
 
   it("createPurchase_allows_missing_cycle", async () => {
     const mocks = createMocks();
-    mocks.paycheckService.findCycleForDate.mockResolvedValue(null);
+    mocks.paycheckRepository.findAll.mockResolvedValue([]);
     mocks.purchaseRepository.create.mockResolvedValue({
       ...purchase,
       paycheckCycleId: null,
     });
-    const service = new PurchaseService(
-      mocks.purchaseRepository as unknown as PurchaseRepository,
-      mocks.paycheckService as unknown as PaycheckService,
-      mocks.activityLogRepository as unknown as ActivityLogRepository,
-      mocks.eventBus
-    );
+    const service = createService(mocks);
 
     await service.createPurchase({
       profileId: "profile-1",
@@ -130,16 +142,12 @@ describe("PurchaseService", () => {
 
   it("updatePurchase_logs_activity_and_emits_change", async () => {
     const mocks = createMocks();
+    mocks.purchaseRepository.findById.mockResolvedValue(purchase);
     mocks.purchaseRepository.update.mockResolvedValue({
       ...purchase,
       amountCents: 2000,
     });
-    const service = new PurchaseService(
-      mocks.purchaseRepository as unknown as PurchaseRepository,
-      mocks.paycheckService as unknown as PaycheckService,
-      mocks.activityLogRepository as unknown as ActivityLogRepository,
-      mocks.eventBus
-    );
+    const service = createService(mocks);
 
     await service.updatePurchase("purchase-1", {
       amountCents: 2000,
@@ -171,12 +179,7 @@ describe("PurchaseService", () => {
       state: "charged",
       resolvedAt: "2026-06-01T12:00:00.000Z",
     });
-    const service = new PurchaseService(
-      mocks.purchaseRepository as unknown as PurchaseRepository,
-      mocks.paycheckService as unknown as PaycheckService,
-      mocks.activityLogRepository as unknown as ActivityLogRepository,
-      mocks.eventBus
-    );
+    const service = createService(mocks);
 
     await service.markPurchaseCharged("purchase-1");
 
@@ -202,12 +205,7 @@ describe("PurchaseService", () => {
       ...purchase,
       state: "pending",
     });
-    const service = new PurchaseService(
-      mocks.purchaseRepository as unknown as PurchaseRepository,
-      mocks.paycheckService as unknown as PaycheckService,
-      mocks.activityLogRepository as unknown as ActivityLogRepository,
-      mocks.eventBus
-    );
+    const service = createService(mocks);
 
     await service.markPurchasePending("purchase-1");
 
@@ -230,12 +228,7 @@ describe("PurchaseService", () => {
   it("deletePurchase_soft_deletes_existing_purchase_logs_and_emits_change", async () => {
     const mocks = createMocks();
     mocks.purchaseRepository.findById.mockResolvedValue(purchase);
-    const service = new PurchaseService(
-      mocks.purchaseRepository as unknown as PurchaseRepository,
-      mocks.paycheckService as unknown as PaycheckService,
-      mocks.activityLogRepository as unknown as ActivityLogRepository,
-      mocks.eventBus
-    );
+    const service = createService(mocks);
 
     await service.deletePurchase("purchase-1");
 
@@ -259,12 +252,7 @@ describe("PurchaseService", () => {
   it("deletePurchase_rejects_missing_purchase_without_side_effects", async () => {
     const mocks = createMocks();
     mocks.purchaseRepository.findById.mockResolvedValue(null);
-    const service = new PurchaseService(
-      mocks.purchaseRepository as unknown as PurchaseRepository,
-      mocks.paycheckService as unknown as PaycheckService,
-      mocks.activityLogRepository as unknown as ActivityLogRepository,
-      mocks.eventBus
-    );
+    const service = createService(mocks);
 
     await expect(service.deletePurchase("missing")).rejects.toThrow(
       "Purchase missing not found."

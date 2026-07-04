@@ -13,8 +13,14 @@ import {
   DatePickerField,
   KeyboardDoneAccessory,
 } from "@/shared/ui/components";
+import { EnvelopePickerField } from "@/features/budgeting/components/EnvelopePickerField";
 import { styles } from "@/shared/ui/styles";
 import type { Purchase } from "@/shared/ui/types";
+
+type EnvelopePickerOption = {
+  id: string;
+  name: string;
+};
 
 type PurchaseEntryModalProps = {
   visible: boolean;
@@ -25,10 +31,14 @@ type PurchaseEntryModalProps = {
   status: Purchase["status"];
   error: string;
   amountAccessoryId: string;
+  envelopesEnabled: boolean;
+  envelopes: EnvelopePickerOption[];
+  envelopeId: string | null;
   onNameChange: (text: string) => void;
   onAmountChange: (text: string) => void;
   onDateChange: (date: string) => void;
   onStatusChange: (status: Purchase["status"]) => void;
+  onEnvelopeChange: (envelopeId: string | null) => void;
   onSave: () => void | Promise<void>;
   onClose: () => void;
 };
@@ -42,10 +52,14 @@ export function PurchaseEntryModal({
   status,
   error,
   amountAccessoryId,
+  envelopesEnabled,
+  envelopes,
+  envelopeId,
   onNameChange,
   onAmountChange,
   onDateChange,
   onStatusChange,
+  onEnvelopeChange,
   onSave,
   onClose,
 }: PurchaseEntryModalProps) {
@@ -93,6 +107,15 @@ export function PurchaseEntryModal({
             value={date}
             onChange={onDateChange}
           />
+
+          {envelopesEnabled && envelopes.length > 0 && (
+            <EnvelopePickerField
+              label="Envelope"
+              envelopes={envelopes}
+              envelopeId={envelopeId}
+              onChange={onEnvelopeChange}
+            />
+          )}
 
           <Text style={styles.inputLabel}>Status</Text>
           <View style={styles.segmentedControl}>

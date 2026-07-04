@@ -10,6 +10,7 @@ import {
   schemaV6,
   schemaV7,
   schemaV8,
+  schemaV9,
 } from "./schema";
 
 const DATABASE_NAME = "budget-flow.db";
@@ -60,6 +61,7 @@ async function migrateDatabase(db: SQLite.SQLiteDatabase) {
       await transaction.execAsync(schemaV6);
       await transaction.execAsync(schemaV7);
       await transaction.execAsync(schemaV8);
+      await transaction.execAsync(schemaV9);
       await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
     });
     return;
@@ -73,6 +75,7 @@ async function migrateDatabase(db: SQLite.SQLiteDatabase) {
       await transaction.execAsync(schemaV6);
       await transaction.execAsync(schemaV7);
       await transaction.execAsync(schemaV8);
+      await transaction.execAsync(schemaV9);
       await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
     });
     return;
@@ -85,6 +88,7 @@ async function migrateDatabase(db: SQLite.SQLiteDatabase) {
       await transaction.execAsync(schemaV6);
       await transaction.execAsync(schemaV7);
       await transaction.execAsync(schemaV8);
+      await transaction.execAsync(schemaV9);
       await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
     });
     return;
@@ -96,6 +100,7 @@ async function migrateDatabase(db: SQLite.SQLiteDatabase) {
       await transaction.execAsync(schemaV6);
       await transaction.execAsync(schemaV7);
       await transaction.execAsync(schemaV8);
+      await transaction.execAsync(schemaV9);
       await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
     });
     return;
@@ -106,6 +111,7 @@ async function migrateDatabase(db: SQLite.SQLiteDatabase) {
       await transaction.execAsync(schemaV6);
       await transaction.execAsync(schemaV7);
       await transaction.execAsync(schemaV8);
+      await transaction.execAsync(schemaV9);
       await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
     });
     return;
@@ -115,6 +121,7 @@ async function migrateDatabase(db: SQLite.SQLiteDatabase) {
     await db.withExclusiveTransactionAsync(async (transaction) => {
       await transaction.execAsync(schemaV7);
       await transaction.execAsync(schemaV8);
+      await transaction.execAsync(schemaV9);
       await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
     });
     return;
@@ -123,6 +130,15 @@ async function migrateDatabase(db: SQLite.SQLiteDatabase) {
   if (currentVersion === 7) {
     await db.withExclusiveTransactionAsync(async (transaction) => {
       await transaction.execAsync(schemaV8);
+      await transaction.execAsync(schemaV9);
+      await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
+    });
+    return;
+  }
+
+  if (currentVersion === 8) {
+    await db.withExclusiveTransactionAsync(async (transaction) => {
+      await transaction.execAsync(schemaV9);
       await transaction.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
     });
     return;

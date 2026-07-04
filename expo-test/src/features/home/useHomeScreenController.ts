@@ -5,6 +5,10 @@ import { useFinancialState } from "@/context/FinancialStateContext";
 import type { Bill } from "@/shared/ui/types";
 
 import { useBillEntryController } from "@/features/bills/hooks";
+import {
+  useBudgetingSettingsActions,
+  useEnvelopeEntryController,
+} from "@/features/budgeting/hooks";
 import { useHomeDerivedData } from "@/features/dashboard/hooks/useHomeDerivedData";
 import { useImportReviewController } from "@/features/import/hooks";
 import { useOnboardingController } from "@/features/onboarding/hooks";
@@ -63,6 +67,14 @@ export function useHomeScreenController({
     changeScreen,
     onTutorialComplete: refreshDashboardSnapshot,
   });
+  const budgetingSettingsActions = useBudgetingSettingsActions({
+    onSettingsChanged: refreshDashboardSnapshot,
+    profileId: dashboardSnapshot?.profile?.id,
+  });
+  const envelopesEnabled =
+    budgetingSettingsActions.budgetingPreferences?.envelopesEnabled ??
+    dashboardSnapshot?.budgetingPreferences?.envelopesEnabled ??
+    false;
   const {
     deletePurchase,
     markPurchaseCharged,
@@ -71,6 +83,7 @@ export function useHomeScreenController({
     openPurchaseEdit,
     purchaseEntry,
   } = usePurchaseEntryController({
+    envelopesEnabled,
     onPurchasesChanged: refreshDashboardSnapshot,
   });
   const {
@@ -104,6 +117,15 @@ export function useHomeScreenController({
     profileId: dashboardSnapshot?.profile?.id,
     setBalanceCents,
     setReserveCents,
+  });
+  const {
+    deleteEnvelope,
+    envelopeEntry,
+    openAddEnvelope,
+    openEnvelopeEdit,
+  } = useEnvelopeEntryController({
+    envelopes: dashboardSnapshot?.envelopes ?? [],
+    onEnvelopesChanged: refreshDashboardSnapshot,
   });
 
   return {
@@ -141,11 +163,22 @@ export function useHomeScreenController({
     toggleBillPaused,
     backupExportError: settingsActions.backupExportError,
     backupExportMessage: settingsActions.backupExportMessage,
+    budgetingPreferences:
+      budgetingSettingsActions.budgetingPreferences ??
+      dashboardSnapshot?.budgetingPreferences ??
+      null,
+    deleteEnvelope,
+    envelopeEntry,
+    envelopeToggleError: budgetingSettingsActions.envelopeToggleError,
     exportBackup: settingsActions.exportBackup,
     isBackupExporting: settingsActions.isBackupExporting,
+    isEnvelopesToggleSaving: budgetingSettingsActions.isEnvelopesToggleSaving,
     isNotificationSaving: settingsActions.isNotificationSaving,
     notificationError: settingsActions.notificationError,
     notificationSettings: settingsActions.notificationSettings,
+    openAddEnvelope,
+    openEnvelopeEdit,
+    toggleEnvelopes: budgetingSettingsActions.toggleEnvelopes,
     toggleNotifications: settingsActions.toggleNotifications,
     updateBalance: settingsActions.updateBalance,
     updateReserve: settingsActions.updateReserve,
