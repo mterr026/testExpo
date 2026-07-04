@@ -717,10 +717,14 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   paycheckCoverageLinkToggle: {
+    borderTopWidth: 1,
+    borderTopColor: surfaces.divider,
+    marginTop: spacing.sm,
     alignItems: "center",
     justifyContent: "center",
     minHeight: 36,
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   paycheckCoverageLinkText: {
     color: colors.accent,
@@ -1696,6 +1700,9 @@ export const styles = StyleSheet.create({
   purchaseSwipeableList: {
     gap: spacing.sm,
   },
+  dashboardEnvelopeSwipeList: {
+    marginBottom: spacing.md,
+  },
   purchaseSwipeableCard: {
     backgroundColor: surfaces.card,
     borderRadius: radius.lg,
@@ -1703,6 +1710,15 @@ export const styles = StyleSheet.create({
     ...shadows.card,
   },
   purchaseSwipeableRowForeground: {
+    backgroundColor: surfaces.card,
+  },
+  envelopeSwipeableCard: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    ...shadows.card,
+  },
+  envelopeSwipeableRowForeground: {
     backgroundColor: surfaces.card,
   },
   purchaseSwipeActions: {

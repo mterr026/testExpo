@@ -124,6 +124,7 @@ export function useHomeScreenController({
     envelopeEntry,
     openAddEnvelope,
     openEnvelopeEdit,
+    toggleEnvelopePaused,
   } = useEnvelopeEntryController({
     envelopes: dashboardSnapshot?.envelopes ?? [],
     onEnvelopesChanged: refreshDashboardSnapshot,
@@ -180,6 +181,7 @@ export function useHomeScreenController({
     notificationSettings: settingsActions.notificationSettings,
     openAddEnvelope,
     openEnvelopeEdit,
+    toggleEnvelopePaused,
     toggleEnvelopes: budgetingSettingsActions.toggleEnvelopes,
     toggleNotifications: settingsActions.toggleNotifications,
     updateBalance: settingsActions.updateBalance,

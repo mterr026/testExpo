@@ -116,6 +116,10 @@ function renderPagerScreen({
           onOpenPaychecks={() => onChangeScreen("Paychecks")}
           onOpenPurchases={() => onChangeScreen("Purchases")}
           onOpenSettings={() => onChangeScreen("Settings")}
+          onAddEnvelope={controller.openAddEnvelope}
+          onDeleteEnvelope={controller.deleteEnvelope}
+          onEditEnvelope={controller.openEnvelopeEdit}
+          onToggleEnvelopePaused={controller.toggleEnvelopePaused}
         />
       );
     case "Purchases":
@@ -181,27 +185,19 @@ function renderPagerScreen({
           backupExportMessage={controller.backupExportMessage}
           balanceCents={controller.dashboardTotals.runningBalanceCents}
           reserveCents={controller.dashboardTotals.reserveCents}
-          envelopes={controller.dashboardSnapshot?.envelopes ?? []}
-          envelopeEntries={
-            controller.dashboardSnapshot?.envelopeSnapshot.entries ?? []
-          }
           envelopesEnabled={controller.budgetingPreferences?.envelopesEnabled ?? null}
           envelopeToggleError={controller.envelopeToggleError}
           isBackupExporting={controller.isBackupExporting}
           isEnvelopesToggleSaving={controller.isEnvelopesToggleSaving}
           isNotificationSaving={controller.isNotificationSaving}
-          isSettingsReady={
-            !controller.dashboardLoading && controller.dashboardSnapshot != null
-          }
+          isSettingsReady={controller.dashboardSnapshot != null}
           notificationError={controller.notificationError}
           notificationsEnabled={
             controller.notificationSettings?.notificationsEnabled ?? null
           }
           moneyInputAccessoryId={settingsMoneyAccessoryId}
-          onAddEnvelope={controller.openAddEnvelope}
           onBackupExport={controller.exportBackup}
           onBalanceChange={controller.updateBalance}
-          onEditEnvelope={controller.openEnvelopeEdit}
           onEnvelopesToggle={controller.toggleEnvelopes}
           onNotificationsToggle={controller.toggleNotifications}
           onReserveChange={controller.updateReserve}

@@ -19,7 +19,7 @@ export function PaycheckCoveredBills({
   isExpanded,
   onToggle,
   showTutorialTarget = false,
-  toggleStyle = "caret",
+  toggleStyle = "link",
 }: PaycheckCoveredBillsProps) {
   if (!coverage) {
     return null;

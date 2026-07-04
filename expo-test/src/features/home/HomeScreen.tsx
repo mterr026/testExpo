@@ -48,7 +48,11 @@ export function HomeScreen() {
   const [swipeRowTouchActive, setSwipeRowTouchActive] = useState(false);
 
   useEffect(() => {
-    if (screen !== "Purchases" && screen !== "Paychecks") {
+    if (
+      screen !== "Purchases" &&
+      screen !== "Paychecks" &&
+      screen !== "Dashboard"
+    ) {
       setSwipeRowTouchActive(false);
     }
   }, [screen]);
@@ -72,7 +76,9 @@ export function HomeScreen() {
             onScrollEnd={handlePagerScrollEnd}
             pagerRef={pagerRef}
             pagerScrollEnabled={
-              (screen !== "Purchases" && screen !== "Paychecks") ||
+              (screen !== "Purchases" &&
+                screen !== "Paychecks" &&
+                screen !== "Dashboard") ||
               !swipeRowTouchActive
             }
             width={width}

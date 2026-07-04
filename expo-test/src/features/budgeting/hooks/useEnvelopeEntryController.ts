@@ -72,6 +72,19 @@ export function useEnvelopeEntryController({
     }
   }
 
+  async function toggleEnvelopePaused(envelope: Envelope) {
+    try {
+      const runtime = await getAppRuntime();
+
+      await runtime.services.envelopeService.update(envelope.id, {
+        isPaused: !envelope.isPaused,
+      });
+      await onEnvelopesChanged?.();
+    } catch {
+      setEnvelopeError("Envelope could not be updated.");
+    }
+  }
+
   function closeEnvelopeModal() {
     setEditingEnvelope(null);
     setEnvelopeName("");
@@ -125,5 +138,6 @@ export function useEnvelopeEntryController({
     },
     openAddEnvelope,
     openEnvelopeEdit,
+    toggleEnvelopePaused,
   };
 }

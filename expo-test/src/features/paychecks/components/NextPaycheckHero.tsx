@@ -52,7 +52,6 @@ export function NextPaycheckHero({
         paycheck={paycheck}
         showTutorialCoverageTarget={showTutorialCoverageTarget}
         showTutorialSwipeTarget={showTutorialSwipeTarget}
-        toggleStyle="link"
         variant="hero"
         wrapUpcomingTutorialTarget={showTutorialUpcomingTarget}
         onConfirmPaycheck={onConfirmPaycheck}

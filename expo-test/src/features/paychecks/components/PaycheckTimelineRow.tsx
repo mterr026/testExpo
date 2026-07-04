@@ -41,7 +41,7 @@ export function PaycheckTimelineRow({
   paycheck,
   showTutorialCoverageTarget = false,
   showTutorialSwipeTarget = false,
-  toggleStyle = "caret",
+  toggleStyle = "link",
   variant = "default",
   wrapUpcomingTutorialTarget = false,
 }: PaycheckTimelineRowProps) {

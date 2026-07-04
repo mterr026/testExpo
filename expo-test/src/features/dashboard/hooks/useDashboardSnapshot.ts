@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { DashboardSnapshot } from "@/features/dashboard/services";
 import { FINANCIAL_STATE_CHANGED } from "@/shared/events/financialEvents";
@@ -12,10 +12,13 @@ export function useDashboardSnapshot() {
     useState<DashboardSnapshot | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState("");
+  const hasLoadedSnapshotRef = useRef(false);
 
   const loadDashboardSnapshot = useCallback(async () => {
     try {
-      setDashboardLoading(true);
+      if (!hasLoadedSnapshotRef.current) {
+        setDashboardLoading(true);
+      }
       const runtime = await getAppRuntime();
       await getOrCreateActiveProfile(runtime);
       const snapshot = await runtime.services.dashboardService.loadDashboardSnapshot(
@@ -23,6 +26,7 @@ export function useDashboardSnapshot() {
       );
 
       setDashboardSnapshot(snapshot);
+      hasLoadedSnapshotRef.current = true;
       setDashboardError("");
     } catch {
       setDashboardError("Dashboard could not be refreshed.");
@@ -37,7 +41,9 @@ export function useDashboardSnapshot() {
 
     async function loadActiveDashboardSnapshot() {
       try {
-        setDashboardLoading(true);
+        if (!hasLoadedSnapshotRef.current) {
+          setDashboardLoading(true);
+        }
         const runtime = await getAppRuntime();
         await getOrCreateActiveProfile(runtime);
         const snapshot = await runtime.services.dashboardService.loadDashboardSnapshot(
@@ -46,6 +52,7 @@ export function useDashboardSnapshot() {
 
         if (isActive) {
           setDashboardSnapshot(snapshot);
+          hasLoadedSnapshotRef.current = true;
           setDashboardError("");
         }
       } catch {

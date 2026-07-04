@@ -1,20 +1,21 @@
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
+import type { Envelope } from "@/database/repositories/types";
 import type { SafeToSpendBreakdown } from "@/engine";
 import type { EnvelopeSnapshotEntry } from "@/engine";
 import { formatDashboardCycleLabel } from "@/features/dashboard/dashboardCycleLabel";
+import { EnvelopeSwipeableRow } from "@/features/budgeting/components/EnvelopeSwipeableRow";
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
 import { money } from "@/shared/ui/components";
 import { styles } from "@/shared/ui/styles";
 import type { Bill, PaycheckListItem } from "@/shared/ui/types";
 
-type DashboardEnvelope = {
-  id: string;
-  name: string;
-  isPaused: boolean;
-};
+type DashboardEnvelope = Pick<
+  Envelope,
+  "id" | "name" | "allocationCents" | "isPaused" | "deletedAt"
+>;
 
 type TimelineEvent = {
   id: string;
@@ -45,6 +46,10 @@ export function DashboardScreen({
   onOpenPaychecks,
   onOpenPurchases,
   onOpenSettings,
+  onAddEnvelope,
+  onDeleteEnvelope,
+  onEditEnvelope,
+  onToggleEnvelopePaused,
 }: {
   activeCycleEndDate: string | null;
   activeCycleStartDate: string | null;
@@ -65,8 +70,15 @@ export function DashboardScreen({
   onOpenPaychecks: () => void;
   onOpenPurchases: () => void;
   onOpenSettings: () => void;
+  onAddEnvelope: () => void;
+  onDeleteEnvelope: (id: string) => void | Promise<void>;
+  onEditEnvelope: (envelope: DashboardEnvelope) => void;
+  onToggleEnvelopePaused: (envelope: DashboardEnvelope) => void | Promise<void>;
 }) {
   const [showAllTimelineEvents, setShowAllTimelineEvents] = useState(false);
+  const [openSwipeEnvelopeId, setOpenSwipeEnvelopeId] = useState<string | null>(
+    null
+  );
   const { onTutorialScroll, tutorialScrollRef } = useTutorialScrollView("Dashboard");
   const isNegative = safeToSpend < 0;
   const timelineEvents = buildTimelineEvents(upcomingBills, upcomingPaychecks);
@@ -75,9 +87,9 @@ export function DashboardScreen({
     ? timelineEvents
     : timelinePreview;
   const hiddenTimelineCount = Math.max(0, timelineEvents.length - timelinePreview.length);
-  const envelopeNameById = new Map(envelopes.map((envelope) => [envelope.id, envelope.name]));
-  const visibleEnvelopeEntries = envelopeEntries.filter((entry) =>
-    envelopeNameById.has(entry.envelopeId)
+  const activeEnvelopes = envelopes.filter((envelope) => !envelope.deletedAt);
+  const envelopeEntryById = new Map(
+    envelopeEntries.map((entry) => [entry.envelopeId, entry])
   );
   const cycleLabel = isLoading
     ? "Loading cycle"
@@ -92,6 +104,7 @@ export function DashboardScreen({
       keyboardShouldPersistTaps="handled"
       scrollEventThrottle={16}
       onScroll={onTutorialScroll}
+      onScrollBeginDrag={() => setOpenSwipeEnvelopeId(null)}
     >
       <TutorialTarget id="dashboard-safe-to-spend">
       <View style={[styles.dashboardHeroCard, isNegative && styles.warningCard]}>
@@ -160,21 +173,50 @@ export function DashboardScreen({
         </View>
       </View>
 
-      {envelopesEnabled && visibleEnvelopeEntries.length > 0 && (
+      {envelopesEnabled && (
         <>
           <View style={styles.dashboardSectionHeader}>
             <Text style={styles.sectionTitleCompact}>Envelopes</Text>
+            <Pressable
+              accessibilityHint="Opens the form to add a new envelope"
+              accessibilityLabel="Add envelope"
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.inlinePrimaryButton,
+                pressed && styles.pressed,
+              ]}
+              onPress={onAddEnvelope}
+            >
+              <Text style={styles.inlinePrimaryButtonText}>+ Add</Text>
+            </Pressable>
           </View>
-          <View style={styles.dashboardBreakdownCard}>
-            {visibleEnvelopeEntries.map((entry) => (
-              <DashboardBreakdownRow
-                key={entry.envelopeId}
-                label={envelopeNameById.get(entry.envelopeId) ?? "Envelope"}
-                tone={entry.remainingCents < 0 ? "deduction" : "default"}
-                value={`${money(entry.remainingCents)} left`}
-              />
-            ))}
-          </View>
+          {activeEnvelopes.length === 0 ? (
+            <View style={styles.dashboardBreakdownCard}>
+              <Text style={[styles.rowMetaText, styles.timelineEmptyText]}>
+                Add envelopes like Gas or Groceries to partition Safe to Spend.
+              </Text>
+            </View>
+          ) : (
+            <View style={[styles.purchaseSwipeableList, styles.dashboardEnvelopeSwipeList]}>
+              {activeEnvelopes.map((envelope) => (
+                <EnvelopeSwipeableRow
+                  key={envelope.id}
+                  envelope={envelope}
+                  envelopeEntry={envelopeEntryById.get(envelope.id)}
+                  isSwipeOpen={openSwipeEnvelopeId === envelope.id}
+                  onDeleteEnvelope={onDeleteEnvelope}
+                  onEditEnvelope={onEditEnvelope}
+                  onSwipeClose={() =>
+                    setOpenSwipeEnvelopeId((current) =>
+                      current === envelope.id ? null : current
+                    )
+                  }
+                  onSwipeOpen={setOpenSwipeEnvelopeId}
+                  onToggleEnvelopePaused={onToggleEnvelopePaused}
+                />
+              ))}
+            </View>
+          )}
         </>
       )}
 
