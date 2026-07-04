@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { View } from "react-native";
+import { View, type StyleProp, type ViewStyle } from "react-native";
 
 import { useOptionalTutorialContext } from "./TutorialContext";
 import type { TutorialTargetId } from "./tutorialTargets";
@@ -7,9 +7,10 @@ import type { TutorialTargetId } from "./tutorialTargets";
 type TutorialTargetProps = {
   id: TutorialTargetId;
   children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
 };
 
-export function TutorialTarget({ id, children }: TutorialTargetProps) {
+export function TutorialTarget({ id, children, style }: TutorialTargetProps) {
   const context = useOptionalTutorialContext();
   const ref = useRef<View>(null);
 
@@ -30,7 +31,7 @@ export function TutorialTarget({ id, children }: TutorialTargetProps) {
   }
 
   return (
-    <View ref={ref} collapsable={false}>
+    <View ref={ref} collapsable={false} style={style}>
       {children}
     </View>
   );

@@ -2411,6 +2411,10 @@ export const styles = StyleSheet.create({
     marginBottom: spacing.section,
     ...shadows.card,
   },
+  settingsMoneySection: {
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
   settingsMetricRow: {
     flexDirection: "row",
     backgroundColor: colors.rowSurface,
@@ -2527,6 +2531,12 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     ...shadows.fab,
+  },
+  fabPressable: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   fabText: {
     color: "white",

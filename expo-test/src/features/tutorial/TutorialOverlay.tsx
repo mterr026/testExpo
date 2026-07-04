@@ -12,6 +12,7 @@ import { colors, fontWeight, radius, spacing, styles } from "@/shared/ui/styles"
 
 import { useTutorialContext } from "./TutorialContext";
 import {
+  buildDimRegions,
   buildHighlightRect,
   buildPointerLayout,
   resolveTooltipPlacement,
@@ -23,6 +24,7 @@ type TutorialOverlayProps = {
   visible: boolean;
   stepIndex: number;
   isSaving: boolean;
+  onBack: () => void;
   onNext: () => void | Promise<void>;
   onSkip: () => void | Promise<void>;
 };
@@ -70,6 +72,7 @@ export function TutorialOverlay({
   visible,
   stepIndex,
   isSaving,
+  onBack,
   onNext,
   onSkip,
 }: TutorialOverlayProps) {
@@ -78,6 +81,7 @@ export function TutorialOverlay({
     null
   );
   const step = tutorialSteps[stepIndex];
+  const isFirstStep = stepIndex === 0;
   const isLastStep = stepIndex === tutorialSteps.length - 1;
   const stepNumber = stepIndex + 1;
   const windowSize = Dimensions.get("window");
@@ -158,7 +162,41 @@ export function TutorialOverlay({
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={tutorialStyles.root} pointerEvents="box-none">
-        <View pointerEvents="none" style={tutorialStyles.fullDim} />
+        {highlight ? (
+          <>
+            {buildDimRegions(highlight, windowSize.width, windowSize.height).map(
+              (region, index) => (
+                <View
+                  key={`dim-${index}`}
+                  pointerEvents="none"
+                  style={[
+                    tutorialStyles.dimRegion,
+                    {
+                      left: region.left,
+                      top: region.top,
+                      width: region.width,
+                      height: region.height,
+                    },
+                  ]}
+                />
+              )
+            )}
+            <View
+              pointerEvents="none"
+              style={[
+                tutorialStyles.spotlightRing,
+                {
+                  left: highlight.x,
+                  top: highlight.y,
+                  width: highlight.width,
+                  height: highlight.height,
+                },
+              ]}
+            />
+          </>
+        ) : (
+          <View pointerEvents="none" style={tutorialStyles.fullDim} />
+        )}
 
         {pointerLayout ? <TutorialPointer layout={pointerLayout} /> : null}
 
@@ -186,19 +224,36 @@ export function TutorialOverlay({
           <Text style={styles.sectionTitle}>{step.title}</Text>
           <Text style={styles.helpText}>{step.body}</Text>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButtonTight,
-              tutorialStyles.nextButton,
-              pressed && styles.pressed,
-            ]}
-            disabled={isSaving}
-            onPress={onNext}
-          >
-            <Text style={styles.primaryButtonText}>
-              {isSaving ? "Saving..." : isLastStep ? "Got it" : "Next"}
-            </Text>
-          </Pressable>
+          <View style={tutorialStyles.tooltipActions}>
+            {!isFirstStep ? (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  tutorialStyles.backButton,
+                  pressed && styles.pressed,
+                ]}
+                disabled={isSaving}
+                onPress={onBack}
+              >
+                <Text style={styles.secondaryButtonText}>Back</Text>
+              </Pressable>
+            ) : null}
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.primaryButtonTight,
+                tutorialStyles.nextButton,
+                !isFirstStep && tutorialStyles.nextButtonWithBack,
+                pressed && styles.pressed,
+              ]}
+              disabled={isSaving}
+              onPress={onNext}
+            >
+              <Text style={styles.primaryButtonText}>
+                {isSaving ? "Saving..." : isLastStep ? "Got it" : "Next"}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>
@@ -220,6 +275,21 @@ const tutorialStyles = {
   fullDim: {
     ...absoluteFill,
     backgroundColor: "rgba(11, 31, 51, 0.52)",
+  },
+  dimRegion: {
+    position: "absolute" as const,
+    backgroundColor: "rgba(11, 31, 51, 0.52)",
+  },
+  spotlightRing: {
+    position: "absolute" as const,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: colors.accentLight,
+    backgroundColor: "transparent",
+    shadowColor: colors.accentLight,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
   },
   pointerRoot: {
     ...absoluteFill,
@@ -281,6 +351,19 @@ const tutorialStyles = {
     letterSpacing: 0.4,
   },
   nextButton: {
+    marginTop: spacing.sm,
+  },
+  nextButtonWithBack: {
+    flex: 1,
+    marginTop: 0,
+  },
+  backButton: {
+    flex: 1,
+    marginTop: 0,
+  },
+  tooltipActions: {
+    flexDirection: "row" as const,
+    gap: spacing.sm,
     marginTop: spacing.sm,
   },
 };

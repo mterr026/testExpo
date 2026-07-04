@@ -81,8 +81,13 @@ export function PaychecksScreen({
   const activeTutorialTargetId = tutorialContext?.activeTargetId ?? null;
   const shouldOpenCoverageForTutorial =
     activeTutorialTargetId === "paychecks-coverage-breakdown";
-  const tutorialCoveragePaycheckId = useMemo(() => {
-    if (!shouldOpenCoverageForTutorial) {
+  const shouldHighlightRowOverflowForTutorial =
+    activeTutorialTargetId === "paychecks-row-overflow";
+  const tutorialFocusedPaycheckId = useMemo(() => {
+    if (
+      !shouldOpenCoverageForTutorial &&
+      !shouldHighlightRowOverflowForTutorial
+    ) {
       return null;
     }
 
@@ -93,8 +98,12 @@ export function PaychecksScreen({
   }, [
     expectedPrimaryPaychecks,
     paycheckBillCoverage,
+    shouldHighlightRowOverflowForTutorial,
     shouldOpenCoverageForTutorial,
   ]);
+  const tutorialCoveragePaycheckId = shouldOpenCoverageForTutorial
+    ? tutorialFocusedPaycheckId
+    : null;
 
   useEffect(() => {
     if (!tutorialCoveragePaycheckId) {
@@ -179,7 +188,6 @@ export function PaychecksScreen({
           <Text style={styles.sectionTitle}>Paychecks</Text>
           <Text style={styles.helpText}>Plan each paycheck cycle.</Text>
         </View>
-        <TutorialTarget id="paychecks-add">
         <Pressable
           style={({ pressed }) => [
             styles.inlinePrimaryButton,
@@ -189,7 +197,6 @@ export function PaychecksScreen({
         >
           <Text style={styles.inlinePrimaryButtonText}>+ Add</Text>
         </Pressable>
-        </TutorialTarget>
       </View>
 
       <Text style={styles.settingsGroupTitle}>Paycheck Schedule</Text>
@@ -220,24 +227,27 @@ export function PaychecksScreen({
       </TutorialTarget>
 
       {paychecks.length === 0 ? (
-        <TutorialTarget id="paychecks-schedule">
+        <TutorialTarget id="paychecks-upcoming">
         <EmptyState
           title="No paychecks yet"
           body="Add an expected paycheck to start building pay cycles."
         />
         </TutorialTarget>
       ) : (
-        <TutorialTarget id="paychecks-schedule">
         <>
+          <TutorialTarget id="paychecks-upcoming">
           <PaycheckScheduleGroup
             coverageByPaycheckId={coverageByPaycheckId}
             expandedCoverageIds={expandedCoverageIds}
             onToggleCoverage={togglePaycheckCoverage}
             paychecks={expectedPrimaryPaychecks}
             showTutorialCoverageTarget={shouldOpenCoverageForTutorial}
+            showTutorialOverflowTarget={shouldHighlightRowOverflowForTutorial}
+            tutorialFocusedPaycheckId={tutorialFocusedPaycheckId}
             title="Expected income"
             onOpenActions={setSelectedPaycheck}
           />
+          </TutorialTarget>
           <AdditionalIncomeSection
             expectedPaychecks={expectedAdditionalPaychecks}
             isPreviousExpanded={showPreviousAdditionalIncome}
@@ -246,6 +256,9 @@ export function PaychecksScreen({
               setShowPreviousAdditionalIncome((isExpanded) => !isExpanded)
             }
             previousPaychecks={previousAdditionalPaychecks}
+            showTutorialTarget={
+              activeTutorialTargetId === "paychecks-additional-income"
+            }
           />
           <PreviousPaychecksSection
             coverageByPaycheckId={coverageByPaycheckId}
@@ -259,7 +272,6 @@ export function PaychecksScreen({
             paychecks={previousPrimaryPaychecks}
           />
         </>
-        </TutorialTarget>
       )}
       <ActionMenu
         header={
@@ -280,40 +292,61 @@ function AdditionalIncomeSection({
   onOpenActions,
   onTogglePrevious,
   previousPaychecks,
+  showTutorialTarget = false,
 }: {
   expectedPaychecks: PaycheckListItem[];
   isPreviousExpanded: boolean;
   onOpenActions: (paycheck: PaycheckListItem) => void;
   onTogglePrevious: () => void;
   previousPaychecks: PaycheckListItem[];
+  showTutorialTarget?: boolean;
 }) {
-  if (expectedPaychecks.length === 0 && previousPaychecks.length === 0) {
+  if (
+    expectedPaychecks.length === 0 &&
+    previousPaychecks.length === 0 &&
+    !showTutorialTarget
+  ) {
     return null;
   }
 
+  const content =
+    expectedPaychecks.length > 0 ? (
+      <>
+        <Text style={styles.paycheckSectionTitle}>Additional income</Text>
+        <View style={styles.additionalIncomeGroup}>
+          {expectedPaychecks.map((paycheck) => (
+            <AdditionalIncomeRow
+              key={paycheck.id}
+              paycheck={paycheck}
+              onOpenActions={onOpenActions}
+            />
+          ))}
+        </View>
+      </>
+    ) : showTutorialTarget ? (
+      <>
+        <Text style={styles.paycheckSectionTitle}>Additional income</Text>
+        <View style={styles.additionalIncomeGroup}>
+          <Text style={styles.helpText}>
+            Side gigs, bonuses, and other deposits that are not your primary
+            paycheck appear here.
+          </Text>
+        </View>
+      </>
+    ) : null;
+
   return (
-    <>
-      {expectedPaychecks.length > 0 && (
-        <>
-          <Text style={styles.paycheckSectionTitle}>Additional income</Text>
-          <View style={styles.additionalIncomeGroup}>
-            {expectedPaychecks.map((paycheck) => (
-              <AdditionalIncomeRow
-                key={paycheck.id}
-                paycheck={paycheck}
-                onOpenActions={onOpenActions}
-              />
-            ))}
-          </View>
-        </>
-      )}
-      <PreviousAdditionalIncomeSection
-        isExpanded={isPreviousExpanded}
-        onOpenActions={onOpenActions}
-        onToggle={onTogglePrevious}
-        paychecks={previousPaychecks}
-      />
-    </>
+    <TutorialTarget id="paychecks-additional-income">
+      <>
+        {content}
+        <PreviousAdditionalIncomeSection
+          isExpanded={isPreviousExpanded}
+          onOpenActions={onOpenActions}
+          onToggle={onTogglePrevious}
+          paychecks={previousPaychecks}
+        />
+      </>
+    </TutorialTarget>
   );
 }
 
@@ -504,6 +537,8 @@ function PaycheckScheduleGroup({
   onToggleCoverage,
   paychecks,
   showTutorialCoverageTarget = false,
+  showTutorialOverflowTarget = false,
+  tutorialFocusedPaycheckId = null,
   title,
 }: {
   coverageByPaycheckId: Map<string, PaycheckBillCoverage>;
@@ -512,6 +547,8 @@ function PaycheckScheduleGroup({
   onToggleCoverage: (paycheckId: string) => void;
   paychecks: PaycheckListItem[];
   showTutorialCoverageTarget?: boolean;
+  showTutorialOverflowTarget?: boolean;
+  tutorialFocusedPaycheckId?: string | null;
   title: string;
 }) {
   if (paychecks.length === 0) {
@@ -561,7 +598,14 @@ function PaycheckScheduleGroup({
                 >
                   {money(paycheck.amountCents)}
                 </Text>
-                <OverflowButton onPress={() => onOpenActions(paycheck)} />
+                {showTutorialOverflowTarget &&
+                paycheck.id === tutorialFocusedPaycheckId ? (
+                  <TutorialTarget id="paychecks-row-overflow">
+                    <OverflowButton onPress={() => onOpenActions(paycheck)} />
+                  </TutorialTarget>
+                ) : (
+                  <OverflowButton onPress={() => onOpenActions(paycheck)} />
+                )}
               </View>
             </View>
             <PaycheckCoveredBills

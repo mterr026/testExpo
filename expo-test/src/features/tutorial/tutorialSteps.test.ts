@@ -31,11 +31,14 @@ describe("tutorialSteps", () => {
     expect(targetIds).toContain("dashboard-safe-to-spend");
     expect(targetIds).toContain("dashboard-breakdown");
     expect(targetIds).toContain("paychecks-summary");
-    expect(targetIds).toContain("paychecks-add");
+    expect(targetIds).toContain("paychecks-upcoming");
+    expect(targetIds).toContain("paychecks-row-overflow");
     expect(targetIds).toContain("paychecks-coverage-breakdown");
+    expect(targetIds).toContain("paychecks-additional-income");
     expect(targetIds).toContain("bills-due");
-    expect(targetIds).toContain("purchases-filters");
-    expect(targetIds).toContain("settings-money");
+    expect(targetIds).toContain("purchases-summary");
+    expect(targetIds).toContain("settings-current-balance");
+    expect(targetIds).toContain("settings-essential-reserve");
     expect(targetIds).toContain("settings-preferences");
   });
 });

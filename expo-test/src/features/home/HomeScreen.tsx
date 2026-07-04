@@ -79,6 +79,7 @@ export function HomeScreen() {
           visible={controller.tutorial.visible}
           stepIndex={controller.tutorial.stepIndex}
           isSaving={controller.tutorial.isSaving}
+          onBack={controller.tutorial.previousTutorialStep}
           onNext={controller.tutorial.nextTutorialStep}
           onSkip={controller.tutorial.skipTutorial}
         />

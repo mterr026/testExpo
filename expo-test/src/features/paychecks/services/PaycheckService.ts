@@ -48,7 +48,39 @@ export class PaycheckService {
     id: string,
     changes: PaycheckChanges
   ): Promise<Paycheck> {
+    const current = await this.paycheckRepository.findById(id);
+
+    if (!current) {
+      throw new Error(`Paycheck ${id} not found.`);
+    }
+
+    const seriesPaychecks =
+      current.isRecurring && current.recurrenceInterval
+        ? await this.findRecurringSeriesPaychecks(current)
+        : [];
+
     const paycheck = await this.paycheckRepository.update(id, changes);
+
+    if (seriesPaychecks.length > 0) {
+      await this.syncRecurringSeriesAfterEdit(
+        current,
+        paycheck,
+        changes,
+        seriesPaychecks
+      );
+    } else if (paycheck.isRecurring && paycheck.recurrenceInterval) {
+      await this.createGeneratedRecurringPaychecks({
+        profileId: paycheck.profileId,
+        label: paycheck.label,
+        amountCents: paycheck.amountCents,
+        expectedDate: paycheck.expectedDate,
+        isPrimary: paycheck.isPrimary,
+        isReceived: paycheck.isReceived,
+        isRecurring: paycheck.isRecurring,
+        recurrenceInterval: paycheck.recurrenceInterval,
+        notes: paycheck.notes,
+      });
+    }
 
     await this.activityLogRepository.create({
       profileId: paycheck.profileId,
@@ -330,5 +362,87 @@ export class PaycheckService {
         candidate.label === paycheck.label &&
         candidate.recurrenceInterval === paycheck.recurrenceInterval
     );
+  }
+
+  private async syncRecurringSeriesAfterEdit(
+    before: Paycheck,
+    after: Paycheck,
+    changes: PaycheckChanges,
+    seriesPaychecks: Paycheck[]
+  ) {
+    const scheduleChanged =
+      (changes.recurrenceInterval !== undefined &&
+        changes.recurrenceInterval !== before.recurrenceInterval) ||
+      (changes.expectedDate !== undefined &&
+        changes.expectedDate !== before.expectedDate) ||
+      (changes.isRecurring !== undefined &&
+        changes.isRecurring !== before.isRecurring);
+
+    const seriesFieldsChanged =
+      (changes.label !== undefined && changes.label !== before.label) ||
+      (changes.amountCents !== undefined &&
+        changes.amountCents !== before.amountCents) ||
+      (changes.isPrimary !== undefined && changes.isPrimary !== before.isPrimary) ||
+      (changes.notes !== undefined && changes.notes !== before.notes);
+
+    const otherFutureUnreceived = seriesPaychecks
+      .filter(
+        (candidate) =>
+          candidate.id !== after.id &&
+          !candidate.isReceived &&
+          candidate.expectedDate >= before.expectedDate
+      )
+      .sort((first, second) =>
+        first.expectedDate.localeCompare(second.expectedDate)
+      );
+
+    if (scheduleChanged) {
+      if (!after.isRecurring || !after.recurrenceInterval) {
+        for (const candidate of otherFutureUnreceived) {
+          await this.paycheckRepository.softDelete(candidate.id);
+        }
+
+        return;
+      }
+
+      const rescheduledDates = generateUpcomingPaycheckDates({
+        count: otherFutureUnreceived.length,
+        interval: after.recurrenceInterval,
+        startDate: after.expectedDate,
+      });
+
+      for (let index = 0; index < otherFutureUnreceived.length; index += 1) {
+        await this.paycheckRepository.update(otherFutureUnreceived[index].id, {
+          expectedDate: rescheduledDates[index],
+          recurrenceInterval: after.recurrenceInterval,
+          isRecurring: true,
+          ...(seriesFieldsChanged
+            ? {
+                label: after.label,
+                amountCents: after.amountCents,
+                isPrimary: after.isPrimary,
+                notes: after.notes,
+              }
+            : {}),
+        });
+      }
+
+      return;
+    }
+
+    if (!seriesFieldsChanged || !after.isRecurring) {
+      return;
+    }
+
+    for (const candidate of otherFutureUnreceived) {
+      await this.paycheckRepository.update(candidate.id, {
+        ...(changes.label !== undefined ? { label: after.label } : {}),
+        ...(changes.amountCents !== undefined
+          ? { amountCents: after.amountCents }
+          : {}),
+        ...(changes.isPrimary !== undefined ? { isPrimary: after.isPrimary } : {}),
+        ...(changes.notes !== undefined ? { notes: after.notes } : {}),
+      });
+    }
   }
 }

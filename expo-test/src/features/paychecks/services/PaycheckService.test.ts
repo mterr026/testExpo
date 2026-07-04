@@ -194,6 +194,7 @@ describe("PaycheckService", () => {
 
   it("updatePaycheck_logs_adjustment_and_emits_change", async () => {
     const mocks = createMocks();
+    mocks.paycheckRepository.findById.mockResolvedValue(paycheck);
     mocks.paycheckRepository.update.mockResolvedValue({
       ...paycheck,
       amountCents: 210000,
@@ -202,6 +203,7 @@ describe("PaycheckService", () => {
 
     await service.updatePaycheck("paycheck-1", { amountCents: 210000 });
 
+    expect(mocks.paycheckRepository.findById).toHaveBeenCalledWith("paycheck-1");
     expect(mocks.paycheckRepository.update).toHaveBeenCalledWith("paycheck-1", {
       amountCents: 210000,
     });
@@ -216,6 +218,186 @@ describe("PaycheckService", () => {
       FINANCIAL_STATE_CHANGED,
       "profile-1"
     );
+  });
+
+  it("updatePaycheck_reschedules_future_series_paychecks_when_recurrence_interval_changes", async () => {
+    const mocks = createMocks();
+    const futurePaycheck: Paycheck = {
+      ...paycheck,
+      id: "paycheck-2",
+      expectedDate: "2026-06-15",
+    };
+    const updatedAnchor: Paycheck = {
+      ...paycheck,
+      recurrenceInterval: "weekly",
+    };
+
+    mocks.paycheckRepository.findById.mockResolvedValue(paycheck);
+    mocks.paycheckRepository.findAll.mockResolvedValue([paycheck, futurePaycheck]);
+    mocks.paycheckRepository.update
+      .mockResolvedValueOnce(updatedAnchor)
+      .mockResolvedValueOnce({
+        ...futurePaycheck,
+        expectedDate: "2026-06-08",
+        recurrenceInterval: "weekly",
+      });
+    const service = createService(mocks);
+
+    await service.updatePaycheck("paycheck-1", {
+      recurrenceInterval: "weekly",
+    });
+
+    expect(mocks.paycheckRepository.update).toHaveBeenNthCalledWith(1, "paycheck-1", {
+      recurrenceInterval: "weekly",
+    });
+    expect(mocks.paycheckRepository.update).toHaveBeenNthCalledWith(2, "paycheck-2", {
+      expectedDate: "2026-06-08",
+      recurrenceInterval: "weekly",
+      isRecurring: true,
+    });
+  });
+
+  it("updatePaycheck_reschedules_future_series_paychecks_when_anchor_expected_date_changes", async () => {
+    const mocks = createMocks();
+    const futurePaycheck: Paycheck = {
+      ...paycheck,
+      id: "paycheck-2",
+      expectedDate: "2026-06-15",
+    };
+    const updatedAnchor: Paycheck = {
+      ...paycheck,
+      expectedDate: "2026-06-05",
+    };
+
+    mocks.paycheckRepository.findById.mockResolvedValue(paycheck);
+    mocks.paycheckRepository.findAll.mockResolvedValue([paycheck, futurePaycheck]);
+    mocks.paycheckRepository.update
+      .mockResolvedValueOnce(updatedAnchor)
+      .mockResolvedValueOnce({
+        ...futurePaycheck,
+        expectedDate: "2026-06-19",
+      });
+    const service = createService(mocks);
+
+    await service.updatePaycheck("paycheck-1", {
+      expectedDate: "2026-06-05",
+    });
+
+    expect(mocks.paycheckRepository.update).toHaveBeenNthCalledWith(2, "paycheck-2", {
+      expectedDate: "2026-06-19",
+      recurrenceInterval: "biweekly",
+      isRecurring: true,
+    });
+  });
+
+  it("updatePaycheck_deletes_future_series_paychecks_when_recurrence_is_removed", async () => {
+    const mocks = createMocks();
+    const futurePaycheck: Paycheck = {
+      ...paycheck,
+      id: "paycheck-2",
+      expectedDate: "2026-06-15",
+    };
+    const updatedAnchor: Paycheck = {
+      ...paycheck,
+      isRecurring: false,
+      recurrenceInterval: null,
+    };
+
+    mocks.paycheckRepository.findById.mockResolvedValue(paycheck);
+    mocks.paycheckRepository.findAll.mockResolvedValue([paycheck, futurePaycheck]);
+    mocks.paycheckRepository.update.mockResolvedValue(updatedAnchor);
+    const service = createService(mocks);
+
+    await service.updatePaycheck("paycheck-1", {
+      isRecurring: false,
+      recurrenceInterval: null,
+    });
+
+    expect(mocks.paycheckRepository.softDelete).toHaveBeenCalledWith("paycheck-2");
+    expect(mocks.paycheckRepository.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("updatePaycheck_propagates_amount_to_future_series_paychecks_without_schedule_change", async () => {
+    const mocks = createMocks();
+    const futurePaycheck: Paycheck = {
+      ...paycheck,
+      id: "paycheck-2",
+      expectedDate: "2026-06-15",
+    };
+    const updatedAnchor: Paycheck = {
+      ...paycheck,
+      amountCents: 210000,
+    };
+
+    mocks.paycheckRepository.findById.mockResolvedValue(paycheck);
+    mocks.paycheckRepository.findAll.mockResolvedValue([paycheck, futurePaycheck]);
+    mocks.paycheckRepository.update
+      .mockResolvedValueOnce(updatedAnchor)
+      .mockResolvedValueOnce({
+        ...futurePaycheck,
+        amountCents: 210000,
+      });
+    const service = createService(mocks);
+
+    await service.updatePaycheck("paycheck-1", { amountCents: 210000 });
+
+    expect(mocks.paycheckRepository.update).toHaveBeenNthCalledWith(2, "paycheck-2", {
+      amountCents: 210000,
+    });
+  });
+
+  it("updatePaycheck_generates_future_paycheck_when_one_time_income_becomes_recurring", async () => {
+    const mocks = createMocks();
+    const oneTimePaycheck: Paycheck = {
+      ...paycheck,
+      isRecurring: false,
+      recurrenceInterval: null,
+    };
+    const recurringPaycheck: Paycheck = {
+      ...oneTimePaycheck,
+      isRecurring: true,
+      recurrenceInterval: "biweekly",
+    };
+    const generatedPaycheck: Paycheck = {
+      ...recurringPaycheck,
+      id: "paycheck-2",
+      expectedDate: "2026-06-15",
+    };
+
+    mocks.paycheckRepository.findById.mockResolvedValue(oneTimePaycheck);
+    mocks.paycheckRepository.update.mockResolvedValue(recurringPaycheck);
+    mocks.paycheckRepository.create.mockResolvedValue(generatedPaycheck);
+    const service = createService(mocks);
+
+    await service.updatePaycheck("paycheck-1", {
+      isRecurring: true,
+      recurrenceInterval: "biweekly",
+    });
+
+    expect(mocks.paycheckRepository.create).toHaveBeenCalledWith({
+      profileId: "profile-1",
+      label: "Primary",
+      amountCents: 200000,
+      expectedDate: "2026-06-15",
+      isPrimary: true,
+      isReceived: false,
+      isRecurring: true,
+      recurrenceInterval: "biweekly",
+      notes: null,
+    });
+  });
+
+  it("updatePaycheck_rejects_missing_paycheck_without_side_effects", async () => {
+    const mocks = createMocks();
+    mocks.paycheckRepository.findById.mockResolvedValue(null);
+    const service = createService(mocks);
+
+    await expect(
+      service.updatePaycheck("missing", { amountCents: 210000 })
+    ).rejects.toThrow("Paycheck missing not found.");
+    expect(mocks.paycheckRepository.update).not.toHaveBeenCalled();
+    expect(mocks.activityLogRepository.create).not.toHaveBeenCalled();
+    expect(mocks.eventBus.emit).not.toHaveBeenCalled();
   });
 
   it("markPaycheckReceived_logs_confirmation_and_emits_change", async () => {

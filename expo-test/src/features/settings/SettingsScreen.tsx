@@ -109,7 +109,6 @@ export function SettingsScreen({
         </View>
       </View>
 
-      <TutorialTarget id="settings-money">
       <View style={styles.settingsMoneyCard}>
         <Text style={styles.settingsGroupTitle}>Money</Text>
         <View style={styles.settingsMetricRow}>
@@ -123,32 +122,40 @@ export function SettingsScreen({
           </View>
         </View>
 
-        <Text style={styles.inputLabel}>Current balance</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="decimal-pad"
-          inputAccessoryViewID={moneyInputAccessoryId}
-          value={balanceDraft}
-          onChangeText={(text) => {
-            setBalanceDraft(text);
-            setSettingsError("");
-          }}
-        />
-        <Text style={styles.helpText}>
-          Match this to your bank account so safe-to-spend stays accurate.
-        </Text>
+        <TutorialTarget id="settings-current-balance">
+          <View style={styles.settingsMoneySection}>
+            <Text style={styles.inputLabel}>Current balance</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="decimal-pad"
+              inputAccessoryViewID={moneyInputAccessoryId}
+              value={balanceDraft}
+              onChangeText={(text) => {
+                setBalanceDraft(text);
+                setSettingsError("");
+              }}
+            />
+            <Text style={styles.helpText}>
+              Match this to your bank account so safe-to-spend stays accurate.
+            </Text>
+          </View>
+        </TutorialTarget>
 
-        <Text style={styles.inputLabel}>Essential reserve</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="decimal-pad"
-          inputAccessoryViewID={moneyInputAccessoryId}
-          value={reserveDraft}
-          onChangeText={(text) => {
-            setReserveDraft(text);
-            setSettingsError("");
-          }}
-        />
+        <TutorialTarget id="settings-essential-reserve">
+          <View style={styles.settingsMoneySection}>
+            <Text style={styles.inputLabel}>Essential reserve</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="decimal-pad"
+              inputAccessoryViewID={moneyInputAccessoryId}
+              value={reserveDraft}
+              onChangeText={(text) => {
+                setReserveDraft(text);
+                setSettingsError("");
+              }}
+            />
+          </View>
+        </TutorialTarget>
 
         {!!settingsError && <Text style={styles.errorText}>{settingsError}</Text>}
 
@@ -171,7 +178,6 @@ export function SettingsScreen({
           </Text>
         </Pressable>
       </View>
-      </TutorialTarget>
 
       <TutorialTarget id="settings-preferences">
       <View style={styles.settingsSectionHeader}>

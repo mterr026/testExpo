@@ -21,22 +21,24 @@ export function HomeFloatingActionButton({
   }
 
   return (
-    <TutorialTarget id="dashboard-fab">
-    <Pressable
-      accessibilityLabel="Add purchase"
-      style={({ pressed }) => [
-        styles.fab,
-        { bottom: bottomInset + spacing.xxxl * 3 + spacing.md },
-        pressed && styles.pressed,
-      ]}
-      onPress={onPress}
+    <TutorialTarget
+      id="dashboard-fab"
+      style={[styles.fab, { bottom: bottomInset + spacing.xxxl * 3 + spacing.md }]}
     >
-      <SymbolView
-        name={{ ios: "plus", android: "add", web: "add" }}
-        tintColor="white"
-        size={26}
-      />
-    </Pressable>
+      <Pressable
+        accessibilityLabel="Add purchase"
+        style={({ pressed }) => [
+          styles.fabPressable,
+          pressed && styles.pressed,
+        ]}
+        onPress={onPress}
+      >
+        <SymbolView
+          name={{ ios: "plus", android: "add", web: "add" }}
+          tintColor="white"
+          size={26}
+        />
+      </Pressable>
     </TutorialTarget>
   );
 }

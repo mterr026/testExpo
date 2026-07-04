@@ -75,6 +75,12 @@ export function useTutorialController({
     await dismissTutorial();
   }
 
+  function previousTutorialStep() {
+    if (stepIndex > 0) {
+      setStepIndex((current) => current - 1);
+    }
+  }
+
   async function skipTutorial() {
     await dismissTutorial();
   }
@@ -85,6 +91,7 @@ export function useTutorialController({
       error,
       isSaving,
       nextTutorialStep,
+      previousTutorialStep,
       skipTutorial,
       stepIndex,
       stepCount: tutorialSteps.length,
