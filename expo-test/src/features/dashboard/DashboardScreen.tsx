@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { Envelope } from "@/database/repositories/types";
@@ -7,6 +7,7 @@ import type { EnvelopeSnapshotEntry } from "@/engine";
 import { formatDashboardCycleLabel } from "@/features/dashboard/dashboardCycleLabel";
 import { EnvelopeSwipeableRow } from "@/features/budgeting/components/EnvelopeSwipeableRow";
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
+import { useOptionalTutorialContext } from "@/features/tutorial/TutorialContext";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
 import { money } from "@/shared/ui/components";
 import { styles } from "@/shared/ui/styles";
@@ -76,10 +77,23 @@ export function DashboardScreen({
   onToggleEnvelopePaused: (envelope: DashboardEnvelope) => void | Promise<void>;
 }) {
   const [showAllTimelineEvents, setShowAllTimelineEvents] = useState(false);
+  const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   const [openSwipeEnvelopeId, setOpenSwipeEnvelopeId] = useState<string | null>(
     null
   );
   const { onTutorialScroll, tutorialScrollRef } = useTutorialScrollView("Dashboard");
+  const tutorialContext = useOptionalTutorialContext();
+  const shouldExpandBreakdownForTutorial =
+    tutorialContext?.activeTargetId === "dashboard-breakdown";
+
+  useEffect(() => {
+    if (shouldExpandBreakdownForTutorial) {
+      setIsBreakdownExpanded(true);
+      return;
+    }
+
+    setIsBreakdownExpanded(false);
+  }, [shouldExpandBreakdownForTutorial]);
   const isNegative = safeToSpend < 0;
   const timelineEvents = buildTimelineEvents(upcomingBills, upcomingPaychecks);
   const timelinePreview = timelineEvents.slice(0, 5);
@@ -267,73 +281,110 @@ export function DashboardScreen({
         )}
       </View>
 
-      <View style={styles.dashboardSectionHeader}>
-        <Text style={styles.sectionTitleCompact}>Safe to Spend Breakdown</Text>
-      </View>
-
       <TutorialTarget id="dashboard-breakdown">
-      <View style={styles.dashboardBreakdownCard}>
-        {safeToSpendBreakdown.openingBalanceCents > 0 && (
-          <DashboardBreakdownRow
-            label="Starting balance"
-            value={`+${money(safeToSpendBreakdown.openingBalanceCents)}`}
-          />
-        )}
-        <DashboardBreakdownRow
-          label="Confirmed income"
-          tone="credit"
-          value={`+${money(safeToSpendBreakdown.confirmedIncomeCents)}`}
-        />
-        {safeToSpendBreakdown.chargedPurchasesCents > 0 && (
-          <DashboardBreakdownRow
-            label="Charged purchases"
-            tone="deduction"
-            value={`-${money(safeToSpendBreakdown.chargedPurchasesCents)}`}
-          />
-        )}
-        {safeToSpendBreakdown.pendingPurchasesCents > 0 && (
-          <DashboardBreakdownRow
-            label="Pending purchases"
-            tone="deduction"
-            value={`-${money(safeToSpendBreakdown.pendingPurchasesCents)}`}
-          />
-        )}
-        {safeToSpendBreakdown.paidBillsCents > 0 && (
-          <DashboardBreakdownRow
-            label="Paid bills"
-            tone="deduction"
-            value={`-${money(safeToSpendBreakdown.paidBillsCents)}`}
-          />
-        )}
-        <DashboardBreakdownRow
-          isSubtotal
-          label="Available balance"
-          value={money(safeToSpendBreakdown.runningBalanceCents)}
-        />
-        <DashboardBreakdownRow
-          label="Upcoming bills"
-          tone="deduction"
-          value={`-${money(safeToSpendBreakdown.unpaidBillsCents)}`}
-        />
-        <DashboardBreakdownRow
-          label="Reserve"
-          tone="deduction"
-          value={`-${money(safeToSpendBreakdown.essentialReserveCents)}`}
-        />
-        {safeToSpendBreakdown.envelopeReservedCents > 0 && (
-          <DashboardBreakdownRow
-            label="Envelope reserve"
-            tone="deduction"
-            value={`-${money(safeToSpendBreakdown.envelopeReservedCents)}`}
-          />
-        )}
-        <DashboardBreakdownRow
-          isTotal
-          label="Safe to Spend"
-          tone={isNegative ? "deduction" : "total"}
-          value={money(safeToSpendBreakdown.safeToSpendCents)}
-        />
-      </View>
+        <View
+          style={[
+            styles.dashboardBreakdownCard,
+            !isBreakdownExpanded && styles.dashboardBreakdownCardCollapsed,
+          ]}
+        >
+          {isBreakdownExpanded && (
+            <>
+              {safeToSpendBreakdown.openingBalanceCents > 0 && (
+                <DashboardBreakdownRow
+                  label="Starting balance"
+                  value={`+${money(safeToSpendBreakdown.openingBalanceCents)}`}
+                />
+              )}
+              <DashboardBreakdownRow
+                label="Confirmed income"
+                tone="credit"
+                value={`+${money(safeToSpendBreakdown.confirmedIncomeCents)}`}
+              />
+              {safeToSpendBreakdown.chargedPurchasesCents > 0 && (
+                <DashboardBreakdownRow
+                  label="Charged purchases"
+                  tone="deduction"
+                  value={`-${money(safeToSpendBreakdown.chargedPurchasesCents)}`}
+                />
+              )}
+              {safeToSpendBreakdown.pendingPurchasesCents > 0 && (
+                <DashboardBreakdownRow
+                  label="Pending purchases"
+                  tone="deduction"
+                  value={`-${money(safeToSpendBreakdown.pendingPurchasesCents)}`}
+                />
+              )}
+              {safeToSpendBreakdown.paidBillsCents > 0 && (
+                <DashboardBreakdownRow
+                  label="Paid bills"
+                  tone="deduction"
+                  value={`-${money(safeToSpendBreakdown.paidBillsCents)}`}
+                />
+              )}
+              <DashboardBreakdownRow
+                isSubtotal
+                label="Available balance"
+                value={money(safeToSpendBreakdown.runningBalanceCents)}
+              />
+              <DashboardBreakdownRow
+                label="Upcoming bills"
+                tone="deduction"
+                value={`-${money(safeToSpendBreakdown.unpaidBillsCents)}`}
+              />
+              <DashboardBreakdownRow
+                label="Reserve"
+                tone="deduction"
+                value={`-${money(safeToSpendBreakdown.essentialReserveCents)}`}
+              />
+              {safeToSpendBreakdown.envelopeReservedCents > 0 && (
+                <DashboardBreakdownRow
+                  label="Envelope reserve"
+                  tone="deduction"
+                  value={`-${money(safeToSpendBreakdown.envelopeReservedCents)}`}
+                />
+              )}
+              <DashboardBreakdownRow
+                isTotal
+                label="Safe to Spend"
+                tone={isNegative ? "deduction" : "total"}
+                value={money(safeToSpendBreakdown.safeToSpendCents)}
+              />
+            </>
+          )}
+          <Pressable
+            accessibilityHint={
+              isBreakdownExpanded
+                ? "Collapses the Safe to Spend breakdown"
+                : "Expands the Safe to Spend breakdown"
+            }
+            accessibilityLabel={
+              isBreakdownExpanded
+                ? "Hide safe to spend calculation"
+                : "Safe to spend calculation"
+            }
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.paycheckCoverageLinkToggle,
+              !isBreakdownExpanded && styles.dashboardBreakdownToggleCollapsed,
+              !isBreakdownExpanded && pressed && styles.pressed,
+            ]}
+            onPress={() => setIsBreakdownExpanded((expanded) => !expanded)}
+          >
+            {({ pressed }) => (
+              <Text
+                style={[
+                  styles.paycheckCoverageLinkText,
+                  pressed && styles.paycheckCoverageLinkTextPressed,
+                ]}
+              >
+                {isBreakdownExpanded
+                  ? "Hide safe to spend calculation"
+                  : "Safe to spend calculation"}
+              </Text>
+            )}
+          </Pressable>
+        </View>
       </TutorialTarget>
 
     </ScrollView>

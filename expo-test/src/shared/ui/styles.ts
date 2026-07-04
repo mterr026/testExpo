@@ -1288,6 +1288,14 @@ export const styles = StyleSheet.create({
     marginBottom: spacing.md,
     ...shadows.card,
   },
+  dashboardBreakdownCardCollapsed: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  dashboardBreakdownToggleCollapsed: {
+    borderTopWidth: 0,
+    marginTop: 0,
+  },
   dashboardBreakdownRow: {
     paddingVertical: spacing.md,
     flexDirection: "row",

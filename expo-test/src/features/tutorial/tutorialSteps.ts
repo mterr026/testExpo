@@ -24,7 +24,7 @@ export const tutorialSteps: TutorialStep[] = [
     screen: "Dashboard",
     targetId: "dashboard-breakdown",
     title: "See how the number is built",
-    body: "Income, purchases, paid bills, upcoming bills, and reserve roll up into Safe to Spend.",
+    body: "Tap Safe to spend calculation to expand income, purchases, bills, and reserve rolling up into Safe to Spend.",
     placement: "above",
   },
   {
