@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Modal, Pressable, Text, View } from "react-native";
 
 import type { Envelope } from "@/database/repositories/types";
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 
 type EnvelopeOption = Pick<Envelope, "id" | "name">;
 
@@ -19,6 +19,7 @@ export function EnvelopePickerField({
   envelopeId,
   onChange,
 }: EnvelopePickerFieldProps) {
+  const styles = useStyles();
   const [pickerOpen, setPickerOpen] = useState(false);
   const selectedLabel =
     envelopeId == null

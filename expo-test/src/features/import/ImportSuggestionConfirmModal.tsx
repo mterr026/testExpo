@@ -13,7 +13,7 @@ import {
   DatePickerField,
   KeyboardDoneAccessory,
 } from "@/shared/ui/components";
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type { BillType, ImportSuggestionKind } from "@/database/repositories/types";
 import type { PaycheckIncomeRole, PaycheckRecurrence } from "@/shared/ui/types";
 
@@ -66,6 +66,7 @@ export function ImportSuggestionConfirmForm({
   onReject,
   onSave,
 }: ImportSuggestionConfirmFormProps) {
+  const styles = useStyles();
   const isIncome = suggestionKind === "income";
 
   return (
@@ -258,6 +259,7 @@ export function ImportSuggestionConfirmModal({
   visible,
   ...formProps
 }: ImportSuggestionConfirmModalProps) {
+  const styles = useStyles();
   return (
     <Modal visible={visible} transparent animationType="slide">
       <KeyboardAvoidingView

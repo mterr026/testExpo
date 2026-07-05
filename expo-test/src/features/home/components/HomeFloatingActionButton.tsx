@@ -2,7 +2,8 @@ import { SymbolView } from "expo-symbols";
 import { Pressable } from "react-native";
 
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
-import { getFabBottom, styles } from "@/shared/ui/styles";
+import { getFabBottom } from "@/shared/ui/styles";
+import { useStyles, useTheme } from "@/shared/ui/ThemeContext";
 import type { Screen } from "@/shared/ui/types";
 
 type HomeFloatingActionButtonProps = {
@@ -16,6 +17,8 @@ export function HomeFloatingActionButton({
   onPress,
   screen,
 }: HomeFloatingActionButtonProps) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   if (screen !== "Dashboard" && screen !== "Purchases") {
     return null;
   }
@@ -35,7 +38,7 @@ export function HomeFloatingActionButton({
       >
         <SymbolView
           name={{ ios: "plus", android: "add", web: "add" }}
-          tintColor="white"
+          tintColor={colors.onAccent}
           size={26}
         />
       </Pressable>

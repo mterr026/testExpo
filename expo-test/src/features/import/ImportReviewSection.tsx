@@ -15,7 +15,7 @@ import {
   getImportSuggestionMenuPresentation,
   getImportSuggestionRowPresentation,
 } from "@/shared/ui/statusBadges";
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 
 import { ImportLoadingIndicator } from "./components/ImportLoadingIndicator";
 import {
@@ -58,6 +58,7 @@ export function ImportReviewSection({
   title?: string;
   emptyBody?: string;
 }) {
+  const styles = useStyles();
   const [selectedSuggestion, setSelectedSuggestion] =
     useState<ImportSuggestion | null>(null);
 
@@ -237,6 +238,7 @@ function ImportSuggestionRow({
   showDivider: boolean;
   onOpenActions: (suggestion: ImportSuggestion) => void;
 }) {
+  const styles = useStyles();
   const kindLabel = getImportSuggestionRowPresentation(suggestion);
   const isIncome = suggestion.suggestionKind === "income";
 

@@ -6,13 +6,20 @@ import { parseDollarInputToNonNegativeCents } from "@/shared/currency";
 import { money } from "@/shared/ui/components";
 import { ScreenSectionTitle } from "@/shared/ui/ScreenSectionTitle";
 import { ScreenShell } from "@/shared/ui/ScreenShell";
-import { colors, styles } from "@/shared/ui/styles";
+import { useStyles, useTheme } from "@/shared/ui/ThemeContext";
+import type { ThemePreference } from "@/shared/ui/themePreference";
 
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
 
 const MONEY_AUTOSAVE_DEBOUNCE_MS = 600;
 const SAVE_NOTICE_DURATION_MS = 2500;
+
+const APPEARANCE_OPTIONS: Array<{ value: ThemePreference; label: string }> = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
 
 function isIncompleteMoneyDraft(text: string): boolean {
   return text.trimEnd().endsWith(".");
@@ -21,16 +28,20 @@ function isIncompleteMoneyDraft(text: string): boolean {
 export function SettingsScreen({
   backupExportError,
   backupExportMessage,
+  backupImportError,
+  backupImportMessage,
   balanceCents,
   reserveCents,
   envelopesEnabled,
   envelopeToggleError,
   isBackupExporting,
+  isBackupImporting,
   isEnvelopesToggleSaving,
   isNotificationSaving,
   notificationError,
   notificationsEnabled,
   onBackupExport,
+  onBackupImport,
   onBalanceChange,
   onEnvelopesToggle,
   onNotificationsToggle,
@@ -41,17 +52,21 @@ export function SettingsScreen({
 }: {
   backupExportError: string;
   backupExportMessage: string;
+  backupImportError: string;
+  backupImportMessage: string;
   balanceCents: number;
   reserveCents: number;
   envelopesEnabled: boolean | null;
   envelopeToggleError: string;
   isBackupExporting: boolean;
+  isBackupImporting: boolean;
   isEnvelopesToggleSaving: boolean;
   isNotificationSaving: boolean;
   isSettingsReady: boolean;
   notificationError: string;
   notificationsEnabled: boolean | null;
   onBackupExport: () => void | Promise<void>;
+  onBackupImport: () => void | Promise<void>;
   onBalanceChange: (value: number) => void | Promise<void>;
   onEnvelopesToggle: () => void | Promise<void>;
   onNotificationsToggle: () => void | Promise<void>;
@@ -59,6 +74,9 @@ export function SettingsScreen({
   moneyInputAccessoryId: string;
   afterContent?: ReactNode;
 }) {
+  const styles = useStyles();
+  const { colors, isThemePreferenceReady, setThemePreference, themePreference } =
+    useTheme();
   const [balanceDraft, setBalanceDraft] = useState((balanceCents / 100).toFixed(2));
   const [reserveDraft, setReserveDraft] = useState((reserveCents / 100).toFixed(2));
   const [settingsError, setSettingsError] = useState("");
@@ -344,6 +362,50 @@ export function SettingsScreen({
         </View>
       </View>
 
+      <ScreenSectionTitle title="Appearance" />
+      <View style={styles.settingsPreferenceGroup}>
+        <View style={styles.settingsPreferenceRow}>
+          <View style={styles.itemCopy}>
+            <Text style={styles.itemTitle}>Theme</Text>
+            <Text style={styles.rowMetaText}>
+              Override iOS appearance without changing system settings
+            </Text>
+          </View>
+        </View>
+        <View style={styles.settingsAppearanceControl}>
+          <View style={styles.segmentedControl}>
+            {APPEARANCE_OPTIONS.map((option) => {
+              const isActive = themePreference === option.value;
+
+              return (
+                <Pressable
+                  key={option.value}
+                  disabled={!isThemePreferenceReady}
+                  style={({ pressed }) => [
+                    styles.segmentedControlOption,
+                    isActive && styles.segmentedControlOptionActive,
+                    pressed && styles.pressed,
+                    !isThemePreferenceReady && styles.disabledAction,
+                  ]}
+                  onPress={() => {
+                    void setThemePreference(option.value);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.segmentedControlText,
+                      isActive && styles.segmentedControlTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+
       <TutorialTarget id="settings-preferences">
         <ScreenSectionTitle title="Notifications" />
         <View style={styles.settingsPreferenceGroup}>
@@ -392,29 +454,57 @@ export function SettingsScreen({
           <View style={styles.settingsPreferenceRow}>
             <View style={styles.itemCopy}>
               <Text style={styles.itemTitle}>Backup</Text>
-              <Text style={styles.rowMetaText}>Export a local JSON backup</Text>
+              <Text style={styles.rowMetaText}>
+                Export or restore a local JSON backup
+              </Text>
+              <Text style={styles.rowMetaText}>
+                Saved exports use Budget Flow Backups in Files.
+              </Text>
               {!!backupExportMessage && (
                 <Text style={styles.successText}>{backupExportMessage}</Text>
+              )}
+              {!!backupImportMessage && (
+                <Text style={styles.successText}>{backupImportMessage}</Text>
               )}
               {!!backupExportError && (
                 <Text style={styles.errorText}>{backupExportError}</Text>
               )}
+              {!!backupImportError && (
+                <Text style={styles.errorText}>{backupImportError}</Text>
+              )}
             </View>
-            <Pressable
-              disabled={isBackupExporting}
-              style={({ pressed }) => [
-                styles.settingsActionButton,
-                pressed && styles.pressed,
-                isBackupExporting && styles.disabledAction,
-              ]}
-              onPress={() => {
-                void onBackupExport();
-              }}
-            >
-              <Text style={styles.settingsActionButtonText}>
-                {isBackupExporting ? "Exporting" : "Export"}
-              </Text>
-            </Pressable>
+            <View style={styles.settingsActionColumn}>
+              <Pressable
+                disabled={isBackupExporting || isBackupImporting}
+                style={({ pressed }) => [
+                  styles.settingsActionButton,
+                  pressed && styles.pressed,
+                  (isBackupExporting || isBackupImporting) && styles.disabledAction,
+                ]}
+                onPress={() => {
+                  void onBackupExport();
+                }}
+              >
+                <Text style={styles.settingsActionButtonText}>
+                  {isBackupExporting ? "Exporting" : "Export"}
+                </Text>
+              </Pressable>
+              <Pressable
+                disabled={isBackupExporting || isBackupImporting}
+                style={({ pressed }) => [
+                  styles.settingsActionButton,
+                  pressed && styles.pressed,
+                  (isBackupExporting || isBackupImporting) && styles.disabledAction,
+                ]}
+                onPress={() => {
+                  void onBackupImport();
+                }}
+              >
+                <Text style={styles.settingsActionButtonText}>
+                  {isBackupImporting ? "Importing" : "Import"}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </TutorialTarget>

@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-import { styles } from "./styles";
+import { useStyles } from "./ThemeContext";
 
 export function CycleSummaryCard({
   summary,
@@ -11,6 +11,7 @@ export function CycleSummaryCard({
   title?: string;
   variant?: "compact" | "hero";
 }) {
+  const styles = useStyles();
   return (
     <View
       accessibilityRole="summary"

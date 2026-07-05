@@ -12,7 +12,7 @@ import { PurchasesScreen } from "@/features/purchases/PurchasesScreen";
 import { SettingsScreen } from "@/features/settings/SettingsScreen";
 import { createEmptySafeToSpendBreakdown } from "@/engine";
 import { settingsMoneyAccessoryId } from "@/shared/ui/keyboard";
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type { Screen } from "@/shared/ui/types";
 
 import type { NotificationTarget } from "@/features/notifications/types";
@@ -28,7 +28,6 @@ type HomePagerProps = {
   onClearNotificationTarget: () => void;
   onScrollEnd: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   pagerRef: RefObject<ScrollView | null>;
-  pagerScrollEnabled?: boolean;
   width: number;
 };
 
@@ -39,16 +38,16 @@ export function HomePager({
   onClearNotificationTarget,
   onScrollEnd,
   pagerRef,
-  pagerScrollEnabled = true,
   width,
 }: HomePagerProps) {
+  const styles = useStyles();
   return (
     <ScrollView
       ref={pagerRef}
       horizontal
       pagingEnabled
       bounces={false}
-      scrollEnabled={pagerScrollEnabled}
+      scrollEnabled={false}
       scrollEventThrottle={16}
       showsHorizontalScrollIndicator={false}
       style={styles.screenPane}
@@ -184,11 +183,14 @@ function renderPagerScreen({
           key={controller.dashboardSnapshot?.profile?.id ?? "profile"}
           backupExportError={controller.backupExportError}
           backupExportMessage={controller.backupExportMessage}
+          backupImportError={controller.backupImportError}
+          backupImportMessage={controller.backupImportMessage}
           balanceCents={controller.dashboardTotals.runningBalanceCents}
           reserveCents={controller.dashboardTotals.reserveCents}
           envelopesEnabled={controller.budgetingPreferences?.envelopesEnabled ?? null}
           envelopeToggleError={controller.envelopeToggleError}
           isBackupExporting={controller.isBackupExporting}
+          isBackupImporting={controller.isBackupImporting}
           isEnvelopesToggleSaving={controller.isEnvelopesToggleSaving}
           isNotificationSaving={controller.isNotificationSaving}
           isSettingsReady={controller.dashboardSnapshot != null}
@@ -198,6 +200,7 @@ function renderPagerScreen({
           }
           moneyInputAccessoryId={settingsMoneyAccessoryId}
           onBackupExport={controller.exportBackup}
+          onBackupImport={controller.importBackup}
           onBalanceChange={controller.updateBalance}
           onEnvelopesToggle={controller.toggleEnvelopes}
           onNotificationsToggle={controller.toggleNotifications}

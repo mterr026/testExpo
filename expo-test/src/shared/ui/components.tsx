@@ -13,7 +13,8 @@ import {
 import { formatCurrency } from "@/shared/currency";
 
 import { ActionIcon, type ActionIconName } from "./ActionIcon";
-import { styles } from "./styles";
+import { hapticForActionLabel } from "./haptics";
+import { useStyles } from "./ThemeContext";
 
 export type { ActionIconName };
 
@@ -28,6 +29,7 @@ export function EmptyState({
   onAction?: () => void;
   title: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.emptyState}>
       <Text style={styles.emptyTitle}>{title}</Text>
@@ -49,6 +51,7 @@ export function EmptyState({
 }
 
 export function Row({ label, value }: { label: string; value: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.breakdownRow}>
       <Text style={styles.breakdownLabel}>{label}</Text>
@@ -68,7 +71,8 @@ export function StatusPill({
   menu?: boolean;
   tone: StatusPillTone;
 }) {
-  const toneStyles = getStatusPillToneStyles(tone);
+  const styles = useStyles();
+  const toneStyles = getStatusPillToneStyles(tone, styles);
 
   return (
     <View
@@ -83,7 +87,10 @@ export function StatusPill({
   );
 }
 
-function getStatusPillToneStyles(tone: StatusPillTone) {
+function getStatusPillToneStyles(
+  tone: StatusPillTone,
+  styles: ReturnType<typeof useStyles>
+) {
   switch (tone) {
     case "accent":
       return {
@@ -142,9 +149,12 @@ export function ActionMenu({
   actions: ActionMenuItem[];
   onClose: () => void;
 }) {
+  const styles = useStyles();
   const [actionError, setActionError] = useState("");
 
   async function handleActionPress(action: ActionMenuItem) {
+    hapticForActionLabel(action.label);
+
     try {
       setActionError("");
       if (action.closeBeforeAction) {
@@ -259,6 +269,7 @@ export function ActionMenu({
 }
 
 export function OverflowButton({ onPress }: { onPress: () => void }) {
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityLabel="Open actions"
@@ -288,6 +299,7 @@ export function DatePickerField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const styles = useStyles();
   const [iosPickerOpen, setIosPickerOpen] = useState(false);
   const [iosDraftDate, setIosDraftDate] = useState(() => parseIsoDate(value));
   const selectedDate = parseIsoDate(value);
@@ -490,6 +502,7 @@ function CalendarQuickChip({
   selected: boolean;
   onPress: () => void;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       style={({ pressed }) => [
@@ -581,6 +594,7 @@ function offsetDate(date: Date, dayOffset: number) {
 }
 
 export function KeyboardDoneAccessory({ nativeID }: { nativeID: string }) {
+  const styles = useStyles();
   if (Platform.OS !== "ios") {
     return null;
   }

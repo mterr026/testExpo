@@ -1,4 +1,5 @@
 import { ActionIcon, type ActionIconName } from "./ActionIcon";
+import { useTheme } from "./ThemeContext";
 
 export function SwipeActionIcon({
   destructive = false,
@@ -7,5 +8,14 @@ export function SwipeActionIcon({
   destructive?: boolean;
   name: ActionIconName;
 }) {
-  return <ActionIcon color="#FFFFFF" destructive={destructive} name={name} size={22} />;
+  const { colors } = useTheme();
+
+  return (
+    <ActionIcon
+      color={colors.onAccent}
+      destructive={destructive}
+      name={name}
+      size={22}
+    />
+  );
 }

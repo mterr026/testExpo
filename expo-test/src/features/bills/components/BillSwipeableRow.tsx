@@ -1,16 +1,21 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
 import {
+  ActionMenu,
   money,
   StatusPill,
 } from "@/shared/ui/components";
-import { styles } from "@/shared/ui/styles";
+import { hapticForActionLabel, hapticSelection } from "@/shared/ui/haptics";
+import {
+  getSwipeRowActiveOffsetX,
+  swipeRowGestureProps,
+} from "@/shared/ui/swipeRowConfig";
+import { useStyles } from "@/shared/ui/ThemeContext";
+import type { AppStyles } from "@/shared/ui/styles";
 import { SwipeActionIcon } from "@/shared/ui/SwipeActionIcon";
 import type { Bill } from "@/shared/ui/types";
-
-import { useSwipeRowGesture } from "@/features/home/SwipeRowGestureContext";
 
 import { getBillSwipeActions } from "../billActions";
 import { getBillStatusPresentation } from "@/shared/ui/statusBadges";
@@ -48,8 +53,9 @@ export function BillSwipeableRow({
   onSwipeOpen,
   onToggleBillPaused,
 }: BillSwipeableRowProps) {
+  const styles = useStyles();
   const swipeableRef = useRef<Swipeable>(null);
-  const setRowTouchActive = useSwipeRowGesture();
+  const [menuVisible, setMenuVisible] = useState(false);
   const dateParts = formatBillDueDateParts(bill.dueDate, bill.status);
   const isPaid = bill.status === "Paid";
   const isPaused = bill.status === "Paused" || bill.isPaused;
@@ -58,7 +64,7 @@ export function BillSwipeableRow({
   const isScheduled = bill.status === "Scheduled" || isProjected;
   const isUnpaidDue = isDue && !isPaused;
   const billStatus = getBillStatusPresentation(bill.status);
-  const swipeActions = getBillSwipeActions({
+  const menuActions = getBillSwipeActions({
     bill,
     onConfirmBill,
     onDeleteBill,
@@ -67,6 +73,7 @@ export function BillSwipeableRow({
     onMarkUnpaid,
     onToggleBillPaused,
   });
+  const swipeActions = menuActions;
 
   useEffect(() => {
     if (isSwipeOpen) {
@@ -143,82 +150,97 @@ export function BillSwipeableRow({
     </View>
   );
 
-  function handleRowTouchStart() {
-    setRowTouchActive?.(true);
+  function openActionMenu() {
+    void hapticSelection();
+    swipeableRef.current?.close();
+    onSwipeClose();
+    setMenuVisible(true);
   }
 
-  function handleRowTouchEnd() {
-    setRowTouchActive?.(false);
+  function handleSwipeActionPress(action: (typeof swipeActions)[number]) {
+    hapticForActionLabel(action.label);
+    swipeableRef.current?.close();
+    action.onPress();
   }
+
+  const interactiveRow = (
+    <Pressable
+      accessibilityHint={
+        isSwipeOpen
+          ? "Closes bill actions"
+          : "Long press for bill actions, swipe left for quick actions"
+      }
+      accessibilityRole="button"
+      delayLongPress={400}
+      onLongPress={isSwipeOpen ? undefined : openActionMenu}
+      onPress={isSwipeOpen ? () => swipeableRef.current?.close() : undefined}
+    >
+      {rowContent}
+    </Pressable>
+  );
 
   return (
-    <View
-      onTouchCancel={handleRowTouchEnd}
-      onTouchEnd={handleRowTouchEnd}
-      onTouchStart={handleRowTouchStart}
-    >
+    <>
       <Swipeable
         ref={swipeableRef}
-        activeOffsetX={isSwipeOpen ? [-10000, 12] : [-12, 10000]}
-        failOffsetY={[-16, 16]}
-        friction={2}
-        overshootFriction={8}
-        overshootRight={false}
+        {...swipeRowGestureProps}
+        activeOffsetX={getSwipeRowActiveOffsetX(isSwipeOpen)}
         containerStyle={
           isGrouped ? styles.billGroupedSwipeRow : styles.billSwipeableCard
         }
         onSwipeableClose={onSwipeClose}
         onSwipeableWillOpen={() => onSwipeOpen(bill.id)}
         renderRightActions={() => (
-          <View style={styles.purchaseSwipeActions}>
-            {swipeActions.map((action) => (
-              <Pressable
-                key={action.label}
-                accessibilityRole="button"
-                accessibilityLabel={action.label}
-                style={({ pressed }) => [
-                  styles.purchaseSwipeAction,
-                  getBillSwipeActionStyle(action.destructive, action.label),
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => {
-                  swipeableRef.current?.close();
-                  action.onPress();
-                }}
-              >
-                {action.icon ? (
-                  <SwipeActionIcon
-                    destructive={action.destructive}
-                    name={action.icon}
-                  />
-                ) : null}
-                <Text
-                  style={[
-                    styles.purchaseSwipeActionLabel,
-                    action.destructive && styles.purchaseSwipeActionLabelDestructive,
+            <View style={styles.purchaseSwipeActions}>
+              {swipeActions.map((action) => (
+                <Pressable
+                  key={action.label}
+                  accessibilityRole="button"
+                  accessibilityLabel={action.label}
+                  style={({ pressed }) => [
+                    styles.purchaseSwipeAction,
+                    getBillSwipeActionStyle(action.destructive, action.label, styles),
+                    pressed && styles.pressed,
                   ]}
-                  numberOfLines={2}
+                  onPress={() => handleSwipeActionPress(action)}
                 >
-                  {getBillSwipeActionLabel(action.label)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-      >
-        {isSwipeOpen ? (
-          <Pressable
-            accessibilityHint="Closes bill actions"
-            accessibilityRole="button"
-            onPress={() => swipeableRef.current?.close()}
-          >
-            {rowContent}
-          </Pressable>
-        ) : (
-          rowContent
-        )}
-      </Swipeable>
-    </View>
+                  {action.icon ? (
+                    <SwipeActionIcon
+                      destructive={action.destructive}
+                      name={action.icon}
+                    />
+                  ) : null}
+                  <Text
+                    style={[
+                      styles.purchaseSwipeActionLabel,
+                      action.destructive && styles.purchaseSwipeActionLabelDestructive,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {getBillSwipeActionLabel(action.label)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        >
+          {interactiveRow}
+        </Swipeable>
+
+      <ActionMenu
+        header={{
+          amount: money(bill.amountCents),
+          meta: getBillRowMeta(bill),
+          status: billStatus.label,
+          statusTone: billStatus.tone,
+          title: formatBillDisplayName(bill.name),
+        }}
+        title={formatBillDisplayName(bill.name)}
+        visible={menuVisible}
+        actions={menuActions}
+        onClose={() => setMenuVisible(false)}
+      />
+    </>
   );
 }
 
@@ -250,7 +272,11 @@ function getBillSwipeActionLabel(label: string) {
   return label;
 }
 
-function getBillSwipeActionStyle(destructive: boolean | undefined, label: string) {
+function getBillSwipeActionStyle(
+  destructive: boolean | undefined,
+  label: string,
+  styles: AppStyles
+) {
   if (destructive) {
     return styles.purchaseSwipeActionDestructive;
   }

@@ -16,7 +16,8 @@ import {
   getBillTimelineMetaLabel,
   getPaycheckTimelineMetaLabel,
 } from "@/shared/ui/statusBadges";
-import { styles, getFabScrollPadding } from "@/shared/ui/styles";
+import { getFabScrollPadding } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type { Bill, PaycheckListItem } from "@/shared/ui/types";
 
 type DashboardEnvelope = Pick<
@@ -82,6 +83,7 @@ export function DashboardScreen({
   onEditEnvelope: (envelope: DashboardEnvelope) => void;
   onToggleEnvelopePaused: (envelope: DashboardEnvelope) => void | Promise<void>;
 }) {
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const [showAllTimelineEvents, setShowAllTimelineEvents] = useState(false);
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
@@ -121,6 +123,7 @@ export function DashboardScreen({
       ref={tutorialScrollRef}
       style={styles.content}
       contentContainerStyle={{ paddingBottom: getFabScrollPadding(insets.bottom) }}
+      directionalLockEnabled
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       scrollEventThrottle={16}
@@ -198,18 +201,20 @@ export function DashboardScreen({
         <>
           <View style={styles.dashboardSectionHeader}>
             <Text style={styles.sectionTitleCompact}>Envelopes</Text>
-            <Pressable
-              accessibilityHint="Opens the form to add a new envelope"
-              accessibilityLabel="Add envelope"
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.inlinePrimaryButton,
-                pressed && styles.pressed,
-              ]}
-              onPress={onAddEnvelope}
-            >
-              <Text style={styles.inlinePrimaryButtonText}>+ Add</Text>
-            </Pressable>
+            {activeEnvelopes.length > 0 && (
+              <Pressable
+                accessibilityHint="Opens the form to add a new envelope"
+                accessibilityLabel="Add envelope"
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.inlinePrimaryButton,
+                  pressed && styles.pressed,
+                ]}
+                onPress={onAddEnvelope}
+              >
+                <Text style={styles.inlinePrimaryButtonText}>+ Add</Text>
+              </Pressable>
+            )}
           </View>
           {activeEnvelopes.length === 0 ? (
             <EmptyState
@@ -485,6 +490,7 @@ function DashboardTimelineRow({
   showConnectorBelow: boolean;
   onOpenPaychecks: () => void;
 }) {
+  const styles = useStyles();
   const isIncome = event.kind === "income";
   const dateParts = formatTimelineDateParts(event.date);
   const content = (
@@ -589,6 +595,7 @@ function DashboardCycleChip({
   onPress: () => void;
   value: string;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityHint={accessibilityHint}
@@ -633,6 +640,7 @@ function DashboardBreakdownRow({
   tone?: "default" | "credit" | "deduction" | "total";
   value: string;
 }) {
+  const styles = useStyles();
   return (
     <View
       style={[

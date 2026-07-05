@@ -1,8 +1,9 @@
 import { Text, View } from "react-native";
 
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 
 export function HomeHeader() {
+  const styles = useStyles();
   return (
     <View style={styles.header}>
       <View style={styles.logoLockup}>

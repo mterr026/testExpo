@@ -16,7 +16,9 @@ import {
   KeyboardDoneAccessory,
 } from "@/shared/ui/components";
 import { EnvelopePickerField } from "@/features/budgeting/components/EnvelopePickerField";
-import { styles } from "@/shared/ui/styles";
+import { hapticConfirm } from "@/shared/ui/haptics";
+import { SheetDragHandle } from "@/shared/ui/SheetDragHandle";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type { Purchase } from "@/shared/ui/types";
 
 type EnvelopePickerOption = {
@@ -71,6 +73,7 @@ export function PurchaseEntryModal({
   onSaveAndAddAnother,
   onClose,
 }: PurchaseEntryModalProps) {
+  const styles = useStyles();
   const isEditing = mode === "edit";
   const amountInputRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -91,6 +94,16 @@ export function PurchaseEntryModal({
     };
   }, [visible, isEditing, addFormResetKey]);
 
+  async function handleSave() {
+    void hapticConfirm();
+    await onSave();
+  }
+
+  async function handleSaveAndAddAnother() {
+    void hapticConfirm();
+    await onSaveAndAddAnother();
+  }
+
   return (
     <Modal visible={visible} transparent animationType="slide">
       <KeyboardAvoidingView
@@ -99,6 +112,7 @@ export function PurchaseEntryModal({
       >
         <Pressable style={styles.modalBackdrop} onPress={Keyboard.dismiss} />
         <View style={[styles.sheet, styles.sheetScrollable]}>
+          <SheetDragHandle />
           <ScrollView
             ref={scrollRef}
             automaticallyAdjustKeyboardInsets
@@ -229,7 +243,7 @@ export function PurchaseEntryModal({
                 styles.primaryButtonTight,
                 pressed && styles.pressed,
               ]}
-              onPress={onSave}
+              onPress={handleSave}
             >
               <Text style={styles.primaryButtonText}>
                 {isEditing ? "Save Changes" : "Save Purchase"}
@@ -242,7 +256,7 @@ export function PurchaseEntryModal({
                   styles.secondaryButton,
                   pressed && styles.pressed,
                 ]}
-                onPress={onSaveAndAddAnother}
+                onPress={handleSaveAndAddAnother}
               >
                 <Text style={styles.secondaryButtonText}>Save & add another</Text>
               </Pressable>

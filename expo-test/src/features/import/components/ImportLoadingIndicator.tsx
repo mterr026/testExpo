@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { colors, styles } from "@/shared/ui/styles";
+import { useStyles, useTheme } from "@/shared/ui/ThemeContext";
 
 type ImportLoadingIndicatorProps = {
   subtitle?: string;
@@ -23,6 +23,8 @@ export function ImportLoadingIndicator({
   title,
   variant = "card",
 }: ImportLoadingIndicatorProps) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   const pulse = useSharedValue(0.35);
 
   useEffect(() => {
@@ -66,6 +68,7 @@ export function ImportLoadingIndicator({
 }
 
 function ImportLoadingDots() {
+  const styles = useStyles();
   return (
     <View style={styles.importLoadingDotsRow}>
       {[0, 1, 2].map((index) => (
@@ -76,6 +79,7 @@ function ImportLoadingDots() {
 }
 
 function ImportLoadingDot({ delayMs }: { delayMs: number }) {
+  const styles = useStyles();
   const scale = useSharedValue(0.7);
 
   useEffect(() => {

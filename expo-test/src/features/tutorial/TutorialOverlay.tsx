@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
   Modal,
@@ -8,7 +8,9 @@ import {
   type LayoutRectangle,
 } from "react-native";
 
-import { colors, fontWeight, radius, spacing, styles } from "@/shared/ui/styles";
+import { fontWeight, radius, spacing } from "@/shared/ui/styles";
+import { useStyles, useTheme } from "@/shared/ui/ThemeContext";
+import type { ThemeColors } from "@/shared/ui/theme";
 
 import { useTutorialContext } from "./TutorialContext";
 import {
@@ -33,8 +35,10 @@ const TOOLTIP_ESTIMATED_HEIGHT = 200;
 
 function TutorialPointer({
   layout,
+  tutorialStyles,
 }: {
   layout: ReturnType<typeof buildPointerLayout>;
+  tutorialStyles: ReturnType<typeof createTutorialStyles>;
 }) {
   const headLeft = layout.centerX - 10;
 
@@ -76,6 +80,12 @@ export function TutorialOverlay({
   onNext,
   onSkip,
 }: TutorialOverlayProps) {
+  const styles = useStyles();
+  const { colors, isDark } = useTheme();
+  const tutorialStyles = useMemo(
+    () => createTutorialStyles(colors, isDark),
+    [colors, isDark]
+  );
   const { measureTarget, scrollTargetIntoView } = useTutorialContext();
   const [highlightLayout, setHighlightLayout] = useState<LayoutRectangle | null>(
     null
@@ -198,7 +208,9 @@ export function TutorialOverlay({
           <View pointerEvents="none" style={tutorialStyles.fullDim} />
         )}
 
-        {pointerLayout ? <TutorialPointer layout={pointerLayout} /> : null}
+        {pointerLayout ? (
+          <TutorialPointer layout={pointerLayout} tutorialStyles={tutorialStyles} />
+        ) : null}
 
         <Pressable
           accessibilityRole="button"
@@ -268,102 +280,106 @@ const absoluteFill = {
   left: 0,
 };
 
-const tutorialStyles = {
-  root: {
-    flex: 1,
-  },
-  fullDim: {
-    ...absoluteFill,
-    backgroundColor: "rgba(11, 31, 51, 0.52)",
-  },
-  dimRegion: {
-    position: "absolute" as const,
-    backgroundColor: "rgba(11, 31, 51, 0.52)",
-  },
-  spotlightRing: {
-    position: "absolute" as const,
-    borderRadius: radius.lg,
-    borderWidth: 2,
-    borderColor: colors.accentLight,
-    backgroundColor: "transparent",
-    shadowColor: colors.accentLight,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-  },
-  pointerRoot: {
-    ...absoluteFill,
-  },
-  pointerHead: {
-    position: "absolute" as const,
-    width: 20,
-    textAlign: "center" as const,
-    fontSize: 18,
-    lineHeight: 20,
-    color: colors.accentLight,
-  },
-  pointerShaft: {
-    position: "absolute" as const,
-    width: 3,
-    borderRadius: 2,
-    backgroundColor: colors.accentLight,
-  },
-  skipButton: {
-    position: "absolute" as const,
-    top: spacing.xxxl + spacing.sm,
-    right: spacing.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: "rgba(255, 253, 247, 0.94)",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  skipButtonText: {
-    color: colors.accentDark,
-    fontSize: 13,
-    fontWeight: fontWeight.medium,
-  },
-  tooltip: {
-    position: "absolute" as const,
-    left: spacing.lg,
-    right: spacing.lg,
-    backgroundColor: colors.card,
-    borderRadius: radius.sheet,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.accentDark,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 18,
-    elevation: 12,
-    gap: spacing.sm,
-  },
-  tooltipCentered: {
-    top: "34%" as const,
-  },
-  tooltipEyebrow: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: fontWeight.medium,
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.4,
-  },
-  nextButton: {
-    marginTop: spacing.sm,
-  },
-  nextButtonWithBack: {
-    flex: 1,
-    marginTop: 0,
-  },
-  backButton: {
-    flex: 1,
-    marginTop: 0,
-  },
-  tooltipActions: {
-    flexDirection: "row" as const,
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-};
+function createTutorialStyles(colors: ThemeColors, isDark: boolean) {
+  const dimOverlay = isDark ? "rgba(0, 0, 0, 0.62)" : "rgba(11, 31, 51, 0.52)";
+
+  return {
+    root: {
+      flex: 1,
+    },
+    fullDim: {
+      ...absoluteFill,
+      backgroundColor: dimOverlay,
+    },
+    dimRegion: {
+      position: "absolute" as const,
+      backgroundColor: dimOverlay,
+    },
+    spotlightRing: {
+      position: "absolute" as const,
+      borderRadius: radius.lg,
+      borderWidth: 2,
+      borderColor: colors.accentLight,
+      backgroundColor: "transparent",
+      shadowColor: colors.accentLight,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.45,
+      shadowRadius: 10,
+    },
+    pointerRoot: {
+      ...absoluteFill,
+    },
+    pointerHead: {
+      position: "absolute" as const,
+      width: 20,
+      textAlign: "center" as const,
+      fontSize: 18,
+      lineHeight: 20,
+      color: colors.accentLight,
+    },
+    pointerShaft: {
+      position: "absolute" as const,
+      width: 3,
+      borderRadius: 2,
+      backgroundColor: colors.accentLight,
+    },
+    skipButton: {
+      position: "absolute" as const,
+      top: spacing.xxxl + spacing.sm,
+      right: spacing.lg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.pill,
+      backgroundColor: isDark ? "rgba(26, 36, 51, 0.94)" : "rgba(255, 253, 247, 0.94)",
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    skipButtonText: {
+      color: colors.accentDark,
+      fontSize: 13,
+      fontWeight: fontWeight.medium,
+    },
+    tooltip: {
+      position: "absolute" as const,
+      left: spacing.lg,
+      right: spacing.lg,
+      backgroundColor: colors.card,
+      borderRadius: radius.sheet,
+      padding: spacing.xl,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: colors.accentDark,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.16,
+      shadowRadius: 18,
+      elevation: 12,
+      gap: spacing.sm,
+    },
+    tooltipCentered: {
+      top: "34%" as const,
+    },
+    tooltipEyebrow: {
+      color: colors.muted,
+      fontSize: 12,
+      fontWeight: fontWeight.medium,
+      textTransform: "uppercase" as const,
+      letterSpacing: 0.4,
+    },
+    nextButton: {
+      marginTop: spacing.sm,
+    },
+    nextButtonWithBack: {
+      flex: 1,
+      marginTop: 0,
+    },
+    backButton: {
+      flex: 1,
+      marginTop: 0,
+    },
+    tooltipActions: {
+      flexDirection: "row" as const,
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+    },
+  };
+}

@@ -12,7 +12,8 @@ import { CollapsibleSection } from "@/shared/ui/CollapsibleSection";
 import { CycleSummaryCard } from "@/shared/ui/CycleSummaryCard";
 import { ScreenSectionTitle } from "@/shared/ui/ScreenSectionTitle";
 import { ScreenShell } from "@/shared/ui/ScreenShell";
-import { getFabScrollPadding, styles } from "@/shared/ui/styles";
+import { getFabScrollPadding } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type { PaycheckListItem, Purchase } from "@/shared/ui/types";
 
 import { formatDashboardCycleLabel } from "@/features/dashboard/dashboardCycleLabel";
@@ -61,6 +62,7 @@ export function PurchasesScreen({
   onMarkCharged,
   onMarkPending,
 }: PurchasesScreenProps) {
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const purchases = purchasesProp ?? [];
   const paychecks = paychecksProp ?? [];
@@ -379,6 +381,7 @@ function PreviousCycleRow({
   onLoadMore: () => void;
   onToggle: () => void;
 }) {
+  const styles = useStyles();
   const cyclePurchases = [...filterPurchasesForCycle(purchases, option.id, cycleContext)].sort(
     sortPurchasesByMostRecent
   );

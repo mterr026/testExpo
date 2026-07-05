@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type { PaycheckBillCoverage, PaycheckListItem } from "@/shared/ui/types";
 
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
@@ -45,6 +45,7 @@ export function PaycheckTimelineRow({
   variant = "default",
   wrapUpcomingTutorialTarget = false,
 }: PaycheckTimelineRowProps) {
+  const styles = useStyles();
   const isHero = variant === "hero";
   const swipeHeader = (
     <PaycheckSwipeableHeader

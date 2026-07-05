@@ -9,7 +9,7 @@ import { CollapsibleSection } from "@/shared/ui/CollapsibleSection";
 import { CycleSummaryCard } from "@/shared/ui/CycleSummaryCard";
 import { ScreenSectionTitle } from "@/shared/ui/ScreenSectionTitle";
 import { ScreenShell } from "@/shared/ui/ScreenShell";
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type { Bill } from "@/shared/ui/types";
 
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
@@ -47,6 +47,7 @@ export function BillsScreen({
   onConfirmBill: (bill: Bill) => void;
   onToggleBillPaused: (bill: Bill) => void;
 }) {
+  const styles = useStyles();
   const currentCycleBills =
     dueThisCycleBills ??
     bills.filter(
@@ -127,6 +128,7 @@ export function BillsScreen({
         ref={tutorialScrollRef}
         style={styles.content}
         contentContainerStyle={[styles.contentInner, styles.billsContentInner]}
+        directionalLockEnabled
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}

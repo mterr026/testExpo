@@ -3,7 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import { money } from "@/shared/ui/components";
 import { CollapseChevron } from "@/shared/ui/CollapseChevron";
 import { CollapsibleLinkToggle } from "@/shared/ui/CollapsibleLinkToggle";
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type { PaycheckBillCoverage } from "@/shared/ui/types";
 
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
@@ -23,6 +23,7 @@ export function PaycheckCoveredBills({
   showTutorialTarget = false,
   toggleStyle = "link",
 }: PaycheckCoveredBillsProps) {
+  const styles = useStyles();
   if (!coverage) {
     return null;
   }
@@ -119,6 +120,7 @@ function PaycheckCoverageExpandedContent({
   coverage: PaycheckBillCoverage;
   windowText: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.paycheckCoverageExpanded}>
       <Text style={styles.paycheckCoverageWindowText}>{windowText}</Text>
@@ -156,7 +158,7 @@ function PaycheckCoverageExpandedContent({
       )}
       {coverage.canProjectBills && (
         <>
-          <View style={styles.paycheckCoverageTotalRow}>
+          <View style={styles.paycheckCoverageBillListTotalRow}>
             <Text style={styles.paycheckCoverageTitle}>Total bills</Text>
             <Text style={styles.paycheckCoverageAmount}>
               {money(coverage.totalCents)}
@@ -181,6 +183,7 @@ function PaycheckProjectionBreakdown({
 }: {
   coverage: PaycheckBillCoverage;
 }) {
+  const styles = useStyles();
   const reservedBillCount = coverage.coveredBills.filter(
     (bill) => bill.reservationStatus === "reserved"
   ).length;
@@ -191,14 +194,14 @@ function PaycheckProjectionBreakdown({
         Based on today&apos;s Safe to Spend, which already includes pending
         purchases.
       </Text>
-      <View style={styles.paycheckCoverageTotalRow}>
+      <View style={styles.paycheckCoverageBillListTotalRow}>
         <Text style={styles.paycheckCoverageTitle}>Starting Safe to Spend</Text>
         <Text style={styles.paycheckCoverageAmount}>
           {money(coverage.startingSafeToSpendCents)}
         </Text>
       </View>
       {coverage.paycheckImpactCents > 0 && (
-        <View style={styles.paycheckCoverageTotalRow}>
+        <View style={styles.paycheckCoverageBillListTotalRow}>
           <Text style={styles.paycheckCoverageTitle}>Expected paycheck</Text>
           <Text
             style={[styles.paycheckCoverageAmount, styles.paycheckProjectionCredit]}
@@ -208,7 +211,7 @@ function PaycheckProjectionBreakdown({
         </View>
       )}
       {coverage.billsImpactCents > 0 && (
-        <View style={styles.paycheckCoverageTotalRow}>
+        <View style={styles.paycheckCoverageBillListTotalRow}>
           <Text style={styles.paycheckCoverageTitle}>
             {coverage.isCurrentCycle
               ? "Unreserved bills this cycle"

@@ -1,14 +1,18 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
-import { money, StatusPill } from "@/shared/ui/components";
+import { ActionMenu, money, StatusPill } from "@/shared/ui/components";
+import { hapticForActionLabel, hapticSelection } from "@/shared/ui/haptics";
+import {
+  getSwipeRowActiveOffsetX,
+  swipeRowGestureProps,
+} from "@/shared/ui/swipeRowConfig";
 import { SwipeActionIcon } from "@/shared/ui/SwipeActionIcon";
 import { getPaycheckStatusPresentation } from "@/shared/ui/statusBadges";
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
+import type { AppStyles } from "@/shared/ui/styles";
 import type { PaycheckListItem } from "@/shared/ui/types";
-
-import { useSwipeRowGesture } from "@/features/home/SwipeRowGestureContext";
 
 import { getPaycheckSwipeActions } from "../paycheckActions";
 
@@ -43,17 +47,19 @@ export function PaycheckSwipeableHeader({
   showStatusPill = true,
   variant = "default",
 }: PaycheckSwipeableHeaderProps) {
+  const styles = useStyles();
   const swipeableRef = useRef<Swipeable>(null);
-  const setRowTouchActive = useSwipeRowGesture();
+  const [menuVisible, setMenuVisible] = useState(false);
   const isAdditionalIncome = rowInset === "additional";
   const isHero = variant === "hero";
-  const swipeActions = getPaycheckSwipeActions({
+  const menuActions = getPaycheckSwipeActions({
     paycheck,
     onConfirmPaycheck,
     onDeletePaycheck,
     onEditPaycheck,
     onMarkPaycheckUnreceived,
   });
+  const swipeActions = menuActions;
 
   useEffect(() => {
     if (isSwipeOpen) {
@@ -125,86 +131,101 @@ export function PaycheckSwipeableHeader({
     </View>
   );
 
-  function handleRowTouchStart() {
-    setRowTouchActive?.(true);
+  function openActionMenu() {
+    void hapticSelection();
+    swipeableRef.current?.close();
+    onSwipeClose();
+    setMenuVisible(true);
   }
 
-  function handleRowTouchEnd() {
-    setRowTouchActive?.(false);
+  function handleSwipeActionPress(action: (typeof swipeActions)[number]) {
+    hapticForActionLabel(action.label);
+    swipeableRef.current?.close();
+    action.onPress();
   }
+
+  const interactiveRow = (
+    <Pressable
+      accessibilityHint={
+        isSwipeOpen
+          ? "Closes paycheck actions"
+          : "Long press for paycheck actions, swipe left for quick actions"
+      }
+      accessibilityRole="button"
+      delayLongPress={400}
+      onLongPress={isSwipeOpen ? undefined : openActionMenu}
+      onPress={isSwipeOpen ? () => swipeableRef.current?.close() : undefined}
+    >
+      {rowContent}
+    </Pressable>
+  );
 
   return (
-    <View
-      onTouchCancel={handleRowTouchEnd}
-      onTouchEnd={handleRowTouchEnd}
-      onTouchStart={handleRowTouchStart}
-    >
+    <>
       <Swipeable
         ref={swipeableRef}
-        activeOffsetX={isSwipeOpen ? [-10000, 12] : [-12, 10000]}
-        failOffsetY={[-16, 16]}
-        friction={2}
-        overshootFriction={8}
-        overshootRight={false}
+        {...swipeRowGestureProps}
+        activeOffsetX={getSwipeRowActiveOffsetX(isSwipeOpen)}
         containerStyle={
-          isHero
-            ? styles.paycheckNextHeroSwipeContainer
-            : isAdditionalIncome
-            ? styles.paycheckSwipeableContainerAdditional
-            : styles.paycheckSwipeableContainer
-        }
-        onSwipeableClose={onSwipeClose}
-        onSwipeableWillOpen={() => onSwipeOpen(paycheck.id)}
-        renderRightActions={() => (
-          <View style={styles.purchaseSwipeActions}>
-            {swipeActions.map((action) => (
-              <Pressable
-                key={action.label}
-                accessibilityRole="button"
-                accessibilityLabel={action.label}
-                style={({ pressed }) => [
-                  styles.purchaseSwipeAction,
-                  getPaycheckSwipeActionStyle(action.destructive, action.label),
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => {
-                  swipeableRef.current?.close();
-                  action.onPress();
-                }}
-              >
-                {action.icon ? (
-                  <SwipeActionIcon
-                    destructive={action.destructive}
-                    name={action.icon}
-                  />
-                ) : null}
-                <Text
-                  style={[
-                    styles.purchaseSwipeActionLabel,
-                    action.destructive && styles.purchaseSwipeActionLabelDestructive,
+            isHero
+              ? styles.paycheckNextHeroSwipeContainer
+              : isAdditionalIncome
+                ? styles.paycheckSwipeableContainerAdditional
+                : styles.paycheckSwipeableContainer
+          }
+          onSwipeableClose={onSwipeClose}
+          onSwipeableWillOpen={() => onSwipeOpen(paycheck.id)}
+          renderRightActions={() => (
+            <View style={styles.purchaseSwipeActions}>
+              {swipeActions.map((action) => (
+                <Pressable
+                  key={action.label}
+                  accessibilityRole="button"
+                  accessibilityLabel={action.label}
+                  style={({ pressed }) => [
+                    styles.purchaseSwipeAction,
+                    getPaycheckSwipeActionStyle(action.destructive, action.label, styles),
+                    pressed && styles.pressed,
                   ]}
-                  numberOfLines={2}
+                  onPress={() => handleSwipeActionPress(action)}
                 >
-                  {getPaycheckSwipeActionLabel(action.label)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-      >
-        {isSwipeOpen ? (
-          <Pressable
-            accessibilityHint="Closes paycheck actions"
-            accessibilityRole="button"
-            onPress={() => swipeableRef.current?.close()}
-          >
-            {rowContent}
-          </Pressable>
-        ) : (
-          rowContent
-        )}
-      </Swipeable>
-    </View>
+                  {action.icon ? (
+                    <SwipeActionIcon
+                      destructive={action.destructive}
+                      name={action.icon}
+                    />
+                  ) : null}
+                  <Text
+                    style={[
+                      styles.purchaseSwipeActionLabel,
+                      action.destructive && styles.purchaseSwipeActionLabelDestructive,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {getPaycheckSwipeActionLabel(action.label)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        >
+          {interactiveRow}
+        </Swipeable>
+
+      <ActionMenu
+        header={{
+          amount: money(paycheck.amountCents),
+          meta: paycheck.expectedDate,
+          status: paycheckStatus.label,
+          statusTone: paycheckStatus.tone,
+          title: paycheck.label,
+        }}
+        title={paycheck.label}
+        visible={menuVisible}
+        actions={menuActions}
+        onClose={() => setMenuVisible(false)}
+      />
+    </>
   );
 }
 
@@ -228,7 +249,11 @@ function getPaycheckSwipeActionLabel(label: string) {
   return label;
 }
 
-function getPaycheckSwipeActionStyle(destructive: boolean | undefined, label: string) {
+function getPaycheckSwipeActionStyle(
+  destructive: boolean | undefined,
+  label: string,
+  styles: AppStyles
+) {
   if (destructive) {
     return styles.purchaseSwipeActionDestructive;
   }

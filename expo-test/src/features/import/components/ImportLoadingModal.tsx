@@ -5,7 +5,7 @@ import {
   getImportLoadingLabel,
   type ImportPhase,
 } from "@/features/import/importLoadingStatus";
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 
 type ImportLoadingModalProps = {
   importPhase: ImportPhase | null;
@@ -16,6 +16,7 @@ export function ImportLoadingModal({
   importPhase,
   visible,
 }: ImportLoadingModalProps) {
+  const styles = useStyles();
   const importLoadingLabel = importPhase
     ? getImportLoadingLabel(importPhase)
     : {

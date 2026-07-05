@@ -1,6 +1,6 @@
 import { Pressable, Text } from "react-native";
 
-import { styles } from "./styles";
+import { useStyles } from "./ThemeContext";
 
 export function CollapsibleLinkToggle({
   accessibilityHint,
@@ -17,6 +17,7 @@ export function CollapsibleLinkToggle({
   collapsedLabel: string;
   onToggle: () => void;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityHint={accessibilityHint}

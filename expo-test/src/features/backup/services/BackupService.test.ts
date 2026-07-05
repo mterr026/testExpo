@@ -4,12 +4,15 @@ import type {
   BalanceAdjustment,
   Bill,
   BillCycleInstance,
+  BudgetingPreferences,
+  Envelope,
   NewBackupMetadata,
   NotificationSettings,
   Paycheck,
   Profile,
   Purchase,
 } from "@/database/repositories/types";
+import { FakeDatabase } from "@/database/repositories/testUtils";
 
 import {
   parseBudgetFlowBackupJson,
@@ -24,6 +27,7 @@ const profile: Profile = {
   currencyCode: "USD",
   onboardingComplete: true,
   openingBalanceCents: 0,
+  openingBalanceAsOfDate: null,
   tutorialComplete: true,
   createdAt: "2026-06-01T12:00:00.000Z",
   updatedAt: "2026-06-01T12:00:00.000Z",
@@ -82,6 +86,19 @@ const billCycleInstance: BillCycleInstance = {
   syncStatus: "local",
 };
 
+const envelope: Envelope = {
+  id: "envelope-1",
+  profileId: "profile-1",
+  name: "Groceries",
+  allocationCents: 40000,
+  sortOrder: 0,
+  isPaused: false,
+  createdAt: "2026-06-01T12:00:00.000Z",
+  updatedAt: "2026-06-01T12:00:00.000Z",
+  deletedAt: null,
+  syncStatus: "local",
+};
+
 const purchase: Purchase = {
   id: "purchase-1",
   profileId: "profile-1",
@@ -90,6 +107,7 @@ const purchase: Purchase = {
   description: "Gas",
   purchaseDate: "2026-06-10",
   paycheckCycleId: "paycheck-1",
+  envelopeId: "envelope-1",
   resolvedAt: null,
   createdAt: "2026-06-01T12:00:00.000Z",
   updatedAt: "2026-06-01T12:00:00.000Z",
@@ -123,6 +141,15 @@ const notificationSettings: NotificationSettings = {
   syncStatus: "local",
 };
 
+const budgetingPreferences: BudgetingPreferences = {
+  id: "budgeting-preferences-1",
+  profileId: "profile-1",
+  envelopesEnabled: true,
+  createdAt: "2026-06-01T12:00:00.000Z",
+  updatedAt: "2026-06-01T12:00:00.000Z",
+  syncStatus: "local",
+};
+
 function createMocks() {
   return {
     activityLogRepository: {
@@ -133,7 +160,7 @@ function createMocks() {
         entityType: "backup",
         entityId: null,
         summary:
-          "Exported backup budget-flow-backup-2026-06-19-120000000Z.json with 6 records.",
+          "Exported backup Budget Flow Backup 2026-06-19 1200.json with 8 records.",
         createdAt: "2026-06-19T12:00:00.000Z",
       }),
     },
@@ -157,6 +184,12 @@ function createMocks() {
     billRepository: {
       findAll: vi.fn().mockResolvedValue([bill]),
     },
+    budgetingPreferencesRepository: {
+      findByProfileId: vi.fn().mockResolvedValue(budgetingPreferences),
+    },
+    envelopeRepository: {
+      findAll: vi.fn().mockResolvedValue([envelope]),
+    },
     notificationSettingsRepository: {
       findByProfileId: vi.fn().mockResolvedValue(notificationSettings),
     },
@@ -174,7 +207,7 @@ function createMocks() {
 
 function createService(
   mocks: ReturnType<typeof createMocks>,
-  options: ConstructorParameters<typeof BackupService>[7] = {}
+  options: ConstructorParameters<typeof BackupService>[9] = {}
 ) {
   return new BackupService(
     mocks.profileRepository,
@@ -184,6 +217,8 @@ function createService(
     mocks.purchaseRepository,
     mocks.balanceAdjustmentRepository,
     mocks.notificationSettingsRepository,
+    mocks.envelopeRepository,
+    mocks.budgetingPreferencesRepository,
     {
       now: () => new Date("2026-06-19T12:00:00.000Z"),
       ...options,
@@ -197,21 +232,27 @@ describe("BackupService", () => {
     const service = createService(mocks);
 
     await expect(service.buildExportPayload()).resolves.toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: "2026-06-19T12:00:00.000Z",
       profile,
       records: {
         balanceAdjustments: [balanceAdjustment],
         billCycleInstances: [billCycleInstance],
         bills: [bill],
+        budgetingPreferences,
+        envelopes: [envelope],
         notificationSettings,
         paychecks: [paycheck],
         purchases: [purchase],
       },
-      recordCount: 6,
+      recordCount: 8,
     });
     expect(mocks.billCycleInstanceRepository.findByCycle).toHaveBeenCalledWith(
       "paycheck-1"
+    );
+    expect(mocks.envelopeRepository.findAll).toHaveBeenCalledWith("profile-1");
+    expect(mocks.budgetingPreferencesRepository.findByProfileId).toHaveBeenCalledWith(
+      "profile-1"
     );
   });
 
@@ -228,12 +269,10 @@ describe("BackupService", () => {
   it("buildExportPackage_returns_filename_json_and_record_count", async () => {
     const exportPackage = await createService(createMocks()).buildExportPackage();
 
-    expect(exportPackage.fileName).toBe(
-      "budget-flow-backup-2026-06-19-120000000Z.json"
-    );
-    expect(exportPackage.recordCount).toBe(6);
+    expect(exportPackage.fileName).toBe("Budget Flow Backup 2026-06-19 1200.json");
+    expect(exportPackage.recordCount).toBe(8);
     expect(JSON.parse(exportPackage.jsonText)).toEqual(exportPackage.payload);
-    expect(exportPackage.jsonText).toContain("\n  \"schemaVersion\": 1");
+    expect(exportPackage.jsonText).toContain("\n  \"schemaVersion\": 2");
   });
 
   it("buildExportPackage_produces_json_that_matches_the_restore_contract", async () => {
@@ -244,10 +283,105 @@ describe("BackupService", () => {
     );
   });
 
+  it("buildExportPackage_round_trips_balance_adjustments_with_null_reason", async () => {
+    const adjustmentWithoutReason: BalanceAdjustment = {
+      ...balanceAdjustment,
+      reason: null,
+    };
+    const mocks = createMocks();
+    mocks.balanceAdjustmentRepository.findAll.mockResolvedValue([
+      adjustmentWithoutReason,
+    ]);
+    const exportPackage = await createService(mocks).buildExportPackage();
+
+    expect(exportPackage.payload.records.balanceAdjustments[0].reason).toBeNull();
+    expect(parseBudgetFlowBackupJson(exportPackage.jsonText)).toEqual(
+      exportPackage.payload
+    );
+  });
+
+  it("validateBudgetFlowBackupPayload_accepts_v1_backups_with_null_balance_adjustment_reason", async () => {
+    const adjustmentWithoutReason: BalanceAdjustment = {
+      ...balanceAdjustment,
+      reason: null,
+    };
+    const exportPackage = await createService(createMocks()).buildExportPackage();
+    const v1Payload = {
+      schemaVersion: 1,
+      exportedAt: exportPackage.payload.exportedAt,
+      profile: exportPackage.payload.profile,
+      recordCount: 6,
+      records: {
+        balanceAdjustments: [adjustmentWithoutReason],
+        billCycleInstances: exportPackage.payload.records.billCycleInstances,
+        bills: exportPackage.payload.records.bills,
+        notificationSettings: exportPackage.payload.records.notificationSettings,
+        paychecks: exportPackage.payload.records.paychecks,
+        purchases: exportPackage.payload.records.purchases.map((purchaseItem) => ({
+          ...purchaseItem,
+          envelopeId: null,
+        })),
+      },
+    };
+
+    expect(
+      validateBudgetFlowBackupPayload(v1Payload).records.balanceAdjustments[0].reason
+    ).toBeNull();
+  });
+
+  it("validateBudgetFlowBackupPayload_rejects_invalid_balance_adjustment_reason", async () => {
+    const exportPackage = await createService(createMocks()).buildExportPackage();
+
+    expect(() =>
+      validateBudgetFlowBackupPayload({
+        ...exportPackage.payload,
+        records: {
+          ...exportPackage.payload.records,
+          balanceAdjustments: [
+            {
+              ...balanceAdjustment,
+              reason: 42,
+            },
+          ],
+        },
+      })
+    ).toThrow("Backup balance adjustment reason is invalid.");
+  });
+
   it("parseBudgetFlowBackupJson_rejects_invalid_json_before_restore_work_starts", () => {
     expect(() => parseBudgetFlowBackupJson("{nope")).toThrow(
       "Backup file is not valid JSON."
     );
+  });
+
+  it("validateBudgetFlowBackupPayload_accepts_v1_backups_without_envelope_data", async () => {
+    const exportPackage = await createService(createMocks()).buildExportPackage();
+    const v1Payload = {
+      schemaVersion: 1,
+      exportedAt: exportPackage.payload.exportedAt,
+      profile: exportPackage.payload.profile,
+      recordCount: 6,
+      records: {
+        balanceAdjustments: exportPackage.payload.records.balanceAdjustments,
+        billCycleInstances: exportPackage.payload.records.billCycleInstances,
+        bills: exportPackage.payload.records.bills,
+        notificationSettings: exportPackage.payload.records.notificationSettings,
+        paychecks: exportPackage.payload.records.paychecks,
+        purchases: exportPackage.payload.records.purchases.map((purchaseItem) => ({
+          ...purchaseItem,
+          envelopeId: null,
+        })),
+      },
+    };
+
+    expect(validateBudgetFlowBackupPayload(v1Payload)).toEqual({
+      ...v1Payload,
+      records: {
+        ...v1Payload.records,
+        budgetingPreferences: null,
+        envelopes: [],
+      },
+    });
   });
 
   it("validateBudgetFlowBackupPayload_rejects_unsupported_schema_versions", async () => {
@@ -310,6 +444,43 @@ describe("BackupService", () => {
     ).toThrow("Backup contains bill instances with missing references.");
   });
 
+  it("validateBudgetFlowBackupPayload_nulls_orphaned_purchase_envelope_references", async () => {
+    const exportPackage = await createService(createMocks()).buildExportPackage();
+
+    expect(
+      validateBudgetFlowBackupPayload({
+        ...exportPackage.payload,
+        recordCount: exportPackage.payload.recordCount - 1,
+        records: {
+          ...exportPackage.payload.records,
+          envelopes: [],
+        },
+      }).records.purchases[0].envelopeId
+    ).toBeNull();
+  });
+
+  it("validateBudgetFlowBackupPayload_nulls_v1_purchase_envelope_references", async () => {
+    const exportPackage = await createService(createMocks()).buildExportPackage();
+    const v1Payload = {
+      schemaVersion: 1,
+      exportedAt: exportPackage.payload.exportedAt,
+      profile: exportPackage.payload.profile,
+      recordCount: 6,
+      records: {
+        balanceAdjustments: exportPackage.payload.records.balanceAdjustments,
+        billCycleInstances: exportPackage.payload.records.billCycleInstances,
+        bills: exportPackage.payload.records.bills,
+        notificationSettings: exportPackage.payload.records.notificationSettings,
+        paychecks: exportPackage.payload.records.paychecks,
+        purchases: exportPackage.payload.records.purchases,
+      },
+    };
+
+    expect(
+      validateBudgetFlowBackupPayload(v1Payload).records.purchases[0].envelopeId
+    ).toBeNull();
+  });
+
   it("buildExportPayload_rejects_missing_active_profile", async () => {
     const mocks = createMocks();
     mocks.profileRepository.findActive.mockResolvedValue(null);
@@ -324,9 +495,9 @@ describe("BackupService", () => {
   it("exportToDevice_writes_file_and_records_local_export_metadata", async () => {
     const mocks = createMocks();
     const writeBackupPackage = vi.fn().mockResolvedValue({
-      fileName: "budget-flow-backup-2026-06-19-120000000Z.json",
-      recordCount: 6,
-      uri: "file:///documents/budget-flow-backup-2026-06-19-120000000Z.json",
+      fileName: "Budget Flow Backup 2026-06-19 1200.json",
+      recordCount: 8,
+      uri: "file:///documents/Budget Flow Backups/Budget Flow Backup 2026-06-19 1200.json",
     });
     const service = createService(mocks, {
       activityLogRepository: mocks.activityLogRepository,
@@ -335,36 +506,36 @@ describe("BackupService", () => {
     });
 
     await expect(service.exportToDevice()).resolves.toEqual({
-      fileName: "budget-flow-backup-2026-06-19-120000000Z.json",
+      fileName: "Budget Flow Backup 2026-06-19 1200.json",
       metadata: {
         id: "backup-metadata-1",
         profileId: "profile-1",
         eventType: "export",
-        fileName: "budget-flow-backup-2026-06-19-120000000Z.json",
-        recordCount: 6,
+        fileName: "Budget Flow Backup 2026-06-19 1200.json",
+        recordCount: 8,
         createdAt: "2026-06-19T12:00:00.000Z",
       },
-      recordCount: 6,
-      uri: "file:///documents/budget-flow-backup-2026-06-19-120000000Z.json",
+      recordCount: 8,
+      uri: "file:///documents/Budget Flow Backups/Budget Flow Backup 2026-06-19 1200.json",
     });
     expect(writeBackupPackage).toHaveBeenCalledWith(
       expect.objectContaining({
-        fileName: "budget-flow-backup-2026-06-19-120000000Z.json",
-        recordCount: 6,
+        fileName: "Budget Flow Backup 2026-06-19 1200.json",
+        recordCount: 8,
       })
     );
     expect(mocks.backupMetadataRepository.create).toHaveBeenCalledWith({
       profileId: "profile-1",
       eventType: "export",
-      fileName: "budget-flow-backup-2026-06-19-120000000Z.json",
-      recordCount: 6,
+      fileName: "Budget Flow Backup 2026-06-19 1200.json",
+      recordCount: 8,
     });
     expect(mocks.activityLogRepository.create).toHaveBeenCalledWith({
       profileId: "profile-1",
       eventType: "backup_exported",
       entityType: "backup",
       summary:
-        "Exported backup budget-flow-backup-2026-06-19-120000000Z.json with 6 records.",
+        "Exported backup Budget Flow Backup 2026-06-19 1200.json with 8 records.",
     });
   });
 
@@ -376,5 +547,62 @@ describe("BackupService", () => {
       "Backup export requires a backup metadata repository."
     );
     expect(writeBackupPackage).not.toHaveBeenCalled();
+  });
+
+  it("restoreFromJson_validates_and_restores_backup_records", async () => {
+    const mocks = createMocks();
+    const db = new FakeDatabase();
+    const exportPackage = await createService(mocks).buildExportPackage();
+    const service = createService(mocks, {
+      activityLogRepository: mocks.activityLogRepository,
+      backupMetadataRepository: mocks.backupMetadataRepository,
+      database: db,
+    });
+
+    await expect(
+      service.restoreFromJson(
+        exportPackage.jsonText,
+        "Budget Flow Backup 2026-06-19 1200.json"
+      )
+    ).resolves.toEqual({
+      fileName: "Budget Flow Backup 2026-06-19 1200.json",
+      metadata: {
+        id: "backup-metadata-1",
+        profileId: "profile-1",
+        eventType: "restore",
+        fileName: "Budget Flow Backup 2026-06-19 1200.json",
+        recordCount: 8,
+        createdAt: "2026-06-19T12:00:00.000Z",
+      },
+      profileId: "profile-1",
+      recordCount: 8,
+    });
+    expect(db.transactionCount).toBe(1);
+    expect(mocks.activityLogRepository.create).toHaveBeenCalledWith({
+      profileId: "profile-1",
+      eventType: "backup_restored",
+      entityType: "backup",
+      summary:
+        "Restored backup Budget Flow Backup 2026-06-19 1200.json with 8 records.",
+    });
+  });
+
+  it("importFromDevice_returns_null_when_the_user_cancels_file_selection", async () => {
+    const service = createService(createMocks(), {
+      pickBackupFile: vi.fn().mockResolvedValue(null),
+    });
+
+    await expect(service.importFromDevice()).resolves.toBeNull();
+  });
+
+  it("restoreFromJson_requires_database_executor", async () => {
+    const exportPackage = await createService(createMocks()).buildExportPackage();
+    const service = createService(createMocks(), {
+      backupMetadataRepository: createMocks().backupMetadataRepository,
+    });
+
+    await expect(service.restoreFromJson(exportPackage.jsonText)).rejects.toThrow(
+      "Backup restore requires a database executor."
+    );
   });
 });

@@ -166,6 +166,8 @@ export function useHomeScreenController({
     toggleBillPaused,
     backupExportError: settingsActions.backupExportError,
     backupExportMessage: settingsActions.backupExportMessage,
+    backupImportError: settingsActions.backupImportError,
+    backupImportMessage: settingsActions.backupImportMessage,
     budgetingPreferences:
       budgetingSettingsActions.budgetingPreferences ??
       dashboardSnapshot?.budgetingPreferences ??
@@ -174,7 +176,9 @@ export function useHomeScreenController({
     envelopeEntry,
     envelopeToggleError: budgetingSettingsActions.envelopeToggleError,
     exportBackup: settingsActions.exportBackup,
+    importBackup: settingsActions.importBackup,
     isBackupExporting: settingsActions.isBackupExporting,
+    isBackupImporting: settingsActions.isBackupImporting,
     isEnvelopesToggleSaving: budgetingSettingsActions.isEnvelopesToggleSaving,
     isNotificationSaving: settingsActions.isNotificationSaving,
     notificationError: settingsActions.notificationError,

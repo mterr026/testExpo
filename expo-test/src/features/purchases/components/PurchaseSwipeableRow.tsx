@@ -1,14 +1,19 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
+import { ActionMenu, money, StatusPill } from "@/shared/ui/components";
+import { hapticForActionLabel, hapticSelection } from "@/shared/ui/haptics";
 import { getPurchaseStatusPresentation } from "@/shared/ui/statusBadges";
-import { money, StatusPill } from "@/shared/ui/components";
 import { SwipeActionIcon } from "@/shared/ui/SwipeActionIcon";
-import { styles } from "@/shared/ui/styles";
+import {
+  getSwipeRowActiveOffsetX,
+  swipeRowGestureProps,
+} from "@/shared/ui/swipeRowConfig";
+import { useStyles } from "@/shared/ui/ThemeContext";
+import type { AppStyles } from "@/shared/ui/styles";
 import type { Purchase } from "@/shared/ui/types";
 
-import { useSwipeRowGesture } from "@/features/home/SwipeRowGestureContext";
 import { getPurchaseSwipeActions } from "../purchaseActions";
 import { getPurchaseRowMeta, formatPurchaseDisplayName } from "../purchaseRowDisplay";
 
@@ -33,18 +38,20 @@ export function PurchaseSwipeableRow({
   onSwipeOpen,
   purchase,
 }: PurchaseSwipeableRowProps) {
+  const styles = useStyles();
   const swipeableRef = useRef<Swipeable>(null);
-  const setRowTouchActive = useSwipeRowGesture();
+  const [menuVisible, setMenuVisible] = useState(false);
   const isPending = purchase.status === "Pending";
   const isCharged = purchase.status === "Charged";
   const purchaseStatus = getPurchaseStatusPresentation(purchase.status);
-  const swipeActions = getPurchaseSwipeActions({
+  const menuActions = getPurchaseSwipeActions({
     purchase,
     onDeletePurchase,
     onEditPurchase,
     onMarkCharged,
     onMarkPending,
   });
+  const swipeActions = menuActions;
 
   useEffect(() => {
     if (isSwipeOpen) {
@@ -89,78 +96,93 @@ export function PurchaseSwipeableRow({
     </View>
   );
 
-  function handleRowTouchStart() {
-    setRowTouchActive?.(true);
+  function openActionMenu() {
+    void hapticSelection();
+    swipeableRef.current?.close();
+    onSwipeClose();
+    setMenuVisible(true);
   }
 
-  function handleRowTouchEnd() {
-    setRowTouchActive?.(false);
+  function handleSwipeActionPress(action: (typeof swipeActions)[number]) {
+    hapticForActionLabel(action.label);
+    swipeableRef.current?.close();
+    action.onPress();
   }
+
+  const interactiveRow = (
+    <Pressable
+      accessibilityHint={
+        isSwipeOpen
+          ? "Closes purchase actions"
+          : "Long press for purchase actions, swipe left for quick actions"
+      }
+      accessibilityRole="button"
+      delayLongPress={400}
+      onLongPress={isSwipeOpen ? undefined : openActionMenu}
+      onPress={isSwipeOpen ? () => swipeableRef.current?.close() : undefined}
+    >
+      {rowContent}
+    </Pressable>
+  );
 
   return (
-    <View
-      onTouchCancel={handleRowTouchEnd}
-      onTouchEnd={handleRowTouchEnd}
-      onTouchStart={handleRowTouchStart}
-    >
+    <>
       <Swipeable
         ref={swipeableRef}
-        activeOffsetX={isSwipeOpen ? [-10000, 12] : [-12, 10000]}
-        failOffsetY={[-16, 16]}
-        friction={2}
-        overshootFriction={8}
-        overshootRight={false}
+        {...swipeRowGestureProps}
+        activeOffsetX={getSwipeRowActiveOffsetX(isSwipeOpen)}
         containerStyle={styles.purchaseSwipeableCard}
         onSwipeableClose={onSwipeClose}
         onSwipeableWillOpen={() => onSwipeOpen(purchase.id)}
         renderRightActions={() => (
-          <View style={styles.purchaseSwipeActions}>
-            {swipeActions.map((action) => (
-              <Pressable
-                key={action.label}
-                accessibilityRole="button"
-                accessibilityLabel={action.label}
-                style={({ pressed }) => [
-                  styles.purchaseSwipeAction,
-                  getPurchaseSwipeActionStyle(action.destructive, action.label),
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => {
-                  swipeableRef.current?.close();
-                  action.onPress();
-                }}
-              >
-                <SwipeActionIcon
-                  destructive={action.destructive}
-                  name={action.icon ?? "pencil"}
-                />
-                <Text
-                  style={[
-                    styles.purchaseSwipeActionLabel,
-                    action.destructive && styles.purchaseSwipeActionLabelDestructive,
+            <View style={styles.purchaseSwipeActions}>
+              {swipeActions.map((action) => (
+                <Pressable
+                  key={action.label}
+                  accessibilityRole="button"
+                  accessibilityLabel={action.label}
+                  style={({ pressed }) => [
+                    styles.purchaseSwipeAction,
+                    getPurchaseSwipeActionStyle(action.destructive, action.label, styles),
+                    pressed && styles.pressed,
                   ]}
-                  numberOfLines={2}
+                  onPress={() => handleSwipeActionPress(action)}
                 >
-                  {getPurchaseSwipeActionLabel(action.label)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-      >
-        {isSwipeOpen ? (
-          <Pressable
-            accessibilityHint="Closes purchase actions"
-            accessibilityRole="button"
-            onPress={() => swipeableRef.current?.close()}
-          >
-            {rowContent}
-          </Pressable>
-        ) : (
-          rowContent
-        )}
-      </Swipeable>
-    </View>
+                  <SwipeActionIcon
+                    destructive={action.destructive}
+                    name={action.icon ?? "pencil"}
+                  />
+                  <Text
+                    style={[
+                      styles.purchaseSwipeActionLabel,
+                      action.destructive && styles.purchaseSwipeActionLabelDestructive,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {getPurchaseSwipeActionLabel(action.label)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        >
+          {interactiveRow}
+        </Swipeable>
+
+      <ActionMenu
+        header={{
+          amount: `-${money(normalizePurchaseAmountCents(purchase.amountCents))}`,
+          meta: getPurchaseRowMeta(purchase),
+          status: purchaseStatus.label,
+          statusTone: purchaseStatus.tone,
+          title: formatPurchaseDisplayName(purchase.name),
+        }}
+        title={formatPurchaseDisplayName(purchase.name)}
+        visible={menuVisible}
+        actions={menuActions}
+        onClose={() => setMenuVisible(false)}
+      />
+    </>
   );
 }
 
@@ -184,7 +206,11 @@ function getPurchaseSwipeActionLabel(label: string) {
   return label;
 }
 
-function getPurchaseSwipeActionStyle(destructive: boolean | undefined, label: string) {
+function getPurchaseSwipeActionStyle(
+  destructive: boolean | undefined,
+  label: string,
+  styles: AppStyles
+) {
   if (destructive) {
     return styles.purchaseSwipeActionDestructive;
   }

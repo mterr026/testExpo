@@ -96,9 +96,12 @@ export function createAppServices(
         repositories.purchaseRepository,
         repositories.balanceAdjustmentRepository,
         repositories.notificationSettingsRepository,
+        repositories.envelopeRepository,
+        repositories.budgetingPreferencesRepository,
         {
           activityLogRepository: repositories.activityLogRepository,
           backupMetadataRepository: repositories.backupMetadataRepository,
+          database: db,
         }
       ),
       billService,

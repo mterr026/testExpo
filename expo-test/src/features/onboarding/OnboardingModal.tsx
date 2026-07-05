@@ -21,7 +21,7 @@ import type { ImportPhase } from "@/features/import/importLoadingStatus";
 import {
   KeyboardDoneAccessory,
 } from "@/shared/ui/components";
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 
 export type OnboardingStep = "balance" | "reserve" | "import";
 
@@ -77,6 +77,7 @@ export function OnboardingModal({
   onSkip,
   onDismiss,
 }: OnboardingModalProps) {
+  const styles = useStyles();
   const isBalanceStep = step === "balance";
   const isImportStep = step === "import";
   const isReserveStep = step === "reserve";

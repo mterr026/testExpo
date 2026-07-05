@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
 
 import { money } from "@/shared/ui/components";
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type { PaycheckBillCoverage, PaycheckListItem } from "@/shared/ui/types";
 
 import { PaycheckTimelineRow } from "./PaycheckTimelineRow";
@@ -43,6 +43,7 @@ export function NextPaycheckHero({
   showTutorialUpcomingTarget = false,
   upcomingCount,
 }: NextPaycheckHeroProps) {
+  const styles = useStyles();
   return (
     <View style={styles.paycheckNextHeroSection}>
       <View style={styles.paycheckNextHeroCard}>

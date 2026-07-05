@@ -1,8 +1,14 @@
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+} from "react-native-reanimated";
 
+import { hapticSelection } from "./haptics";
 import { CollapseChevron } from "./CollapseChevron";
-import { styles } from "./styles";
+import { useStyles } from "./ThemeContext";
 
 export function CollapsibleSection({
   accessibilityHint,
@@ -21,6 +27,12 @@ export function CollapsibleSection({
   onToggle: () => void;
   title: string;
 }) {
+  const styles = useStyles();
+  function handleToggle() {
+    void hapticSelection();
+    onToggle();
+  }
+
   return (
     <>
       <Pressable
@@ -32,7 +44,7 @@ export function CollapsibleSection({
           styles.paycheckSectionToggle,
           pressed && styles.pressed,
         ]}
-        onPress={onToggle}
+        onPress={handleToggle}
       >
         <Text style={styles.paycheckCoverageTitle}>{title}</Text>
         <View style={styles.paycheckCoverageTotalRow}>
@@ -42,7 +54,15 @@ export function CollapsibleSection({
           <CollapseChevron expanded={expanded} />
         </View>
       </Pressable>
-      {expanded ? children : null}
+      {expanded ? (
+        <Animated.View
+          entering={FadeIn.duration(180)}
+          exiting={FadeOut.duration(140)}
+          layout={LinearTransition.duration(180)}
+        >
+          {children}
+        </Animated.View>
+      ) : null}
     </>
   );
 }

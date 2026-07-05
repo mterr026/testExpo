@@ -2,7 +2,7 @@ import { SymbolView } from "expo-symbols";
 import { Pressable, Text, View } from "react-native";
 
 import { screenOrder } from "@/features/app/homeData";
-import { colors, styles } from "@/shared/ui/styles";
+import { useStyles, useTheme } from "@/shared/ui/ThemeContext";
 import type { Screen } from "@/shared/ui/types";
 
 type IconName = React.ComponentProps<typeof SymbolView>["name"];
@@ -36,6 +36,8 @@ export function BottomNav({
   bottomInset: number;
   onChange: (screen: Screen) => void;
 }) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   return (
     <View style={[styles.bottomNav, { paddingBottom: Math.max(bottomInset, 10) + 8 }]}>
       {screenOrder.map((name) => {

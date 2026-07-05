@@ -1,7 +1,7 @@
 import { SymbolView } from "expo-symbols";
 import type { ComponentProps } from "react";
 
-import { colors } from "./styles";
+import { useTheme } from "./ThemeContext";
 
 export type ActionIconName =
   | "checkmark"
@@ -36,7 +36,7 @@ const actionIcons: Record<
 };
 
 export function ActionIcon({
-  color = colors.accentDark,
+  color,
   destructive = false,
   name,
   size = 20,
@@ -46,11 +46,13 @@ export function ActionIcon({
   name: ActionIconName;
   size?: number;
 }) {
+  const { colors } = useTheme();
+
   return (
     <SymbolView
       name={actionIcons[name]}
       size={size}
-      tintColor={destructive ? colors.warningText : color}
+      tintColor={destructive ? colors.warningText : (color ?? colors.accentDark)}
     />
   );
 }

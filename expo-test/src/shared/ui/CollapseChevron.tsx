@@ -1,9 +1,9 @@
 import { SymbolView } from "expo-symbols";
 
-import { colors } from "./styles";
+import { useTheme } from "./ThemeContext";
 
 export function CollapseChevron({
-  color = colors.muted,
+  color,
   expanded,
   size = 14,
 }: {
@@ -11,6 +11,8 @@ export function CollapseChevron({
   expanded: boolean;
   size?: number;
 }) {
+  const { colors } = useTheme();
+
   return (
     <SymbolView
       name={
@@ -23,7 +25,7 @@ export function CollapseChevron({
             }
       }
       size={size}
-      tintColor={color}
+      tintColor={color ?? colors.muted}
     />
   );
 }

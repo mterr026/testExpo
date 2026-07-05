@@ -8,7 +8,7 @@ import {
 import { CollapsibleSection } from "@/shared/ui/CollapsibleSection";
 import { ScreenSectionTitle } from "@/shared/ui/ScreenSectionTitle";
 import { ScreenShell } from "@/shared/ui/ScreenShell";
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type {
   NextCyclePreview,
   PaycheckBillCoverage,
@@ -53,6 +53,7 @@ export function PaychecksScreen({
   onEditPaycheck,
   onMarkPaycheckUnreceived,
 }: PaychecksScreenProps) {
+  const styles = useStyles();
   const [showPreviousPaychecks, setShowPreviousPaychecks] = useState(false);
   const [showPreviousAdditionalIncome, setShowPreviousAdditionalIncome] =
     useState(false);
@@ -177,6 +178,7 @@ export function PaychecksScreen({
       ref={tutorialScrollRef}
       style={styles.content}
       contentContainerStyle={styles.contentInner}
+      directionalLockEnabled
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       scrollEventThrottle={16}
@@ -327,6 +329,7 @@ function AdditionalIncomeSection({
   previousPaychecks: PaycheckListItem[];
   showTutorialTarget?: boolean;
 }) {
+  const styles = useStyles();
   if (
     expectedPaychecks.length === 0 &&
     previousPaychecks.length === 0 &&
@@ -411,6 +414,7 @@ function PreviousAdditionalIncomeSection({
   onToggle: () => void;
   paychecks: PaycheckListItem[];
 }) {
+  const styles = useStyles();
   if (paychecks.length === 0) {
     return null;
   }
@@ -469,6 +473,7 @@ function AdditionalIncomeRow({
   paycheck: PaycheckListItem;
   received?: boolean;
 }) {
+  const styles = useStyles();
   return (
     <View
       style={[
@@ -593,6 +598,7 @@ function PaycheckScheduleGroup({
   tutorialFocusedPaycheckId?: string | null;
   title: string;
 }) {
+  const styles = useStyles();
   if (paychecks.length === 0) {
     return null;
   }

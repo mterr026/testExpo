@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 
-import { styles } from "./styles";
+import { useStyles } from "./ThemeContext";
 
 export function ScreenShell({
   headerAction,
@@ -12,6 +12,7 @@ export function ScreenShell({
   subtitle?: string;
   title: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.screenHeaderRow}>
       <View style={styles.itemCopy}>
