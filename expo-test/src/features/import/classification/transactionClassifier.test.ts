@@ -19,6 +19,9 @@ describe("classifyTransactionDescription", () => {
     ["KLARNA", "installment"],
     ["NETFLIX", "subscription"],
     ["SPOTIFY", "subscription"],
+    ["YOUTUBE PREMIUM", "subscription"],
+    ["GOOGLE YOUTUBE", "subscription"],
+    ["CHECKCARD 0525 GOOGLE *YouTub Mountain ViewCA", "subscription"],
     ["PARAMOUNT+", "subscription"],
     ["APPLE.COM/BILL", "subscription"],
     ["OPENAI CHATGPT", "subscription"],
@@ -128,6 +131,20 @@ describe("mapCategoryToSuggestion", () => {
         direction: "debit",
       })
     ).toBe("needs_review");
+    expect(
+      mapCategoryToSuggestion({
+        category: "credit_card_payment",
+        categoryConfidence: 80,
+        direction: "debit",
+      })
+    ).toBe("ignored_ordinary_spending");
+    expect(
+      mapCategoryToSuggestion({
+        category: "fee",
+        categoryConfidence: 80,
+        direction: "debit",
+      })
+    ).toBe("ignored_ordinary_spending");
     expect(
       mapCategoryToSuggestion({
         category: "misc_purchase",

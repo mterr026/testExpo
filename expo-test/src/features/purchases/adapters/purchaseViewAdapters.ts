@@ -1,7 +1,7 @@
 import type { Purchase as RepositoryPurchase } from "@/database/repositories/types";
 import type { Purchase } from "@/shared/ui/types";
 
-import { getTodayIsoDate } from "@/features/app/homeData";
+import { getTodayIsoDate } from "@/shared/dates";
 
 export function mapRepositoryPurchaseToPrototype(
   purchase: RepositoryPurchase
@@ -19,5 +19,6 @@ export function mapRepositoryPurchaseToPrototype(
         : purchaseDate,
     purchaseDate,
     paycheckCycleId: purchase.paycheckCycleId,
+    envelopeId: purchase.envelopeId,
   };
 }

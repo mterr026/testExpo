@@ -1,23 +1,6 @@
 import { StyleSheet } from "react-native";
 
-export const colors = {
-  background: "#F6F3EA",
-  card: "#FFFDF7",
-  hero: "#FFFDF7",
-  soft: "#E7EDF2",
-  text: "#14243A",
-  muted: "#667085",
-  border: "#DAD6C9",
-  accent: "#183A5A",
-  accentDark: "#0B1F33",
-  accentLight: "#D9E5EF",
-  warm: "#EFE7D5",
-  warmText: "#455468",
-  warning: "#F2E2C7",
-  warningText: "#6F4A16",
-  rowSurface: "#FCFAF2",
-  rowBorder: "#CEC8B9",
-};
+import { lightTheme, type AppTheme } from "./theme";
 
 /** 4pt spacing grid — use these instead of one-off pixel values. */
 export const spacing = {
@@ -42,19 +25,6 @@ export const radius = {
   pill: 999,
 } as const;
 
-/** Surface fills and borders derived from the Budget Flow palette. */
-export const surfaces = {
-  card: "#FFFDF8",
-  cardBorder: "#E4DED0",
-  cardBorderSoft: "#E3DDCF",
-  divider: "#ECE6D9",
-  dividerSoft: "#E7E0D2",
-  dividerWarm: "#E8E1D3",
-  breakdownBorder: "#E2DCCA",
-  timelineBadge: "#EEF3F7",
-  rowInset: "#EEE8DA",
-  purchaseMetricBorder: "#E9E2D3",
-} as const;
 
 /** Type scale — sizes and weights for consistent hierarchy. */
 export const fontSize = {
@@ -71,12 +41,27 @@ export const fontSize = {
   display: 52,
 } as const;
 
-export const fontWeight = {
-  regular: "600",
-  medium: "700",
-  semibold: "800",
-  bold: "900",
+/** Inter faces loaded in app/_layout.tsx via @expo-google-fonts/inter. */
+export const fontFamily = {
+  regular: "Inter_400Regular",
+  medium: "Inter_500Medium",
+  semibold: "Inter_600SemiBold",
+  bold: "Inter_700Bold",
+  heavy: "Inter_800ExtraBold",
 } as const;
+
+export const fontWeight = {
+  regular: "400",
+  medium: "500",
+  semibold: "600",
+  bold: "700",
+  heavy: "800",
+} as const;
+
+/** Prefer fontFamily over fontWeight — Inter uses discrete face files. */
+export function fontStyle(weight: keyof typeof fontFamily = "regular") {
+  return { fontFamily: fontFamily[weight] } as const;
+}
 
 export const lineHeight = {
   tight: 17,
@@ -86,53 +71,96 @@ export const lineHeight = {
   display: 58,
 } as const;
 
-/** Reusable elevation presets — keep shadows subtle and on-brand. */
-export const shadows = {
-  none: {
-    shadowColor: "transparent",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-  },
-  subtle: {
-    shadowColor: colors.accentDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.025,
-    shadowRadius: 5,
-    elevation: 1,
-  },
-  card: {
-    shadowColor: colors.accentDark,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  raised: {
-    shadowColor: colors.accentDark,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  hero: {
-    shadowColor: colors.accentDark,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 5,
-  },
-  fab: {
-    shadowColor: colors.accentDark,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 5,
-  },
+/** Home shell layout — bottom nav, FAB, and scroll clearance. */
+export const homeChrome = {
+  navClearance: 80,
+  navContentHeight: 72,
+  fabBottomOffset: spacing.xxxl * 2 + spacing.sm,
+  fabSize: 56,
+  fabScrollPaddingExtra: spacing.sm,
 } as const;
 
-export const styles = StyleSheet.create({
+export function getBottomNavHeight(bottomInset: number) {
+  return (
+    spacing.sm +
+    2 +
+    homeChrome.navContentHeight +
+    Math.max(bottomInset, 10) +
+    spacing.sm
+  );
+}
+
+/** Distance from the screen bottom to the FAB's bottom edge. */
+export function getFabBottom(bottomInset: number) {
+  return getBottomNavHeight(bottomInset) + spacing.md;
+}
+
+/** Scroll content padding when the add-purchase FAB is visible. */
+export function getFabScrollPadding(bottomInset: number) {
+  return (
+    getFabBottom(bottomInset) +
+    homeChrome.fabSize +
+    homeChrome.fabScrollPaddingExtra
+  );
+}
+
+/** Reusable elevation presets — keep shadows subtle and on-brand. */
+export function createShadows(theme: AppTheme) {
+  const { colors } = theme;
+
+  return {
+    none: {
+      shadowColor: "transparent",
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+    },
+    subtle: {
+      shadowColor: colors.accentDark,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.025,
+      shadowRadius: 5,
+      elevation: 1,
+    },
+    card: {
+      shadowColor: colors.accentDark,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+      elevation: 2,
+    },
+    raised: {
+      shadowColor: colors.accentDark,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.07,
+      shadowRadius: 12,
+      elevation: 3,
+    },
+    hero: {
+      shadowColor: colors.accentDark,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 20,
+      elevation: 5,
+    },
+    fab: {
+      shadowColor: colors.accentDark,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.16,
+      shadowRadius: 12,
+      elevation: 5,
+    },
+  } as const;
+}
+
+export type ThemeShadows = ReturnType<typeof createShadows>;
+
+export function createStyles(theme: AppTheme) {
+  const { colors, surfaces } = theme;
+  const shadows = createShadows(theme);
+
+  return StyleSheet.create({
   page: {
     flex: 1,
     backgroundColor: colors.background,
@@ -171,14 +199,14 @@ export const styles = StyleSheet.create({
     ...shadows.subtle,
   },
   logoMarkText: {
-    color: "white",
+    color: colors.onAccent,
     fontSize: fontSize.meta,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     letterSpacing: 0,
   },
   logo: {
     fontSize: fontSize.logo,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     color: colors.text,
     letterSpacing: 0,
   },
@@ -197,7 +225,13 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   contentInner: {
-    paddingBottom: 166,
+    paddingBottom: homeChrome.navClearance,
+  },
+  contentInnerWithFab: {
+    paddingBottom:
+      homeChrome.fabBottomOffset +
+      homeChrome.fabSize +
+      homeChrome.fabScrollPaddingExtra,
   },
   heroCard: {
     backgroundColor: colors.hero,
@@ -230,21 +264,21 @@ export const styles = StyleSheet.create({
   eyebrow: {
     color: colors.muted,
     fontSize: fontSize.meta,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     textTransform: "uppercase",
     letterSpacing: 1,
   },
   safeAmount: {
     fontSize: fontSize.display + 4,
     lineHeight: lineHeight.display + 4,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("heavy"),
     color: colors.text,
     marginTop: spacing.sm - 2,
   },
   dashboardHeroLabel: {
     color: colors.muted,
     fontSize: fontSize.meta,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     textTransform: "uppercase",
     letterSpacing: 1.2,
     textAlign: "center",
@@ -254,7 +288,7 @@ export const styles = StyleSheet.create({
     fontSize: fontSize.body,
     color: colors.muted,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.regular,
+    ...fontStyle("regular"),
     textAlign: "center",
   },
   dashboardHeroStatusLine: {
@@ -272,7 +306,85 @@ export const styles = StyleSheet.create({
     color: colors.accentDark,
     fontSize: fontSize.label,
     lineHeight: lineHeight.tight + 2,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
+    textAlign: "center",
+  },
+  dashboardCycleSnapshot: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md + 2,
+    paddingBottom: spacing.md,
+    marginBottom: spacing.xxl,
+    ...shadows.subtle,
+  },
+  dashboardCycleSnapshotHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  dashboardCycleSnapshotTitle: {
+    color: colors.text,
+    fontSize: fontSize.body,
+    lineHeight: lineHeight.body,
+    ...fontStyle("semibold"),
+  },
+  dashboardCycleSnapshotDates: {
+    color: colors.muted,
+    fontSize: fontSize.meta,
+    lineHeight: lineHeight.tight,
+    ...fontStyle("medium"),
+    flexShrink: 1,
+    textAlign: "right",
+  },
+  dashboardCycleSnapshotChipRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  dashboardCycleSnapshotChip: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: colors.rowSurface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md - 1,
+    borderWidth: 1,
+    borderColor: surfaces.cardBorderSoft,
+    alignItems: "center",
+  },
+  dashboardCycleSnapshotChipPressed: {
+    backgroundColor: colors.warm,
+    borderColor: surfaces.dividerWarm,
+  },
+  dashboardCycleSnapshotChipLabel: {
+    color: colors.muted,
+    fontSize: fontSize.caption,
+    lineHeight: lineHeight.tight - 3,
+    ...fontStyle("medium"),
+    textAlign: "center",
+  },
+  dashboardCycleSnapshotChipValue: {
+    color: colors.text,
+    fontSize: fontSize.body,
+    lineHeight: lineHeight.body,
+    ...fontStyle("semibold"),
+    marginTop: spacing.xs,
+    textAlign: "center",
+  },
+  dashboardCycleSnapshotChipValueMuted: {
+    color: colors.muted,
+    fontSize: fontSize.meta,
+    lineHeight: lineHeight.tight,
+    ...fontStyle("regular"),
+  },
+  dashboardCycleSnapshotChipHint: {
+    color: colors.warmText,
+    fontSize: fontSize.caption,
+    lineHeight: lineHeight.tight - 3,
+    ...fontStyle("regular"),
+    marginTop: spacing.xs - 1,
     textAlign: "center",
   },
   dashboardHeroReserveText: {
@@ -280,13 +392,13 @@ export const styles = StyleSheet.create({
     fontSize: fontSize.caption,
     lineHeight: lineHeight.tight - 2,
     marginTop: spacing.sm,
-    fontWeight: fontWeight.regular,
+    ...fontStyle("regular"),
     textAlign: "center",
   },
   safeAmountSmall: {
     fontSize: fontSize.displaySm,
     lineHeight: lineHeight.displaySm,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("heavy"),
     color: colors.text,
     marginTop: spacing.sm,
   },
@@ -311,7 +423,7 @@ export const styles = StyleSheet.create({
   heroMetaText: {
     color: colors.muted,
     fontSize: fontSize.label,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
   },
   metaDot: {
     width: spacing.xs,
@@ -348,19 +460,19 @@ export const styles = StyleSheet.create({
     borderColor: colors.accentDark,
   },
   primaryButtonText: {
-    color: "white",
+    color: colors.onAccent,
     fontSize: fontSize.title,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("heavy"),
   },
   sectionTitle: {
     fontSize: fontSize.section,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     color: colors.text,
     marginBottom: spacing.xs + 1,
   },
   sectionTitleCompact: {
     fontSize: fontSize.sectionCompact,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     color: colors.text,
     marginBottom: spacing.sm + 2,
   },
@@ -382,9 +494,9 @@ export const styles = StyleSheet.create({
     borderColor: colors.accentDark,
   },
   inlinePrimaryButtonText: {
-    color: "white",
+    color: colors.onAccent,
     fontSize: fontSize.label + 2,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("heavy"),
   },
   inlineSecondaryButton: {
     backgroundColor: colors.card,
@@ -399,7 +511,7 @@ export const styles = StyleSheet.create({
   inlineSecondaryButtonText: {
     color: colors.accent,
     fontSize: fontSize.label + 2,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   card: {
     backgroundColor: surfaces.card,
@@ -440,88 +552,150 @@ export const styles = StyleSheet.create({
     ...shadows.subtle,
   },
   billRow: {
-    backgroundColor: surfaces.card,
-    borderRadius: radius.lg,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: spacing.md,
-    minHeight: 72,
-    ...shadows.card,
+    minHeight: 76,
   },
   billRowPaid: {
     backgroundColor: colors.rowSurface,
   },
+  billRowPaused: {
+    backgroundColor: colors.rowSurface,
+  },
+  billRowProjected: {
+    backgroundColor: surfaces.card,
+    borderWidth: 1,
+    borderColor: surfaces.dividerWarm,
+    ...shadows.subtle,
+  },
   billRowEmpty: {
     backgroundColor: surfaces.card,
     borderRadius: radius.lg,
-    marginBottom: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
     ...shadows.subtle,
   },
+  billListGroup: {
+    gap: spacing.lg,
+  },
+  billGroupedList: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    marginBottom: spacing.lg,
+    ...shadows.card,
+  },
+  billGroupedListRowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: surfaces.divider,
+  },
+  billGroupedSwipeRow: {
+    overflow: "hidden",
+    borderRadius: 0,
+    ...shadows.none,
+  },
   billDateBadge: {
-    width: 48,
+    width: 52,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: surfaces.timelineBadge,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm + 2,
     flexShrink: 0,
+  },
+  billDateBadgeDue: {
+    backgroundColor: colors.accentLight,
+  },
+  billDateBadgePaid: {
+    backgroundColor: colors.rowSurface,
+  },
+  billDateBadgeScheduled: {
+    backgroundColor: colors.rowSurface,
+  },
+  billDateBadgePaused: {
+    backgroundColor: colors.rowSurface,
   },
   billDateMonth: {
     color: colors.muted,
     fontSize: fontSize.caption,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("bold"),
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     lineHeight: lineHeight.tight - 3,
+  },
+  billDateMonthDue: {
+    color: colors.accent,
   },
   billDateDay: {
     color: colors.text,
-    fontSize: fontSize.title,
-    fontWeight: fontWeight.bold,
+    fontSize: fontSize.title + 1,
+    ...fontStyle("bold"),
     lineHeight: lineHeight.body,
-    marginTop: 1,
+    marginTop: spacing.xs,
+    fontVariant: ["tabular-nums"],
   },
   billRowMain: {
     flex: 1,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: spacing.md,
     minWidth: 0,
   },
   billTitleRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: spacing.sm,
     marginBottom: spacing.xs,
+  },
+  billTitleText: {
+    flex: 1,
+    minWidth: 0,
   },
   billDueMeta: {
     color: colors.muted,
     fontSize: fontSize.meta,
     lineHeight: lineHeight.tight,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
   },
   billAmountColumn: {
     alignItems: "flex-end",
-    gap: spacing.sm,
+    justifyContent: "flex-start",
     flexShrink: 0,
+    minWidth: 96,
   },
   billAmount: {
     color: colors.text,
-    fontSize: fontSize.bodyLg,
+    fontSize: fontSize.title,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("heavy"),
     fontVariant: ["tabular-nums"],
     textAlign: "right",
   },
   billAmountPaid: {
     color: colors.warmText,
+  },
+  billAmountDue: {
+    color: colors.accent,
+  },
+  billSwipeableCard: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    ...shadows.card,
+  },
+  billSwipeableRowForeground: {
+    backgroundColor: surfaces.card,
+    marginBottom: 0,
+  },
+  billsContentInner: {
+    paddingBottom: homeChrome.navClearance + spacing.xl,
+  },
+  purchasesContentInner: {
+    paddingBottom: homeChrome.navClearance + spacing.xl,
   },
   paycheckSummaryPanel: {
     backgroundColor: colors.rowSurface,
@@ -556,7 +730,7 @@ export const styles = StyleSheet.create({
     color: colors.warmText,
     fontSize: fontSize.body,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     marginTop: spacing.xs,
     textAlign: "center",
     fontVariant: ["tabular-nums"],
@@ -564,19 +738,101 @@ export const styles = StyleSheet.create({
   paycheckSummaryValueHighlight: {
     color: colors.accent,
     fontSize: fontSize.bodyLg,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   paycheckSummaryLabel: {
     color: colors.muted,
     fontSize: fontSize.caption,
     lineHeight: lineHeight.tight - 2,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
     textAlign: "center",
+  },
+  paycheckNextHeroSection: {
+    marginBottom: spacing.lg,
+  },
+  paycheckNextHeroCard: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg + spacing.xs,
+    paddingBottom: spacing.lg,
+    ...shadows.hero,
+  },
+  paycheckNextHeroCardInner: {
+    paddingBottom: spacing.xs,
+  },
+  paycheckNextHeroFocus: {
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  paycheckNextHeroStatusRow: {
+    marginTop: spacing.xs,
+  },
+  paycheckNextHeroLabel: {
+    color: colors.muted,
+    fontSize: fontSize.meta,
+    ...fontStyle("semibold"),
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    textAlign: "center",
+  },
+  paycheckNextHeroAmount: {
+    color: colors.accent,
+    textAlign: "center",
+    marginTop: spacing.xs,
+    letterSpacing: -1.2,
+  },
+  paycheckNextHeroSubcopy: {
+    textAlign: "center",
+    marginTop: spacing.sm,
+  },
+  paycheckNextHeroStatsBar: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: surfaces.dividerWarm,
+  },
+  paycheckNextHeroStatsLine: {
+    color: colors.muted,
+    fontSize: fontSize.meta,
+    lineHeight: lineHeight.tight + 2,
+    ...fontStyle("medium"),
+    textAlign: "center",
+    fontVariant: ["tabular-nums"],
+  },
+  paycheckNextHeroSwipeContainer: {
+    marginHorizontal: -spacing.lg,
+  },
+  paycheckNextHeroSwipeForeground: {
+    backgroundColor: surfaces.card,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+    alignItems: "center",
+  },
+  paycheckCoverageLinkToggle: {
+    borderTopWidth: 1,
+    borderTopColor: surfaces.divider,
+    marginTop: spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 36,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  paycheckCoverageLinkText: {
+    color: colors.accent,
+    fontSize: fontSize.label,
+    lineHeight: lineHeight.tight + 2,
+    ...fontStyle("semibold"),
+    textAlign: "center",
+  },
+  paycheckCoverageLinkTextPressed: {
+    textDecorationLine: "underline",
   },
   paycheckSectionTitle: {
     color: colors.muted,
     fontSize: fontSize.meta,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: spacing.sm + 2,
@@ -584,7 +840,7 @@ export const styles = StyleSheet.create({
   },
   paycheckTimelineGroup: {
     marginBottom: spacing.section,
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   additionalIncomeGroup: {
     marginBottom: spacing.section,
@@ -592,10 +848,10 @@ export const styles = StyleSheet.create({
   },
   additionalIncomeRow: {
     minHeight: 56,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: spacing.sm,
+    overflow: "hidden",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     backgroundColor: colors.rowSurface,
@@ -608,15 +864,16 @@ export const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: fontSize.body,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     fontVariant: ["tabular-nums"],
   },
   paycheckTimelineRow: {
     backgroundColor: surfaces.card,
     borderRadius: radius.lg,
+    overflow: "hidden",
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingTop: spacing.lg + spacing.xs,
+    paddingBottom: spacing.lg,
     ...shadows.card,
   },
   paycheckTimelineRowExpected: {
@@ -630,6 +887,28 @@ export const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: spacing.md,
+  },
+  paycheckSwipeableContainer: {
+    marginHorizontal: -spacing.lg,
+  },
+  paycheckSwipeableContainerAdditional: {
+    marginHorizontal: -spacing.md,
+  },
+  paycheckSwipeableRowForeground: {
+    minHeight: 72,
+    backgroundColor: surfaces.card,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: spacing.md,
+  },
+  paycheckSwipeableRowForegroundAdditional: {
+    paddingHorizontal: spacing.md,
+  },
+  paycheckSwipeableRowForegroundRowSurface: {
+    backgroundColor: colors.rowSurface,
   },
   paycheckTitleRow: {
     flexDirection: "row",
@@ -647,7 +926,7 @@ export const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: fontSize.title + 1,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("heavy"),
     fontVariant: ["tabular-nums"],
   },
   paycheckAmountReceived: {
@@ -671,11 +950,11 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   paycheckCoverageBlock: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: surfaces.divider,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   paycheckCoverageToggle: {
     flexDirection: "row",
@@ -685,33 +964,28 @@ export const styles = StyleSheet.create({
     minHeight: 44,
     paddingVertical: spacing.xs,
   },
-  paidBillsToggle: {
-    backgroundColor: colors.rowSurface,
-    borderRadius: radius.md,
-    marginTop: spacing.sm + 2,
-    marginBottom: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md - 1,
-    minHeight: 44,
-    ...shadows.subtle,
-  },
   paycheckCoverageTitle: {
     color: colors.muted,
     fontSize: fontSize.meta,
     lineHeight: lineHeight.tight - 1,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   paycheckCoverageTotal: {
     color: colors.text,
     fontSize: fontSize.label,
     lineHeight: lineHeight.tight,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
+  },
+  paycheckCoverageTotalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
   },
   paycheckCoverageSummaryText: {
     color: colors.accentDark,
     fontSize: fontSize.meta,
     lineHeight: lineHeight.tight - 1,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   paycheckCoverageRow: {
     flexDirection: "row",
@@ -723,13 +997,13 @@ export const styles = StyleSheet.create({
     color: colors.text,
     fontSize: fontSize.label,
     lineHeight: lineHeight.tight,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
   },
   paycheckCoverageAmount: {
     color: colors.text,
     fontSize: fontSize.label,
     lineHeight: lineHeight.tight,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     flexShrink: 0,
     fontVariant: ["tabular-nums"],
     minWidth: 72,
@@ -742,7 +1016,7 @@ export const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: fontSize.meta,
     lineHeight: lineHeight.tight,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
   },
   paycheckCoverageHelpText: {
     color: colors.muted,
@@ -750,23 +1024,23 @@ export const styles = StyleSheet.create({
     lineHeight: lineHeight.tight + 2,
   },
   paycheckCoverageBillList: {
-    backgroundColor: colors.rowSurface,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.md,
-    overflow: "hidden",
+    gap: 0,
+    borderTopWidth: 1,
+    borderTopColor: surfaces.divider,
+    paddingTop: spacing.xs,
   },
   paycheckCoverageBillRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: spacing.md,
-    paddingVertical: spacing.sm + 2,
+    paddingVertical: spacing.md,
   },
   paycheckCoverageBillRowDivider: {
     borderBottomWidth: 1,
     borderBottomColor: surfaces.divider,
   },
-  paycheckCoverageTotalRow: {
+  paycheckCoverageBillListTotalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -814,7 +1088,7 @@ export const styles = StyleSheet.create({
   rowPrimaryActionText: {
     color: colors.accentDark,
     fontSize: 13,
-    fontWeight: "900",
+    ...fontStyle("heavy"),
   },
   rowPrimaryActionInline: {
     alignSelf: "flex-start",
@@ -845,7 +1119,7 @@ export const styles = StyleSheet.create({
   rowSecondaryActionText: {
     color: colors.muted,
     fontSize: 13,
-    fontWeight: "800",
+    ...fontStyle("semibold"),
   },
   rowSecondaryDangerText: {
     color: colors.warningText,
@@ -871,7 +1145,7 @@ export const styles = StyleSheet.create({
   rowActionText: {
     color: colors.accentDark,
     fontSize: 13,
-    fontWeight: "800",
+    ...fontStyle("semibold"),
   },
   rowActionDangerText: {
     color: colors.muted,
@@ -927,14 +1201,14 @@ export const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: fontSize.caption,
     lineHeight: lineHeight.tight - 3,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
     textAlign: "center",
   },
   dashboardSummaryValue: {
     color: colors.warmText,
     fontSize: fontSize.body,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     marginTop: spacing.xs,
     textAlign: "center",
   },
@@ -942,7 +1216,7 @@ export const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: fontSize.meta,
     lineHeight: lineHeight.tight,
-    fontWeight: fontWeight.regular,
+    ...fontStyle("regular"),
   },
   dashboardSectionHeader: {
     flexDirection: "row",
@@ -954,7 +1228,7 @@ export const styles = StyleSheet.create({
   dashboardSectionHint: {
     color: colors.muted,
     fontSize: fontSize.meta,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   comingUpCard: {
     backgroundColor: surfaces.card,
@@ -1003,7 +1277,7 @@ export const styles = StyleSheet.create({
   timelineNodeIcon: {
     fontSize: fontSize.label,
     lineHeight: lineHeight.tight,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   timelineRowMain: {
     flex: 1,
@@ -1021,7 +1295,7 @@ export const styles = StyleSheet.create({
   timelineDateMonth: {
     color: colors.muted,
     fontSize: fontSize.caption,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     textTransform: "uppercase",
     letterSpacing: 0.5,
     lineHeight: lineHeight.tight - 3,
@@ -1029,7 +1303,7 @@ export const styles = StyleSheet.create({
   timelineDateDay: {
     color: colors.text,
     fontSize: fontSize.title,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     lineHeight: lineHeight.body,
     marginTop: 1,
   },
@@ -1053,13 +1327,13 @@ export const styles = StyleSheet.create({
     color: colors.text,
     fontSize: fontSize.bodyLg,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   dashboardTimelineMeta: {
     fontSize: fontSize.meta,
     lineHeight: lineHeight.tight,
     marginTop: spacing.xs - 1,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
   },
   dashboardTimelineMetaIncome: {
     color: colors.accent,
@@ -1072,7 +1346,7 @@ export const styles = StyleSheet.create({
     textAlign: "right",
     fontSize: fontSize.bodyLg,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     flexShrink: 0,
   },
   timelineEmptyText: {
@@ -1083,7 +1357,7 @@ export const styles = StyleSheet.create({
     color: colors.accentDark,
     fontSize: fontSize.label,
     lineHeight: lineHeight.tight + 1,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   dashboardTimelineFooter: {
     paddingTop: spacing.md,
@@ -1102,10 +1376,36 @@ export const styles = StyleSheet.create({
     marginBottom: spacing.md,
     ...shadows.card,
   },
+  dashboardBreakdownCardCollapsed: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  dashboardBreakdownBody: {
+    gap: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  dashboardBreakdownSection: {
+    gap: 0,
+  },
+  dashboardBreakdownSectionTitle: {
+    color: colors.muted,
+    fontSize: fontSize.caption,
+    ...fontStyle("bold"),
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    lineHeight: lineHeight.tight,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
+  },
+  dashboardBreakdownToggleCollapsed: {
+    borderTopWidth: 0,
+    marginTop: 0,
+  },
   dashboardBreakdownRow: {
-    paddingVertical: spacing.md,
+    minHeight: 40,
+    paddingVertical: spacing.sm + 2,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: spacing.lg,
     borderBottomWidth: 1,
@@ -1118,64 +1418,131 @@ export const styles = StyleSheet.create({
     marginTop: spacing.xs,
     paddingTop: spacing.md + 2,
     paddingBottom: spacing.sm,
+    minHeight: 48,
+    alignItems: "center",
   },
   dashboardBreakdownSubtotalRow: {
     borderBottomWidth: 0,
     borderTopWidth: 1,
     borderTopColor: surfaces.divider,
-    marginTop: spacing.xs - 2,
+    marginTop: spacing.xs,
     paddingTop: spacing.md,
+    paddingBottom: spacing.sm + 2,
+    minHeight: 44,
+    alignItems: "center",
   },
   dashboardBreakdownLabel: {
     flex: 1,
     minWidth: 0,
     color: colors.muted,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.regular,
+    ...fontStyle("medium"),
     lineHeight: lineHeight.body,
   },
   dashboardBreakdownTotalLabel: {
     color: colors.text,
     fontSize: fontSize.bodyLg,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   dashboardBreakdownSubtotalLabel: {
     color: colors.text,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   dashboardBreakdownValue: {
-    minWidth: 100,
+    minWidth: 108,
     textAlign: "right",
     color: colors.text,
     fontSize: fontSize.bodyLg,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     lineHeight: lineHeight.body,
     fontVariant: ["tabular-nums"],
     flexShrink: 0,
   },
   dashboardBreakdownValueDeduction: {
     color: colors.warningText,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   dashboardBreakdownValueCredit: {
-    color: colors.accentDark,
-    fontWeight: fontWeight.semibold,
+    color: colors.accent,
+    ...fontStyle("semibold"),
   },
   dashboardBreakdownValueTotal: {
     color: colors.accent,
   },
   dashboardBreakdownTotalValue: {
     fontSize: fontSize.title + 1,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     color: colors.accentDark,
   },
   dashboardBreakdownSubtotalValue: {
     color: colors.text,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   dashboardBreakdownRowLast: {
     borderBottomWidth: 0,
+    paddingBottom: spacing.xs,
+  },
+  purchaseCycleHeaderCard: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
+    marginBottom: spacing.md + 2,
+    ...shadows.subtle,
+  },
+  cycleSummaryCardCompact: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
+    marginBottom: spacing.md + 2,
+    ...shadows.subtle,
+  },
+  cycleSummaryCardHero: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.card,
+  },
+  cycleSummaryCardTitle: {
+    color: colors.text,
+    fontSize: fontSize.body,
+    lineHeight: lineHeight.body,
+    ...fontStyle("semibold"),
+    marginBottom: spacing.xs,
+  },
+  cycleSummaryCardSummary: {
+    color: colors.warmText,
+    fontSize: fontSize.label,
+    lineHeight: lineHeight.tight + 2,
+    ...fontStyle("semibold"),
+    fontVariant: ["tabular-nums"],
+  },
+  screenSectionTitle: {
+    color: colors.muted,
+    fontSize: fontSize.meta,
+    ...fontStyle("bold"),
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: spacing.sm + 2,
+    paddingHorizontal: spacing.xs,
+  },
+  purchaseCycleHeaderTitle: {
+    color: colors.text,
+    fontSize: fontSize.body,
+    lineHeight: lineHeight.body,
+    ...fontStyle("semibold"),
+    marginBottom: spacing.xs,
+  },
+  purchaseCycleHeaderSummary: {
+    color: colors.warmText,
+    fontSize: fontSize.label,
+    lineHeight: lineHeight.tight + 2,
+    ...fontStyle("semibold"),
+    fontVariant: ["tabular-nums"],
   },
   purchaseSummaryCard: {
     backgroundColor: surfaces.card,
@@ -1204,7 +1571,7 @@ export const styles = StyleSheet.create({
     color: colors.warmText,
     fontSize: fontSize.bodyLg,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     marginTop: spacing.xs,
     textAlign: "center",
     fontVariant: ["tabular-nums"],
@@ -1212,13 +1579,13 @@ export const styles = StyleSheet.create({
   purchaseSummaryValueHighlight: {
     color: colors.warningText,
     fontSize: fontSize.title,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   purchaseSummaryLabel: {
     color: colors.muted,
     fontSize: fontSize.caption,
     lineHeight: lineHeight.tight - 3,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     textAlign: "center",
   },
   purchaseSummaryCycleWindow: {
@@ -1238,7 +1605,7 @@ export const styles = StyleSheet.create({
   purchaseBackToActiveCycleText: {
     color: colors.accentDark,
     fontSize: fontSize.label,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   purchaseCyclePickerButton: {
     minWidth: 96,
@@ -1266,12 +1633,12 @@ export const styles = StyleSheet.create({
     flex: 1,
     color: colors.text,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   purchaseCycleSelectorChevron: {
     color: colors.muted,
     fontSize: fontSize.label,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   purchaseSummaryStripPanel: {
     backgroundColor: surfaces.card,
@@ -1284,21 +1651,21 @@ export const styles = StyleSheet.create({
   purchaseSummaryStripText: {
     color: colors.warmText,
     fontSize: fontSize.label,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     textAlign: "center",
     fontVariant: ["tabular-nums"],
   },
   purchaseCyclePickerLabel: {
     color: colors.muted,
     fontSize: fontSize.meta,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     textTransform: "uppercase",
     letterSpacing: 0.6,
   },
   purchaseCyclePickerValue: {
     color: colors.text,
     fontSize: fontSize.label,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     marginTop: 2,
   },
   purchaseCycleOption: {
@@ -1318,7 +1685,7 @@ export const styles = StyleSheet.create({
   purchaseCycleOptionTitle: {
     color: colors.text,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   purchaseCycleOptionMeta: {
     color: colors.muted,
@@ -1331,12 +1698,12 @@ export const styles = StyleSheet.create({
   purchaseCycleOptionAmount: {
     color: colors.text,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   purchaseCycleOptionSelected: {
     color: colors.accentDark,
     fontSize: fontSize.meta,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     marginTop: 2,
   },
   purchasePastCycleRow: {
@@ -1356,6 +1723,17 @@ export const styles = StyleSheet.create({
   },
   purchasePastCycleSection: {
     marginTop: spacing.xl,
+  },
+  purchaseOutsideCycleSection: {
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+  },
+  purchaseOutsideCycleMeta: {
+    color: colors.muted,
+    fontSize: fontSize.meta,
+    lineHeight: lineHeight.tight,
+    paddingHorizontal: spacing.xs,
+    marginBottom: spacing.sm,
   },
   purchasePreviousCycleGroup: {
     gap: spacing.md,
@@ -1379,7 +1757,7 @@ export const styles = StyleSheet.create({
   purchasePreviousCycleTitle: {
     color: colors.text,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   purchasePreviousCycleMeta: {
     color: colors.muted,
@@ -1389,7 +1767,7 @@ export const styles = StyleSheet.create({
   purchasePreviousCycleAmount: {
     color: colors.text,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     fontVariant: ["tabular-nums"],
     flexShrink: 0,
   },
@@ -1399,7 +1777,7 @@ export const styles = StyleSheet.create({
   purchasePastCycleRowTitle: {
     color: colors.text,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   purchasePastCycleRowMeta: {
     color: colors.muted,
@@ -1409,7 +1787,7 @@ export const styles = StyleSheet.create({
   purchasePastCycleRowAmount: {
     color: colors.text,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     fontVariant: ["tabular-nums"],
   },
   purchaseUnassignedNotice: {
@@ -1444,10 +1822,10 @@ export const styles = StyleSheet.create({
   filterChipText: {
     color: colors.muted,
     fontSize: fontSize.label,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   filterChipTextActive: {
-    color: "white",
+    color: colors.onAccent,
   },
   transactionFeed: {
     marginBottom: spacing.md,
@@ -1458,7 +1836,7 @@ export const styles = StyleSheet.create({
   transactionDateHeader: {
     color: colors.muted,
     fontSize: fontSize.meta,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: spacing.sm,
@@ -1471,14 +1849,81 @@ export const styles = StyleSheet.create({
     marginBottom: 0,
     ...shadows.card,
   },
-  purchaseTransactionRow: {
-    minHeight: 68,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+  purchaseSwipeableList: {
+    gap: spacing.sm,
+  },
+  dashboardEnvelopeSwipeList: {
+    marginBottom: spacing.md,
+  },
+  purchaseSwipeableCard: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    ...shadows.card,
+  },
+  purchaseSwipeableRowForeground: {
+    backgroundColor: surfaces.card,
+  },
+  envelopeSwipeableCard: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    ...shadows.card,
+  },
+  envelopeSwipeableRowForeground: {
+    backgroundColor: surfaces.card,
+  },
+  purchaseSwipeActions: {
     flexDirection: "row",
+    alignItems: "stretch",
+  },
+  purchaseSwipeAction: {
+    width: 76,
+    justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+  },
+  purchaseSwipeActionAccent: {
+    backgroundColor: colors.accentLight,
+  },
+  purchaseSwipeActionDefault: {
+    backgroundColor: colors.soft,
+  },
+  purchaseSwipeActionDestructive: {
+    backgroundColor: colors.warning,
+  },
+  purchaseSwipeActionIcon: {
+    fontSize: fontSize.bodyLg,
+    lineHeight: lineHeight.body,
+  },
+  purchaseSwipeActionLabel: {
+    color: colors.accentDark,
+    fontSize: fontSize.caption,
+    ...fontStyle("semibold"),
+    lineHeight: lineHeight.tight,
+    textAlign: "center",
+  },
+  purchaseSwipeActionLabelDestructive: {
+    color: colors.warningText,
+  },
+  purchaseTransactionRow: {
+    minHeight: 76,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    flexDirection: "row",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: spacing.md,
+  },
+  purchaseRowMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    minWidth: 0,
   },
   transactionRow: {
     minHeight: 56,
@@ -1497,7 +1942,7 @@ export const styles = StyleSheet.create({
     color: colors.text,
     fontSize: fontSize.bodyLg,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   transactionAmountStack: {
     alignItems: "flex-end",
@@ -1509,31 +1954,36 @@ export const styles = StyleSheet.create({
     color: colors.warningText,
     fontSize: fontSize.bodyLg,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("heavy"),
   },
   purchaseTitleRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: spacing.sm,
+  },
+  purchaseTitleText: {
+    flex: 1,
+    minWidth: 0,
   },
   purchaseAmountColumn: {
     alignItems: "flex-end",
-    gap: spacing.sm,
+    justifyContent: "flex-start",
     flexShrink: 0,
+    minWidth: 96,
   },
   purchaseAmount: {
-    color: colors.warningText,
-    fontSize: fontSize.bodyLg,
+    color: colors.accent,
+    fontSize: fontSize.title,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("heavy"),
     fontVariant: ["tabular-nums"],
     textAlign: "right",
-    minWidth: 72,
   },
   purchaseAmountPending: {
-    color: colors.warningText,
-    opacity: 0.88,
+    color: colors.accent,
+  },
+  purchaseAmountCharged: {
+    color: colors.warmText,
   },
   viewAllButton: {
     minHeight: 44,
@@ -1550,12 +2000,12 @@ export const styles = StyleSheet.create({
   viewAllButtonText: {
     color: colors.accentDark,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   viewAllButtonMeta: {
     color: colors.muted,
     fontSize: fontSize.meta,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   cycleSummaryCard: {
     backgroundColor: colors.card,
@@ -1567,7 +2017,7 @@ export const styles = StyleSheet.create({
   cycleAmount: {
     fontSize: 34,
     lineHeight: 40,
-    fontWeight: "900",
+    ...fontStyle("heavy"),
     color: colors.text,
     marginTop: 8,
   },
@@ -1580,7 +2030,7 @@ export const styles = StyleSheet.create({
   },
   noteTitle: {
     fontSize: 17,
-    fontWeight: "800",
+    ...fontStyle("semibold"),
     color: colors.text,
     marginBottom: 6,
   },
@@ -1602,7 +2052,7 @@ export const styles = StyleSheet.create({
   itemTitle: {
     fontSize: fontSize.bodyLg,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     color: colors.text,
   },
   rowMetaText: {
@@ -1614,7 +2064,7 @@ export const styles = StyleSheet.create({
   itemAmount: {
     fontSize: fontSize.bodyLg,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("heavy"),
     color: colors.text,
     flexShrink: 0,
   },
@@ -1629,7 +2079,7 @@ export const styles = StyleSheet.create({
   importGroupHeader: {
     color: colors.muted,
     fontSize: fontSize.meta,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginTop: spacing.md,
@@ -1647,7 +2097,7 @@ export const styles = StyleSheet.create({
   importReviewTitle: {
     color: colors.text,
     fontSize: fontSize.sectionCompact,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     marginBottom: spacing.xs,
   },
   importReviewActions: {
@@ -1662,6 +2112,12 @@ export const styles = StyleSheet.create({
     fontSize: fontSize.body,
     lineHeight: lineHeight.body,
     marginBottom: spacing.md,
+  },
+  importPrivacyNote: {
+    color: colors.warmText,
+    fontSize: fontSize.meta,
+    lineHeight: lineHeight.body,
+    marginTop: spacing.sm,
   },
   importSuggestionListGroup: {
     backgroundColor: surfaces.card,
@@ -1699,7 +2155,7 @@ export const styles = StyleSheet.create({
     color: colors.warningText,
     fontSize: fontSize.bodyLg,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     fontVariant: ["tabular-nums"],
     textAlign: "right",
   },
@@ -1707,7 +2163,7 @@ export const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: fontSize.meta,
     lineHeight: lineHeight.tight,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
   },
   importStatusCard: {
     backgroundColor: surfaces.card,
@@ -1716,10 +2172,77 @@ export const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     ...shadows.subtle,
   },
+  importLoadingCard: {
+    alignItems: "center",
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+    ...shadows.subtle,
+  },
+  importLoadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    backgroundColor: "rgba(246, 243, 234, 0.88)",
+    borderRadius: radius.sheet,
+    justifyContent: "center",
+    padding: spacing.xl,
+    zIndex: 20,
+  },
+  importLoadingModalBackdrop: {
+    alignItems: "center",
+    backgroundColor: "rgba(11, 31, 51, 0.28)",
+    flex: 1,
+    justifyContent: "center",
+    padding: spacing.xl,
+  },
+  importLoadingOverlayCard: {
+    marginBottom: 0,
+    width: "100%",
+  },
+  importLoadingSpinnerWrap: {
+    alignItems: "center",
+    height: 56,
+    justifyContent: "center",
+    marginBottom: spacing.sm,
+    width: 56,
+  },
+  importLoadingPulseRing: {
+    backgroundColor: colors.accentLight,
+    borderRadius: 28,
+    height: 56,
+    position: "absolute",
+    width: 56,
+  },
+  importLoadingTitle: {
+    color: colors.text,
+    fontSize: fontSize.bodyLg,
+    ...fontStyle("bold"),
+    textAlign: "center",
+  },
+  importLoadingSubtitle: {
+    color: colors.muted,
+    fontSize: fontSize.body,
+    lineHeight: lineHeight.body,
+    textAlign: "center",
+  },
+  importLoadingDotsRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  importLoadingDot: {
+    backgroundColor: colors.accent,
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
   statusText: {
     marginTop: 12,
     color: colors.accentDark,
-    fontWeight: "800",
+    ...fontStyle("semibold"),
   },
   statusPill: {
     alignSelf: "flex-start",
@@ -1734,7 +2257,7 @@ export const styles = StyleSheet.create({
   },
   statusPillText: {
     fontSize: fontSize.caption,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     letterSpacing: 0.2,
     lineHeight: lineHeight.tight - 2,
   },
@@ -1789,7 +2312,7 @@ export const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: colors.accentDark,
-    fontWeight: "800",
+    ...fontStyle("semibold"),
   },
   breakdownRow: {
     paddingVertical: 7,
@@ -1827,12 +2350,10 @@ export const styles = StyleSheet.create({
     gap: 12,
   },
   paycheckProjectionTotalRowPrimary: {
-    marginTop: spacing.md,
-    marginBottom: 2,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.rowSurface,
+    marginTop: spacing.sm,
+    paddingTop: spacing.md + 2,
+    borderTopWidth: 1,
+    borderTopColor: surfaces.dividerWarm,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -1841,21 +2362,20 @@ export const styles = StyleSheet.create({
   paycheckProjectionTotalLabel: {
     color: colors.text,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     flex: 1,
   },
   paycheckProjectionTotalValue: {
     color: colors.accentDark,
     fontSize: fontSize.title + 1,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     fontVariant: ["tabular-nums"],
   },
   paycheckProjectionBreakdown: {
-    backgroundColor: colors.rowSurface,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     gap: spacing.xs,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: surfaces.divider,
   },
   paycheckProjectionBreakdownHelp: {
     color: colors.muted,
@@ -1870,10 +2390,36 @@ export const styles = StyleSheet.create({
   },
   paycheckCoveredBillsToggle: {
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    marginTop: 12,
-    paddingTop: 12,
+    borderTopColor: surfaces.divider,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
     alignItems: "center",
+    minHeight: 36,
+    justifyContent: "center",
+  },
+  paycheckBreakdownCaret: {
+    color: colors.muted,
+    fontSize: fontSize.title,
+    lineHeight: lineHeight.body,
+    ...fontStyle("bold"),
+  },
+  paycheckConfirmReceivedButton: {
+    alignSelf: "stretch",
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: spacing.md,
+  },
+  paycheckAdditionalIncomeContent: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.sm,
   },
   breakdownLabel: {
     color: colors.muted,
@@ -1882,12 +2428,12 @@ export const styles = StyleSheet.create({
   breakdownValue: {
     color: colors.text,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   inputLabel: {
     color: colors.text,
     fontSize: fontSize.label,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     marginBottom: spacing.sm - 2,
     marginTop: spacing.sm - 2,
   },
@@ -1900,10 +2446,24 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.md - 1,
     fontSize: fontSize.bodyLg,
     marginBottom: spacing.sm - 2,
+    ...fontStyle("regular"),
   },
   purchaseInput: {
     paddingVertical: spacing.sm + 1,
     marginBottom: spacing.sm,
+  },
+  purchaseAmountHeroInput: {
+    fontSize: fontSize.displaySm,
+    lineHeight: lineHeight.displaySm,
+    ...fontStyle("heavy"),
+    textAlign: "center",
+    paddingVertical: spacing.md,
+  },
+  purchaseRecentMerchantRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   textArea: {
     height: 110,
@@ -1919,7 +2479,7 @@ export const styles = StyleSheet.create({
   readOnlyText: {
     color: colors.text,
     fontSize: fontSize.bodyLg,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
   },
   segmentedControl: {
     flexDirection: "row",
@@ -1942,11 +2502,11 @@ export const styles = StyleSheet.create({
   segmentedControlText: {
     color: colors.muted,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   segmentedControlTextActive: {
     color: colors.accentDark,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   datePickerFrame: {
     minHeight: 220,
@@ -1978,13 +2538,13 @@ export const styles = StyleSheet.create({
     color: colors.accentDark,
     fontSize: 28,
     lineHeight: 30,
-    fontWeight: fontWeight.regular,
+    ...fontStyle("regular"),
   },
   calendarMonthText: {
     flex: 1,
     color: colors.text,
     fontSize: fontSize.bodyLg,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     textAlign: "center",
   },
   calendarQuickChips: {
@@ -2007,11 +2567,11 @@ export const styles = StyleSheet.create({
   calendarQuickChipText: {
     color: colors.muted,
     fontSize: fontSize.label,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   calendarQuickChipTextSelected: {
     color: colors.accentDark,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   calendarGrid: {
     flexDirection: "row",
@@ -2022,7 +2582,7 @@ export const styles = StyleSheet.create({
     width: `${100 / 7}%`,
     color: colors.muted,
     fontSize: fontSize.caption,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     textAlign: "center",
     paddingBottom: spacing.xs + 1,
   },
@@ -2053,17 +2613,17 @@ export const styles = StyleSheet.create({
     color: colors.text,
     fontSize: fontSize.body,
     lineHeight: lineHeight.tight + 1,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
     textAlign: "center",
     includeFontPadding: false,
   },
   calendarDaySelectedText: {
-    color: "white",
-    fontWeight: fontWeight.bold,
+    color: colors.onAccent,
+    ...fontStyle("bold"),
   },
   calendarDayTodayText: {
     color: colors.accentDark,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   calendarDoneButton: {
     backgroundColor: colors.accent,
@@ -2077,14 +2637,14 @@ export const styles = StyleSheet.create({
   errorText: {
     color: colors.warningText,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
     marginTop: spacing.xs - 2,
     marginBottom: spacing.sm + 2,
   },
   successText: {
     color: colors.accentDark,
     fontSize: fontSize.label,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
     lineHeight: lineHeight.tight + 1,
     marginTop: spacing.sm - 2,
   },
@@ -2106,7 +2666,7 @@ export const styles = StyleSheet.create({
   keyboardDoneText: {
     color: colors.accentDark,
     fontSize: fontSize.bodyLg,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   emptyState: {
     backgroundColor: surfaces.card,
@@ -2118,11 +2678,27 @@ export const styles = StyleSheet.create({
   emptyTitle: {
     color: colors.text,
     fontSize: fontSize.title,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     marginBottom: spacing.sm - 2,
+  },
+  emptyStateButton: {
+    marginTop: spacing.md,
+    alignSelf: "flex-start",
+    minHeight: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    justifyContent: "center",
+  },
+  emptyStateButtonText: {
+    color: colors.onAccent,
+    fontSize: fontSize.body,
+    ...fontStyle("semibold"),
   },
   bottomNav: {
     flexDirection: "row",
+    alignItems: "flex-end",
     backgroundColor: colors.card,
     borderTopWidth: 0,
     paddingHorizontal: spacing.sm,
@@ -2141,15 +2717,47 @@ export const styles = StyleSheet.create({
     gap: spacing.xs - 1,
     minHeight: 44,
   },
+  navItemPrimary: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: spacing.xs,
+    marginTop: -spacing.lg,
+    gap: spacing.xs,
+    minHeight: 72,
+  },
+  navItemPrimaryButton: {
+    width: 58,
+    height: 58,
+    borderRadius: radius.fab,
+    backgroundColor: colors.accentLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.fab,
+  },
+  navItemPrimaryButtonActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accentDark,
+  },
   navItemActive: {
     backgroundColor: colors.accentLight,
   },
   navText: {
     fontSize: 10,
     color: colors.muted,
-    fontWeight: "800",
+    ...fontStyle("semibold"),
   },
   navTextActive: {
+    color: colors.accentDark,
+  },
+  navTextPrimary: {
+    fontSize: 11,
+    color: colors.muted,
+    ...fontStyle("bold"),
+  },
+  navTextPrimaryActive: {
     color: colors.accentDark,
   },
   modalOverlay: {
@@ -2166,6 +2774,8 @@ export const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.card,
+    overflow: "hidden",
+    position: "relative",
     padding: spacing.xl + 2,
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,
@@ -2181,6 +2791,17 @@ export const styles = StyleSheet.create({
   },
   sheetScrollContent: {
     padding: spacing.xl + 2,
+  },
+  sheetDragHandleRow: {
+    alignItems: "center",
+    paddingTop: spacing.sm + 2,
+    paddingBottom: spacing.xs,
+  },
+  sheetDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.border,
   },
   onboardingSheetTall: {
     maxHeight: "88%",
@@ -2218,18 +2839,18 @@ export const styles = StyleSheet.create({
   actionMenuTitle: {
     color: colors.text,
     fontSize: fontSize.title,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   actionMenuHeaderMeta: {
     color: colors.muted,
     fontSize: fontSize.label,
-    fontWeight: fontWeight.medium,
+    ...fontStyle("medium"),
     marginTop: spacing.xs,
   },
   actionMenuHeaderAmount: {
     color: colors.text,
     fontSize: fontSize.title + 1,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("heavy"),
     textAlign: "right",
     fontVariant: ["tabular-nums"],
   },
@@ -2259,13 +2880,13 @@ export const styles = StyleSheet.create({
   actionMenuIconText: {
     color: colors.accentDark,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     lineHeight: lineHeight.tight,
   },
   actionMenuItemText: {
     color: colors.accentDark,
     fontSize: fontSize.bodyLg,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   actionMenuErrorText: {
     color: colors.warningText,
@@ -2284,7 +2905,7 @@ export const styles = StyleSheet.create({
   },
   actionMenuCloseText: {
     color: colors.muted,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     fontSize: fontSize.bodyLg,
   },
   overflowButton: {
@@ -2299,7 +2920,7 @@ export const styles = StyleSheet.create({
     color: colors.accentDark,
     fontSize: fontSize.bodyLg,
     lineHeight: lineHeight.body,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     marginTop: -5,
   },
   cancelButton: {
@@ -2308,7 +2929,7 @@ export const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: colors.muted,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     fontSize: fontSize.bodyLg,
   },
   settingsMoneyCard: {
@@ -2317,6 +2938,10 @@ export const styles = StyleSheet.create({
     padding: spacing.lg,
     marginBottom: spacing.section,
     ...shadows.card,
+  },
+  settingsMoneySection: {
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   settingsMetricRow: {
     flexDirection: "row",
@@ -2340,14 +2965,14 @@ export const styles = StyleSheet.create({
   settingsMetricLabel: {
     color: colors.muted,
     fontSize: fontSize.caption,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
     textTransform: "uppercase",
     letterSpacing: 0.6,
   },
   settingsMetricValue: {
     color: colors.text,
     fontSize: fontSize.bodyLg,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     fontVariant: ["tabular-nums"],
   },
   settingsSectionHeader: {
@@ -2370,6 +2995,10 @@ export const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.md,
   },
+  settingsAppearanceControl: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
   settingsPreferenceDivider: {
     borderBottomWidth: 1,
     borderBottomColor: surfaces.divider,
@@ -2380,7 +3009,7 @@ export const styles = StyleSheet.create({
   settingsGroupTitle: {
     color: colors.muted,
     fontSize: fontSize.meta,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: spacing.sm - 2,
@@ -2396,9 +3025,14 @@ export const styles = StyleSheet.create({
   settingsValue: {
     color: colors.accentDark,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.semibold,
+    ...fontStyle("semibold"),
   },
   settingsInlineControl: {
+    alignItems: "flex-end",
+    gap: spacing.sm - 1,
+    flexShrink: 0,
+  },
+  settingsActionColumn: {
     alignItems: "flex-end",
     gap: spacing.sm - 1,
     flexShrink: 0,
@@ -2417,7 +3051,7 @@ export const styles = StyleSheet.create({
   settingsActionButtonText: {
     color: colors.accentDark,
     fontSize: fontSize.label,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   disabledAction: {
     opacity: 0.55,
@@ -2435,12 +3069,27 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     ...shadows.fab,
   },
+  fabPressable: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   fabText: {
-    color: "white",
+    color: colors.onAccent,
     fontSize: fontSize.label + 2,
-    fontWeight: fontWeight.bold,
+    ...fontStyle("bold"),
   },
   pressed: {
     opacity: 0.72,
   },
-});
+  });
+}
+
+export type AppStyles = ReturnType<typeof createStyles>;
+
+/** Static light-theme exports for tests and non-React modules. */
+export const colors = lightTheme.colors;
+export const surfaces = lightTheme.surfaces;
+export const shadows = createShadows(lightTheme);
+export const styles = createStyles(lightTheme);

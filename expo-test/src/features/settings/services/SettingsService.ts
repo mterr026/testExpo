@@ -1,9 +1,11 @@
 import type {
   ActivityLogRepository,
+  BalanceAdjustmentRepository,
   NotificationSettingsRepository,
   ProfileRepository,
 } from "@/database/repositories";
 import type {
+  BalanceAdjustment,
   NotificationSettings,
   NotificationSettingsChanges,
   Profile,
@@ -19,8 +21,38 @@ export class SettingsService {
     private readonly profileRepository: ProfileRepository,
     private readonly notificationSettingsRepository: NotificationSettingsRepository,
     private readonly activityLogRepository: ActivityLogRepository,
+    private readonly balanceAdjustmentRepository: BalanceAdjustmentRepository,
     private readonly eventBus: FinancialEventBus
   ) {}
+
+  async adjustCurrentBalance(
+    profileId: string,
+    previousBalanceCents: number,
+    adjustedBalanceCents: number
+  ): Promise<BalanceAdjustment | null> {
+    validateBalance(adjustedBalanceCents);
+
+    if (previousBalanceCents === adjustedBalanceCents) {
+      return null;
+    }
+
+    const adjustment = await this.balanceAdjustmentRepository.create({
+      profileId,
+      previousBalanceCents,
+      adjustedBalanceCents,
+    });
+
+    await this.activityLogRepository.create({
+      profileId,
+      eventType: "balance_adjusted",
+      entityType: "balance",
+      entityId: adjustment.id,
+      summary: `Adjusted balance: ${formatCurrency(previousBalanceCents)} → ${formatCurrency(adjustedBalanceCents)}`,
+    });
+    this.eventBus.emit(FINANCIAL_STATE_CHANGED, profileId);
+
+    return adjustment;
+  }
 
   async updateEssentialReserve(
     profileId: string,
@@ -73,5 +105,11 @@ function validateReserve(essentialReserveCents: number) {
     essentialReserveCents < 0
   ) {
     throw new Error("Essential reserve must be zero or greater.");
+  }
+}
+
+function validateBalance(adjustedBalanceCents: number) {
+  if (!Number.isInteger(adjustedBalanceCents) || adjustedBalanceCents < 0) {
+    throw new Error("Current balance must be zero or greater.");
   }
 }

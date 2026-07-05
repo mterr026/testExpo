@@ -2,6 +2,8 @@ import type {
   BalanceAdjustment,
   Bill,
   BillCycleInstance,
+  BudgetingPreferences,
+  Envelope,
   NotificationSettings,
   Paycheck,
   Profile,
@@ -10,7 +12,8 @@ import type {
 
 import type { BudgetFlowBackupPayload } from "./BackupService";
 
-export const BUDGET_FLOW_BACKUP_SCHEMA_VERSION = 1;
+export const BUDGET_FLOW_BACKUP_SCHEMA_VERSION = 2;
+export const SUPPORTED_BUDGET_FLOW_BACKUP_SCHEMA_VERSIONS = [1, 2] as const;
 
 export function parseBudgetFlowBackupJson(
   jsonText: string
@@ -31,27 +34,32 @@ export function validateBudgetFlowBackupPayload(
 ): BudgetFlowBackupPayload {
   assertRecord(payload, "Backup file is not a valid Budget Flow backup.");
 
-  if (payload.schemaVersion !== BUDGET_FLOW_BACKUP_SCHEMA_VERSION) {
+  if (
+    !SUPPORTED_BUDGET_FLOW_BACKUP_SCHEMA_VERSIONS.includes(
+      payload.schemaVersion as (typeof SUPPORTED_BUDGET_FLOW_BACKUP_SCHEMA_VERSIONS)[number]
+    )
+  ) {
     throw new Error("Backup schema version is not supported.");
   }
 
   assertIsoDateTime(payload.exportedAt, "Backup export timestamp is invalid.");
   const profile = validateProfile(payload.profile);
-  const records = validateBackupRecords(payload.records);
+  const records = validateBackupRecords(payload.records, payload.schemaVersion);
   assertRecordsBelongToProfile(profile.id, records);
   assertBillInstancesReferenceBackupRecords(records);
+  const sanitizedRecords = sanitizePurchaseEnvelopeReferences(records);
 
-  const recordCount = countBackupRecords(records);
+  const recordCount = countBackupRecords(sanitizedRecords);
 
   if (payload.recordCount !== recordCount) {
     throw new Error("Backup record count does not match its contents.");
   }
 
   return {
-    schemaVersion: BUDGET_FLOW_BACKUP_SCHEMA_VERSION,
+    schemaVersion: payload.schemaVersion as BudgetFlowBackupPayload["schemaVersion"],
     exportedAt: payload.exportedAt,
     profile,
-    records,
+    records: sanitizedRecords,
     recordCount,
   };
 }
@@ -63,14 +71,21 @@ export function countBackupRecords(
     records.balanceAdjustments.length +
     records.billCycleInstances.length +
     records.bills.length +
+    records.envelopes.length +
+    (records.budgetingPreferences ? 1 : 0) +
     (records.notificationSettings ? 1 : 0) +
     records.paychecks.length +
     records.purchases.length
   );
 }
 
-function validateBackupRecords(value: unknown) {
+function validateBackupRecords(
+  value: unknown,
+  schemaVersion: unknown
+): BudgetFlowBackupPayload["records"] {
   assertRecord(value, "Backup records are missing.");
+
+  const includeEnvelopeData = schemaVersion === 2;
 
   return {
     balanceAdjustments: validateArray<BalanceAdjustment>(
@@ -88,6 +103,17 @@ function validateBackupRecords(value: unknown) {
       "Backup bills are invalid.",
       validateBill
     ),
+    budgetingPreferences:
+      includeEnvelopeData && value.budgetingPreferences != null
+        ? validateBudgetingPreferences(value.budgetingPreferences)
+        : null,
+    envelopes: includeEnvelopeData
+      ? validateArray<Envelope>(
+          value.envelopes ?? [],
+          "Backup envelopes are invalid.",
+          validateEnvelope
+        )
+      : [],
     notificationSettings:
       value.notificationSettings == null
         ? null
@@ -117,6 +143,12 @@ function validateProfile(value: unknown): Profile {
     value.onboardingComplete,
     "Backup profile onboarding state is invalid."
   );
+  if ("tutorialComplete" in value) {
+    assertBoolean(
+      value.tutorialComplete,
+      "Backup profile tutorial state is invalid."
+    );
+  }
   assertNumber(
     value.openingBalanceCents,
     "Backup profile opening balance is invalid."
@@ -234,13 +266,20 @@ function validatePurchase(value: unknown): Purchase {
   assertNullableString(value.description, "Backup purchase description is invalid.");
   assertIsoDate(value.purchaseDate, "Backup purchase date is invalid.");
   assertNullableString(value.paycheckCycleId, "Backup purchase paycheck cycle is invalid.");
+  assertNullableString(value.envelopeId, "Backup purchase envelope is invalid.");
   assertNullableString(value.resolvedAt, "Backup purchase resolved date is invalid.");
   assertIsoDateTime(value.createdAt, "Backup purchase created date is invalid.");
   assertIsoDateTime(value.updatedAt, "Backup purchase updated date is invalid.");
   assertNullableString(value.deletedAt, "Backup purchase deleted date is invalid.");
   assertSyncStatus(value.syncStatus, "Backup purchase sync status is invalid.");
 
-  return value as Purchase;
+  return {
+    ...(value as Purchase),
+    envelopeId:
+      "envelopeId" in value && (value.envelopeId === null || typeof value.envelopeId === "string")
+        ? value.envelopeId
+        : null,
+  };
 }
 
 function validateBalanceAdjustment(value: unknown): BalanceAdjustment {
@@ -256,7 +295,10 @@ function validateBalanceAdjustment(value: unknown): BalanceAdjustment {
     "Backup balance adjustment adjusted balance is invalid."
   );
   assertNumber(value.deltaCents, "Backup balance adjustment delta is invalid.");
-  assertString(value.reason, "Backup balance adjustment reason is invalid.");
+  assertNullableString(
+    value.reason ?? null,
+    "Backup balance adjustment reason is invalid."
+  );
   assertIsoDateTime(
     value.createdAt,
     "Backup balance adjustment created date is invalid."
@@ -270,7 +312,13 @@ function validateBalanceAdjustment(value: unknown): BalanceAdjustment {
     "Backup balance adjustment sync status is invalid."
   );
 
-  return value as BalanceAdjustment;
+  return {
+    ...(value as BalanceAdjustment),
+    reason:
+      typeof value.reason === "string" && value.reason.length > 0
+        ? value.reason
+        : null,
+  };
 }
 
 function validateNotificationSettings(value: unknown): NotificationSettings {
@@ -311,6 +359,49 @@ function validateNotificationSettings(value: unknown): NotificationSettings {
   return value as NotificationSettings;
 }
 
+function validateEnvelope(value: unknown): Envelope {
+  assertRecord(value, "Backup envelope is invalid.");
+  assertString(value.id, "Backup envelope id is invalid.");
+  assertString(value.profileId, "Backup envelope profile id is invalid.");
+  assertString(value.name, "Backup envelope name is invalid.");
+  assertNumber(value.allocationCents, "Backup envelope allocation is invalid.");
+  assertNumber(value.sortOrder, "Backup envelope sort order is invalid.");
+  assertBoolean(value.isPaused, "Backup envelope paused state is invalid.");
+  assertIsoDateTime(value.createdAt, "Backup envelope created date is invalid.");
+  assertIsoDateTime(value.updatedAt, "Backup envelope updated date is invalid.");
+  assertNullableString(value.deletedAt, "Backup envelope deleted date is invalid.");
+  assertSyncStatus(value.syncStatus, "Backup envelope sync status is invalid.");
+
+  return value as Envelope;
+}
+
+function validateBudgetingPreferences(value: unknown): BudgetingPreferences {
+  assertRecord(value, "Backup budgeting preferences are invalid.");
+  assertString(value.id, "Backup budgeting preferences id is invalid.");
+  assertString(
+    value.profileId,
+    "Backup budgeting preferences profile id is invalid."
+  );
+  assertBoolean(
+    value.envelopesEnabled,
+    "Backup budgeting preferences envelope state is invalid."
+  );
+  assertIsoDateTime(
+    value.createdAt,
+    "Backup budgeting preferences created date is invalid."
+  );
+  assertIsoDateTime(
+    value.updatedAt,
+    "Backup budgeting preferences updated date is invalid."
+  );
+  assertSyncStatus(
+    value.syncStatus,
+    "Backup budgeting preferences sync status is invalid."
+  );
+
+  return value as BudgetingPreferences;
+}
+
 function assertRecordsBelongToProfile(
   profileId: string,
   records: BudgetFlowBackupPayload["records"]
@@ -320,7 +411,9 @@ function assertRecordsBelongToProfile(
     ...records.bills,
     ...records.paychecks,
     ...records.purchases,
+    ...records.envelopes,
     ...(records.notificationSettings ? [records.notificationSettings] : []),
+    ...(records.budgetingPreferences ? [records.budgetingPreferences] : []),
   ];
 
   if (profileOwnedRecords.some((record) => record.profileId !== profileId)) {
@@ -343,6 +436,34 @@ function assertBillInstancesReferenceBackupRecords(
   ) {
     throw new Error("Backup contains bill instances with missing references.");
   }
+}
+
+export function sanitizePurchaseEnvelopeReferences(
+  records: BudgetFlowBackupPayload["records"]
+): BudgetFlowBackupPayload["records"] {
+  const envelopeIds = new Set(records.envelopes.map((envelope) => envelope.id));
+  let hasOrphanEnvelopeReference = false;
+
+  const purchases = records.purchases.map((purchase) => {
+    if (purchase.envelopeId != null && !envelopeIds.has(purchase.envelopeId)) {
+      hasOrphanEnvelopeReference = true;
+      return {
+        ...purchase,
+        envelopeId: null,
+      };
+    }
+
+    return purchase;
+  });
+
+  if (!hasOrphanEnvelopeReference) {
+    return records;
+  }
+
+  return {
+    ...records,
+    purchases,
+  };
 }
 
 function validateArray<T>(

@@ -10,9 +10,18 @@ import {
   StatusPill,
   type ActionMenuHeader,
   type ActionMenuItem,
-  type StatusPillTone,
 } from "@/shared/ui/components";
-import { styles } from "@/shared/ui/styles";
+import {
+  getImportSuggestionMenuPresentation,
+  getImportSuggestionRowPresentation,
+} from "@/shared/ui/statusBadges";
+import { useStyles } from "@/shared/ui/ThemeContext";
+
+import { ImportLoadingIndicator } from "./components/ImportLoadingIndicator";
+import {
+  getImportLoadingLabel,
+  type ImportPhase,
+} from "./importLoadingStatus";
 
 export function ImportReviewSection({
   error,
@@ -20,12 +29,15 @@ export function ImportReviewSection({
   importMessage,
   isClearing,
   isImporting,
+  importPhase,
   isLoading,
   onClearSuggestions,
   onImportFile,
   onConfirmSuggestion,
   suggestions,
+  onRejectAllSuggestions,
   onRejectSuggestion,
+  privacyNote,
   title = "Review Your Starting Budget",
   emptyBody = "Income and bills found from an imported statement will appear here.",
 }: {
@@ -34,15 +46,19 @@ export function ImportReviewSection({
   importMessage: string;
   isClearing: boolean;
   isImporting: boolean;
+  importPhase: ImportPhase | null;
   isLoading: boolean;
   onClearSuggestions: () => void | Promise<void>;
   onImportFile: () => void | Promise<void>;
   onConfirmSuggestion: (suggestion: ImportSuggestion) => void;
   suggestions: ImportSuggestion[];
+  onRejectAllSuggestions: () => void | Promise<void>;
   onRejectSuggestion: (id: string) => void | Promise<void>;
+  privacyNote?: string;
   title?: string;
   emptyBody?: string;
 }) {
+  const styles = useStyles();
   const [selectedSuggestion, setSelectedSuggestion] =
     useState<ImportSuggestion | null>(null);
 
@@ -77,25 +93,46 @@ export function ImportReviewSection({
       ]
     : [];
 
+  const importLoadingLabel = importPhase
+    ? getImportLoadingLabel(importPhase)
+    : null;
+
   return (
     <View>
       <View style={styles.importReviewPanel}>
         <Text style={styles.importReviewTitle}>{title}</Text>
         <Text style={styles.helpText}>{helpText}</Text>
+        {!!privacyNote && (
+          <Text style={styles.importPrivacyNote}>{privacyNote}</Text>
+        )}
         <View style={styles.importReviewActions}>
           {suggestions.length > 0 && (
-            <Pressable
-              disabled={isClearing || isImporting}
-              style={({ pressed }) => [
-                styles.inlineSecondaryButton,
-                pressed && styles.pressed,
-              ]}
-              onPress={onClearSuggestions}
-            >
-              <Text style={styles.inlineSecondaryButtonText}>
-                {isClearing ? "Clearing" : "Clear"}
-              </Text>
-            </Pressable>
+            <>
+              <Pressable
+                disabled={isClearing || isImporting}
+                style={({ pressed }) => [
+                  styles.inlineSecondaryButton,
+                  pressed && styles.pressed,
+                ]}
+                onPress={onRejectAllSuggestions}
+              >
+                <Text style={styles.inlineSecondaryButtonText}>
+                  {isClearing ? "Dismissing..." : "Dismiss all"}
+                </Text>
+              </Pressable>
+              <Pressable
+                disabled={isClearing || isImporting}
+                style={({ pressed }) => [
+                  styles.inlineSecondaryButton,
+                  pressed && styles.pressed,
+                ]}
+                onPress={onClearSuggestions}
+              >
+                <Text style={styles.inlineSecondaryButtonText}>
+                  {isClearing ? "Clearing" : "Clear"}
+                </Text>
+              </Pressable>
+            </>
           )}
           <Pressable
             disabled={isClearing || isImporting}
@@ -106,36 +143,44 @@ export function ImportReviewSection({
             onPress={onImportFile}
           >
             <Text style={styles.inlinePrimaryButtonText}>
-              {isImporting ? "Importing" : "Import File"}
+              {isImporting ? "Importing..." : "Import File"}
             </Text>
           </Pressable>
         </View>
       </View>
 
-      {!!importMessage && !error && (
+      {!!importMessage && !error && !isImporting && (
         <Text style={styles.importReviewMessage}>{importMessage}</Text>
       )}
 
-      {isLoading && (
-        <View style={styles.importStatusCard}>
-          <Text style={styles.helpText}>Loading import suggestions...</Text>
-        </View>
+      {isImporting && importLoadingLabel && (
+        <ImportLoadingIndicator
+          subtitle={importLoadingLabel.subtitle}
+          title={importLoadingLabel.title}
+        />
       )}
 
-      {!isLoading && !!error && (
+      {isLoading && !isImporting && (
+        <ImportLoadingIndicator
+          subtitle="Checking for saved statement suggestions."
+          title="Loading import suggestions..."
+        />
+      )}
+
+      {!isLoading && !isImporting && !!error && (
         <View style={styles.importStatusCard}>
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
-      {!isLoading && !error && suggestions.length === 0 && (
+      {!isLoading && !isImporting && !error && suggestions.length === 0 && (
         <EmptyState
           title="No import suggestions"
           body={emptyBody}
         />
       )}
 
-      {!isLoading && !error && suggestions.length > 0 && (
+      {!isLoading && !isImporting && !error && suggestions.length > 0 && (
         <>
           {groupImportSuggestions(suggestions).map((group) => (
             <View key={group.title}>
@@ -171,26 +216,17 @@ export function ImportReviewSection({
 }
 
 function getSuggestionActionHeader(suggestion: ImportSuggestion): ActionMenuHeader {
+  const status = getImportSuggestionMenuPresentation(suggestion);
+
   return {
     amount: formatSuggestionAmount(suggestion),
     meta: `${formatInterval(suggestion.detectedInterval)} • ${formatSuggestionDateLabel(
       suggestion
     )} • ${suggestion.occurrenceCount} matches`,
-    status:
-      suggestion.suggestionKind === "income"
-        ? suggestion.detectedInterval === "irregular"
-          ? "Possible Income"
-          : "Likely Income"
-        : suggestion.detectedInterval === "irregular"
-          ? "Possible Bill"
-          : "Likely Recurring Payment",
-    statusTone: getImportSuggestionTone(suggestion),
+    status: status.label,
+    statusTone: status.tone,
     title: suggestion.suggestedName,
   };
-}
-
-function getImportSuggestionTone(suggestion: ImportSuggestion): StatusPillTone {
-  return suggestion.suggestionKind === "income" ? "accent" : "warning";
 }
 
 function ImportSuggestionRow({
@@ -202,7 +238,8 @@ function ImportSuggestionRow({
   showDivider: boolean;
   onOpenActions: (suggestion: ImportSuggestion) => void;
 }) {
-  const kindLabel = formatSuggestionKind(suggestion);
+  const styles = useStyles();
+  const kindLabel = getImportSuggestionRowPresentation(suggestion);
   const isIncome = suggestion.suggestionKind === "income";
 
   return (
@@ -215,10 +252,7 @@ function ImportSuggestionRow({
       <View style={styles.itemCopy}>
         <View style={styles.importSuggestionTitleRow}>
           <Text style={styles.transactionTitle}>{suggestion.suggestedName}</Text>
-          <StatusPill
-            label={kindLabel}
-            tone={getImportSuggestionTone(suggestion)}
-          />
+          <StatusPill label={kindLabel.label} tone={kindLabel.tone} />
         </View>
         <Text style={styles.importSuggestionMeta}>
           {formatInterval(suggestion.detectedInterval)} •{" "}
@@ -245,75 +279,35 @@ function ImportSuggestionRow({
   );
 }
 
-function formatSuggestionKind(suggestion: ImportSuggestion) {
-  if (suggestion.suggestionKind === "income") {
-    return suggestion.detectedInterval === "irregular" ? "Possible Income" : "Income";
-  }
-
-  return suggestion.detectedInterval === "irregular" ? "Possible Bill" : "Bill";
-}
-
 function groupImportSuggestions(suggestions: ImportSuggestion[]) {
   const groups: {
     title: string;
     suggestions: ImportSuggestion[];
   }[] = [
-    { title: "Likely Recurring Payments", suggestions: [] },
-    { title: "Possible Bills", suggestions: [] },
-    { title: "Possible Income", suggestions: [] },
-    { title: "Review Suggested", suggestions: [] },
+    { title: "Likely paychecks", suggestions: [] },
+    { title: "Likely bills", suggestions: [] },
+    { title: "Possible matches", suggestions: [] },
   ];
 
   for (const suggestion of suggestions) {
+    if (suggestion.suggestionKind === "income") {
+      groups[0].suggestions.push(suggestion);
+      continue;
+    }
+
     if (
       suggestion.suggestionKind === "bill" &&
       suggestion.occurrenceCount > 1 &&
       suggestion.detectedInterval !== "irregular"
     ) {
-      groups[0].suggestions.push(suggestion);
-      continue;
-    }
-
-    if (suggestion.suggestionKind === "income") {
-      groups[2].suggestions.push(suggestion);
-      continue;
-    }
-
-    if (isLikelyPossibleBill(suggestion)) {
       groups[1].suggestions.push(suggestion);
       continue;
     }
 
-    groups[3].suggestions.push(suggestion);
+    groups[2].suggestions.push(suggestion);
   }
 
   return groups.filter((group) => group.suggestions.length > 0);
-}
-
-function isLikelyPossibleBill(suggestion: ImportSuggestion) {
-  if (suggestion.suggestionKind !== "bill") {
-    return false;
-  }
-
-  return (
-    suggestion.occurrenceCount > 1 ||
-    isNearCommonBillingDate(suggestion.suggestedDate) ||
-    suggestion.suggestedAmountCents >= 5000
-  );
-}
-
-function isNearCommonBillingDate(date: string | null) {
-  if (!date) {
-    return false;
-  }
-
-  const day = Number(date.slice(-2));
-
-  return (
-    (day >= 1 && day <= 5) ||
-    (day >= 14 && day <= 16) ||
-    day >= 28
-  );
 }
 
 function formatInterval(interval: ImportSuggestion["detectedInterval"]) {

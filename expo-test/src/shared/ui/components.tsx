@@ -12,18 +12,46 @@ import {
 
 import { formatCurrency } from "@/shared/currency";
 
-import { styles } from "./styles";
+import { ActionIcon, type ActionIconName } from "./ActionIcon";
+import { hapticForActionLabel } from "./haptics";
+import { useStyles } from "./ThemeContext";
 
-export function EmptyState({ title, body }: { title: string; body: string }) {
+export type { ActionIconName };
+
+export function EmptyState({
+  actionLabel,
+  body,
+  onAction,
+  title,
+}: {
+  actionLabel?: string;
+  body: string;
+  onAction?: () => void;
+  title: string;
+}) {
+  const styles = useStyles();
   return (
     <View style={styles.emptyState}>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.helpText}>{body}</Text>
+      {actionLabel && onAction ? (
+        <Pressable
+          accessibilityRole="button"
+          style={({ pressed }) => [
+            styles.emptyStateButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={onAction}
+        >
+          <Text style={styles.emptyStateButtonText}>{actionLabel}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 export function Row({ label, value }: { label: string; value: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.breakdownRow}>
       <Text style={styles.breakdownLabel}>{label}</Text>
@@ -43,7 +71,8 @@ export function StatusPill({
   menu?: boolean;
   tone: StatusPillTone;
 }) {
-  const toneStyles = getStatusPillToneStyles(tone);
+  const styles = useStyles();
+  const toneStyles = getStatusPillToneStyles(tone, styles);
 
   return (
     <View
@@ -58,7 +87,10 @@ export function StatusPill({
   );
 }
 
-function getStatusPillToneStyles(tone: StatusPillTone) {
+function getStatusPillToneStyles(
+  tone: StatusPillTone,
+  styles: ReturnType<typeof useStyles>
+) {
   switch (tone) {
     case "accent":
       return {
@@ -89,7 +121,7 @@ function getStatusPillToneStyles(tone: StatusPillTone) {
 }
 
 export type ActionMenuItem = {
-  icon?: string;
+  icon?: ActionIconName;
   label: string;
   closeBeforeAction?: boolean;
   destructive?: boolean;
@@ -117,9 +149,12 @@ export function ActionMenu({
   actions: ActionMenuItem[];
   onClose: () => void;
 }) {
+  const styles = useStyles();
   const [actionError, setActionError] = useState("");
 
   async function handleActionPress(action: ActionMenuItem) {
+    hapticForActionLabel(action.label);
+
     try {
       setActionError("");
       if (action.closeBeforeAction) {
@@ -139,7 +174,12 @@ export function ActionMenu({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.actionMenuOverlay}>
         <Pressable style={styles.modalBackdrop} onPress={onClose} />
         <View style={styles.actionMenuSheet}>
@@ -183,14 +223,22 @@ export function ActionMenu({
                   action.destructive && styles.actionMenuDangerIcon,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.actionMenuIconText,
-                    action.destructive && styles.actionMenuDangerText,
-                  ]}
-                >
-                  {action.icon ?? "•"}
-                </Text>
+                {action.icon ? (
+                  <ActionIcon
+                    destructive={action.destructive}
+                    name={action.icon}
+                    size={18}
+                  />
+                ) : (
+                  <Text
+                    style={[
+                      styles.actionMenuIconText,
+                      action.destructive && styles.actionMenuDangerText,
+                    ]}
+                  >
+                    •
+                  </Text>
+                )}
               </View>
               <Text
                 style={[
@@ -221,9 +269,11 @@ export function ActionMenu({
 }
 
 export function OverflowButton({ onPress }: { onPress: () => void }) {
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityLabel="Open actions"
+      accessibilityRole="button"
       hitSlop={10}
       style={({ pressed }) => [
         styles.overflowButton,
@@ -249,6 +299,7 @@ export function DatePickerField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const styles = useStyles();
   const [iosPickerOpen, setIosPickerOpen] = useState(false);
   const [iosDraftDate, setIosDraftDate] = useState(() => parseIsoDate(value));
   const selectedDate = parseIsoDate(value);
@@ -451,6 +502,7 @@ function CalendarQuickChip({
   selected: boolean;
   onPress: () => void;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       style={({ pressed }) => [
@@ -542,6 +594,7 @@ function offsetDate(date: Date, dayOffset: number) {
 }
 
 export function KeyboardDoneAccessory({ nativeID }: { nativeID: string }) {
+  const styles = useStyles();
   if (Platform.OS !== "ios") {
     return null;
   }

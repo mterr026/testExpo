@@ -4,22 +4,29 @@ import type {
   BackupMetadata,
   Bill,
   BillCycleInstance,
-  NotificationSettings,
+  BudgetingPreferences,
+  Envelope,
   NewActivityLogEntry,
   NewBackupMetadata,
+  NotificationSettings,
   Paycheck,
   Profile,
   Purchase,
+  TransactionalDatabaseExecutor,
 } from "@/database/repositories/types";
 
 import {
   writeBackupPackageToDevice,
   type WrittenBackupFile,
 } from "./BackupFileExport";
+import { pickAndReadBackupFile } from "./BackupFileImport";
 import {
   BUDGET_FLOW_BACKUP_SCHEMA_VERSION,
   countBackupRecords,
+  parseBudgetFlowBackupJson,
 } from "./BackupContract";
+import { createBackupFileName } from "./backupPaths";
+import { restoreBackupPayload } from "./BackupRestoreWriter";
 
 type BackupProfileRepository = {
   findActive(): Promise<Profile | null>;
@@ -49,6 +56,14 @@ type BackupNotificationSettingsRepository = {
   findByProfileId(profileId: string): Promise<NotificationSettings | null>;
 };
 
+type BackupEnvelopeRepository = {
+  findAll(profileId: string): Promise<Envelope[]>;
+};
+
+type BackupBudgetingPreferencesRepository = {
+  findByProfileId(profileId: string): Promise<BudgetingPreferences | null>;
+};
+
 type BackupMetadataRepository = {
   create(input: NewBackupMetadata): Promise<BackupMetadata>;
 };
@@ -61,14 +76,21 @@ type BackupPackageWriter = (
   exportPackage: BudgetFlowBackupExportPackage
 ) => Promise<WrittenBackupFile>;
 
+type BackupFilePicker = () => Promise<{
+  fileName: string;
+  jsonText: string;
+} | null>;
+
 export type BudgetFlowBackupPayload = {
-  schemaVersion: 1;
+  schemaVersion: typeof BUDGET_FLOW_BACKUP_SCHEMA_VERSION;
   exportedAt: string;
   profile: Profile;
   records: {
     balanceAdjustments: BalanceAdjustment[];
     billCycleInstances: BillCycleInstance[];
     bills: Bill[];
+    budgetingPreferences: BudgetingPreferences | null;
+    envelopes: Envelope[];
     notificationSettings: NotificationSettings | null;
     paychecks: Paycheck[];
     purchases: Purchase[];
@@ -87,10 +109,19 @@ export type BudgetFlowBackupExportResult = WrittenBackupFile & {
   metadata: BackupMetadata;
 };
 
+export type BudgetFlowBackupRestoreResult = {
+  fileName: string | null;
+  metadata: BackupMetadata;
+  profileId: string;
+  recordCount: number;
+};
+
 type BackupServiceOptions = {
   activityLogRepository?: BackupActivityLogRepository;
   backupMetadataRepository?: BackupMetadataRepository;
+  database?: TransactionalDatabaseExecutor;
   now?: () => Date;
+  pickBackupFile?: BackupFilePicker;
   writeBackupPackage?: BackupPackageWriter;
 };
 
@@ -103,6 +134,8 @@ export class BackupService {
     private readonly purchaseRepository: BackupPurchaseRepository,
     private readonly balanceAdjustmentRepository: BackupBalanceAdjustmentRepository,
     private readonly notificationSettingsRepository: BackupNotificationSettingsRepository,
+    private readonly envelopeRepository: BackupEnvelopeRepository,
+    private readonly budgetingPreferencesRepository: BackupBudgetingPreferencesRepository,
     private readonly options: BackupServiceOptions = {}
   ) {}
 
@@ -116,12 +149,16 @@ export class BackupService {
     const [
       balanceAdjustments,
       bills,
+      budgetingPreferences,
+      envelopes,
       notificationSettings,
       paychecks,
       purchases,
     ] = await Promise.all([
       this.balanceAdjustmentRepository.findAll(profile.id),
       this.billRepository.findAll(profile.id),
+      this.budgetingPreferencesRepository.findByProfileId(profile.id),
+      this.envelopeRepository.findAll(profile.id),
       this.notificationSettingsRepository.findByProfileId(profile.id),
       this.paycheckRepository.findAll(profile.id),
       this.purchaseRepository.findAll(profile.id),
@@ -137,6 +174,8 @@ export class BackupService {
       balanceAdjustments,
       billCycleInstances,
       bills,
+      budgetingPreferences,
+      envelopes,
       notificationSettings,
       paychecks,
       purchases,
@@ -191,6 +230,74 @@ export class BackupService {
     };
   }
 
+  async restoreFromJson(
+    jsonText: string,
+    sourceFileName: string | null = null
+  ): Promise<BudgetFlowBackupRestoreResult> {
+    const payload = parseBudgetFlowBackupJson(jsonText);
+
+    return this.restoreFromPayload(payload, sourceFileName);
+  }
+
+  async restoreFromPayload(
+    payload: BudgetFlowBackupPayload,
+    sourceFileName: string | null = null
+  ): Promise<BudgetFlowBackupRestoreResult> {
+    const backupMetadataRepository = this.options.backupMetadataRepository;
+    const database = this.options.database;
+
+    if (!backupMetadataRepository) {
+      throw new Error("Backup restore requires a backup metadata repository.");
+    }
+
+    if (!database) {
+      throw new Error("Backup restore requires a database executor.");
+    }
+
+    const activeProfile = await this.profileRepository.findActive();
+
+    if (!activeProfile) {
+      throw new Error("Backup restore requires an active profile.");
+    }
+
+    const restoreResult = await restoreBackupPayload(
+      database,
+      payload,
+      activeProfile.id,
+      sourceFileName
+    );
+    const metadata = await backupMetadataRepository.create({
+      profileId: restoreResult.profileId,
+      eventType: "restore",
+      fileName: sourceFileName,
+      recordCount: restoreResult.recordCount,
+    });
+
+    await this.options.activityLogRepository?.create({
+      profileId: restoreResult.profileId,
+      eventType: "backup_restored",
+      entityType: "backup",
+      summary: sourceFileName
+        ? `Restored backup ${sourceFileName} with ${restoreResult.recordCount} records.`
+        : `Restored backup with ${restoreResult.recordCount} records.`,
+    });
+
+    return {
+      ...restoreResult,
+      metadata,
+    };
+  }
+
+  async importFromDevice(): Promise<BudgetFlowBackupRestoreResult | null> {
+    const pickedFile = await this.readPickedBackupFile();
+
+    if (!pickedFile) {
+      return null;
+    }
+
+    return this.restoreFromJson(pickedFile.jsonText, pickedFile.fileName);
+  }
+
   private now() {
     return this.options.now?.() ?? new Date();
   }
@@ -200,12 +307,10 @@ export class BackupService {
       this.options.writeBackupPackage ?? writeBackupPackageToDevice
     )(exportPackage);
   }
-}
 
-function createBackupFileName(exportedAt: string) {
-  return `budget-flow-backup-${exportedAt
-    .replaceAll(":", "")
-    .replaceAll(".", "")
-    .replace("T", "-")
-    .replace("Z", "Z")}.json`;
+  private readPickedBackupFile() {
+    const pickBackupFile = this.options.pickBackupFile ?? pickAndReadBackupFile;
+
+    return pickBackupFile();
+  }
 }

@@ -1,9 +1,11 @@
+import { useEffect, useRef } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -13,7 +15,9 @@ import {
   DatePickerField,
   KeyboardDoneAccessory,
 } from "@/shared/ui/components";
-import { styles } from "@/shared/ui/styles";
+import { hapticConfirm } from "@/shared/ui/haptics";
+import { SheetDragHandle } from "@/shared/ui/SheetDragHandle";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type { PaycheckIncomeRole, PaycheckRecurrence } from "@/shared/ui/types";
 
 type PaycheckEntryModalProps = {
@@ -53,7 +57,31 @@ export function PaycheckEntryModal({
   onSave,
   onClose,
 }: PaycheckEntryModalProps) {
+  const styles = useStyles();
   const isEditing = mode === "edit";
+  const amountInputRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (!visible || isEditing) {
+      return;
+    }
+
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+
+    const timer = setTimeout(() => {
+      amountInputRef.current?.focus();
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [visible, isEditing]);
+
+  async function handleSave() {
+    void hapticConfirm();
+    await onSave();
+  }
 
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -62,121 +90,135 @@ export function PaycheckEntryModal({
         style={styles.modalOverlay}
       >
         <Pressable style={styles.modalBackdrop} onPress={Keyboard.dismiss} />
-        <View style={styles.sheet}>
-          <Text style={styles.sectionTitle}>
-            {isEditing ? "Edit Income" : "Record Income"}
-          </Text>
-          <Text style={styles.helpText}>
-            Record expected income to keep pay cycles accurate.
-          </Text>
-
-          <Text style={styles.inputLabel}>Source</Text>
-          <TextInput
-            style={[styles.input, styles.purchaseInput]}
-            placeholder="Main job, side work..."
-            returnKeyType="done"
-            onSubmitEditing={Keyboard.dismiss}
-            value={label}
-            onChangeText={onLabelChange}
-          />
-
-          <Text style={styles.inputLabel}>Amount</Text>
-          <TextInput
-            style={[styles.input, styles.purchaseInput]}
-            placeholder="0.00"
-            keyboardType="decimal-pad"
-            inputAccessoryViewID={amountAccessoryId}
-            returnKeyType="done"
-            onSubmitEditing={Keyboard.dismiss}
-            value={amount}
-            onChangeText={onAmountChange}
-          />
-
-          <DatePickerField
-            label="Pay date"
-            value={expectedDate}
-            onChange={onExpectedDateChange}
-          />
-
-          <Text style={styles.inputLabel}>Income type</Text>
-          <View style={styles.paycheckRecurrenceChipRow}>
-            {paycheckIncomeRoleOptions.map((option) => {
-              const isSelected = incomeRole === option.value;
-
-              return (
-                <Pressable
-                  key={option.value}
-                  style={({ pressed }) => [
-                    styles.filterChip,
-                    isSelected && styles.filterChipActive,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() => onIncomeRoleChange(option.value)}
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      isSelected && styles.filterChipTextActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text style={styles.inputLabel}>Repeats</Text>
-          <View style={styles.paycheckRecurrenceChipRow}>
-            {paycheckRecurrenceOptions.map((option) => {
-              const isSelected = recurrence === option.value;
-
-              return (
-                <Pressable
-                  key={option.value}
-                  style={({ pressed }) => [
-                    styles.filterChip,
-                    isSelected && styles.filterChipActive,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() => onRecurrenceChange(option.value)}
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      isSelected && styles.filterChipTextActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {!!error && <Text style={styles.errorText}>{error}</Text>}
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButtonTight,
-              pressed && styles.pressed,
-            ]}
-            onPress={onSave}
+        <View style={[styles.sheet, styles.sheetScrollable]}>
+          <SheetDragHandle />
+          <ScrollView
+            ref={scrollRef}
+            automaticallyAdjustKeyboardInsets
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.sheetScrollContent}
           >
-            <Text style={styles.primaryButtonText}>
-              Save Income
+            <Text style={styles.sectionTitle}>
+              {isEditing ? "Edit Income" : "Record Income"}
             </Text>
-          </Pressable>
+            <Text style={styles.helpText}>
+              {isEditing
+                ? "Update income details to keep pay cycles accurate."
+                : "Enter the amount first — source label is optional."}
+            </Text>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.cancelButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={onClose}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </Pressable>
+            <Text style={styles.inputLabel}>Amount</Text>
+            <TextInput
+              ref={amountInputRef}
+              style={[
+                styles.input,
+                styles.purchaseInput,
+                styles.purchaseAmountHeroInput,
+              ]}
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+              inputAccessoryViewID={amountAccessoryId}
+              returnKeyType="done"
+              onSubmitEditing={Keyboard.dismiss}
+              value={amount}
+              onChangeText={onAmountChange}
+            />
+
+            <Text style={styles.inputLabel}>Source (optional)</Text>
+            <TextInput
+              style={[styles.input, styles.purchaseInput]}
+              placeholder="Main job, side work..."
+              returnKeyType="done"
+              onSubmitEditing={Keyboard.dismiss}
+              value={label}
+              onChangeText={onLabelChange}
+            />
+
+            <DatePickerField
+              label="Pay date"
+              value={expectedDate}
+              onChange={onExpectedDateChange}
+            />
+
+            <Text style={styles.inputLabel}>Income type</Text>
+            <View style={styles.paycheckRecurrenceChipRow}>
+              {paycheckIncomeRoleOptions.map((option) => {
+                const isSelected = incomeRole === option.value;
+
+                return (
+                  <Pressable
+                    key={option.value}
+                    style={({ pressed }) => [
+                      styles.filterChip,
+                      isSelected && styles.filterChipActive,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => onIncomeRoleChange(option.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        isSelected && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={styles.inputLabel}>Repeats</Text>
+            <View style={styles.paycheckRecurrenceChipRow}>
+              {paycheckRecurrenceOptions.map((option) => {
+                const isSelected = recurrence === option.value;
+
+                return (
+                  <Pressable
+                    key={option.value}
+                    style={({ pressed }) => [
+                      styles.filterChip,
+                      isSelected && styles.filterChipActive,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => onRecurrenceChange(option.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        isSelected && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.primaryButtonTight,
+                pressed && styles.pressed,
+              ]}
+              onPress={handleSave}
+            >
+              <Text style={styles.primaryButtonText}>Save Income</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.cancelButton,
+                pressed && styles.pressed,
+              ]}
+              onPress={onClose}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </Pressable>
+          </ScrollView>
           <KeyboardDoneAccessory nativeID={amountAccessoryId} />
         </View>
       </KeyboardAvoidingView>

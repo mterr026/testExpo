@@ -3,22 +3,28 @@ import { useEffect, useState } from "react";
 import type { NotificationSettings } from "@/database/repositories/types";
 import { getAppRuntime } from "@/shared/services/appRuntime";
 
-import { getOrCreateActiveProfile } from "@/features/app/homeData";
+import { getOrCreateActiveProfile } from "@/shared/services/activeProfile";
+import { getTodayIsoDate } from "@/shared/dates";
 
 type UseSettingsActionsInput = {
   onSettingsChanged?: () => void | Promise<void>;
   profileId?: string;
+  setBalanceCents: (balanceCents: number) => void;
   setReserveCents: (reserveCents: number) => void;
 };
 
 export function useSettingsActions({
   onSettingsChanged,
   profileId,
+  setBalanceCents,
   setReserveCents,
 }: UseSettingsActionsInput) {
   const [backupExportError, setBackupExportError] = useState("");
   const [backupExportMessage, setBackupExportMessage] = useState("");
+  const [backupImportError, setBackupImportError] = useState("");
+  const [backupImportMessage, setBackupImportMessage] = useState("");
   const [isBackupExporting, setIsBackupExporting] = useState(false);
+  const [isBackupImporting, setIsBackupImporting] = useState(false);
   const [notificationError, setNotificationError] = useState("");
   const [notificationSettings, setNotificationSettings] =
     useState<NotificationSettings | null>(null);
@@ -59,6 +65,23 @@ export function useSettingsActions({
     };
   }, [profileId]);
 
+  async function updateBalance(targetBalanceCents: number) {
+    const runtime = await getAppRuntime();
+    const profile = await getOrCreateActiveProfile(runtime);
+    const snapshot = await runtime.services.dashboardService.loadDashboardSnapshot(
+      getTodayIsoDate()
+    );
+    const previousBalanceCents = snapshot.safeToSpend.runningBalanceCents;
+
+    await runtime.services.settingsService.adjustCurrentBalance(
+      profile.id,
+      previousBalanceCents,
+      targetBalanceCents
+    );
+    setBalanceCents(targetBalanceCents);
+    await onSettingsChanged?.();
+  }
+
   async function updateReserve(nextReserveCents: number) {
     const runtime = await getAppRuntime();
     const profile = await getOrCreateActiveProfile(runtime);
@@ -79,19 +102,42 @@ export function useSettingsActions({
       (await runtime.services.settingsService.getOrCreateNotificationSettings(
         profile.id
       ));
+    const turningOn = !currentSettings.notificationsEnabled;
 
     try {
       setIsNotificationSaving(true);
+      setNotificationError("");
+
+      if (turningOn) {
+        const permission =
+          await runtime.services.notificationService.requestNotificationPermission();
+
+        if (permission === "unavailable") {
+          setNotificationError(
+            "Notifications are not available in this build. Rebuild the app with npx expo run:ios, then try again."
+          );
+          return;
+        }
+
+        if (permission === "denied") {
+          setNotificationError(
+            "Notifications are blocked. Open iOS Settings → Notifications → expo-test and allow alerts."
+          );
+          return;
+        }
+      }
+
       const updatedSettings =
         await runtime.services.settingsService.updateNotificationSettings(
           profile.id,
           {
-            notificationsEnabled: !currentSettings.notificationsEnabled,
+            notificationsEnabled: turningOn,
           }
         );
 
       setNotificationSettings(updatedSettings);
       setNotificationError("");
+      await onSettingsChanged?.();
     } catch {
       setNotificationError("Notification settings could not be saved.");
     } finally {
@@ -111,7 +157,7 @@ export function useSettingsActions({
       setBackupExportMessage(
         result.shared
           ? `Exported ${result.fileName} with ${result.recordCount} records.`
-          : `Saved ${result.fileName} locally with ${result.recordCount} records. Rebuild the iPhone app to enable the share sheet.`
+          : `Saved ${result.fileName} in Budget Flow Backups with ${result.recordCount} records.`
       );
     } catch {
       setBackupExportError(
@@ -122,15 +168,48 @@ export function useSettingsActions({
     }
   }
 
+  async function importBackup() {
+    try {
+      setIsBackupImporting(true);
+      setBackupImportError("");
+      setBackupImportMessage("");
+
+      const runtime = await getAppRuntime();
+      const result = await runtime.services.backupService.importFromDevice();
+
+      if (!result) {
+        return;
+      }
+
+      setBackupImportMessage(
+        `Restored ${result.fileName ?? "backup"} with ${result.recordCount} records.`
+      );
+      await onSettingsChanged?.();
+    } catch (error) {
+      setBackupImportError(
+        error instanceof Error
+          ? error.message
+          : "Backup could not be restored. Choose a valid Budget Flow backup file."
+      );
+    } finally {
+      setIsBackupImporting(false);
+    }
+  }
+
   return {
     backupExportError,
     backupExportMessage,
+    backupImportError,
+    backupImportMessage,
     exportBackup,
+    importBackup,
     isBackupExporting,
+    isBackupImporting,
     isNotificationSaving,
     notificationError,
     notificationSettings,
     toggleNotifications,
+    updateBalance,
     updateReserve,
   };
 }

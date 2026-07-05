@@ -6,10 +6,12 @@ import type {
 } from "@/database/repositories/types";
 import type { BillCycleWindow } from "@/engine";
 import type { BillService } from "@/features/bills/services";
-import { getDefaultImportIncomeExpectedDate } from "@/features/import/importBillCycle";
+import {
+  getDefaultImportIncomeExpectedDateForRecurrence,
+} from "@/features/import/importBillCycle";
+import { getTodayIsoDate } from "@/shared/dates";
 import type { PaycheckService } from "@/features/paychecks/services";
 
-import { getTodayIsoDate } from "@/features/app/homeData";
 import { parseCsvImportSuggestions } from "./CsvImportParser";
 
 type ImportServiceOptions = {
@@ -130,6 +132,7 @@ export class ImportService {
   async confirmSuggestionAsBill(
     id: string,
     billDetails: {
+      billType?: NewBill["billType"];
       cycle?: BillCycleWindow | null;
       dueDateAbsolute?: string | null;
       dueDayOfCycle?: number | null;
@@ -143,6 +146,7 @@ export class ImportService {
   async confirmSuggestionAsBill(
     id: string,
     billDetails: {
+      billType?: NewBill["billType"];
       cycle?: BillCycleWindow | null;
       dueDateAbsolute?: string | null;
       dueDayOfCycle?: number | null;
@@ -166,7 +170,7 @@ export class ImportService {
     const newBill: NewBill = {
       profileId: suggestion.profileId,
       name: billDetails.name?.trim() || suggestion.suggestedName,
-      billType: "fixed",
+      billType: billDetails.billType ?? "fixed",
       defaultAmountCents:
         billDetails.suggestedAmountCents ?? suggestion.suggestedAmountCents,
       recurrenceInterval: mapSuggestionIntervalToBillInterval(
@@ -227,8 +231,9 @@ export class ImportService {
       amountCents: incomeDetails.amountCents ?? suggestion.suggestedAmountCents,
       expectedDate:
         incomeDetails.expectedDate ??
-        getDefaultImportIncomeExpectedDate({
+        getDefaultImportIncomeExpectedDateForRecurrence({
           detectedInterval: suggestion.detectedInterval,
+          recurrenceInterval,
           suggestedDate: suggestion.suggestedDate,
           today,
         }),

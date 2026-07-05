@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type {
+  BalanceAdjustmentRepository,
   BillCycleInstanceRepository,
   BillRepository,
   PaycheckRepository,
@@ -10,6 +11,7 @@ import type {
 import type {
   Bill,
   BillCycleInstance,
+  BalanceAdjustment,
   Paycheck,
   Profile,
   Purchase,
@@ -24,6 +26,7 @@ const profile: Profile = {
   currencyCode: "USD",
   onboardingComplete: true,
   openingBalanceCents: 0,
+  tutorialComplete: true,
   createdAt: "2026-06-01T12:00:00.000Z",
   updatedAt: "2026-06-01T12:00:00.000Z",
   deletedAt: null,
@@ -56,6 +59,7 @@ const purchase: Purchase = {
   description: "Coffee",
   purchaseDate: "2026-06-02",
   paycheckCycleId: "paycheck-1",
+  envelopeId: null,
   resolvedAt: null,
   createdAt: "2026-06-01T12:00:00.000Z",
   updatedAt: "2026-06-01T12:00:00.000Z",
@@ -116,6 +120,15 @@ function createMocks() {
       findByProfile: vi.fn().mockResolvedValue([]),
       create: vi.fn(),
     },
+    balanceAdjustmentRepository: {
+      findAll: vi.fn().mockResolvedValue([]),
+    },
+    budgetingPreferencesRepository: {
+      findByProfileId: vi.fn().mockResolvedValue(null),
+    },
+    envelopeRepository: {
+      findAll: vi.fn().mockResolvedValue([]),
+    },
   };
 }
 
@@ -125,7 +138,10 @@ function createService(mocks: ReturnType<typeof createMocks>) {
     mocks.paycheckRepository as unknown as PaycheckRepository,
     mocks.purchaseRepository as unknown as PurchaseRepository,
     mocks.billRepository as unknown as BillRepository,
-    mocks.billCycleInstanceRepository as unknown as BillCycleInstanceRepository
+    mocks.billCycleInstanceRepository as unknown as BillCycleInstanceRepository,
+    mocks.balanceAdjustmentRepository as unknown as BalanceAdjustmentRepository,
+    mocks.budgetingPreferencesRepository as unknown as import("@/database/repositories").BudgetingPreferencesRepository,
+    mocks.envelopeRepository as unknown as import("@/database/repositories").EnvelopeRepository
   );
 }
 
@@ -186,12 +202,105 @@ describe("DashboardService", () => {
       balanceAdjustmentsCents: 0,
       runningBalanceCents: 197500,
       essentialReserveCents: 10000,
+      envelopeReservedCents: 0,
       safeToSpendCents: 137500,
     });
+    expect(mocks.budgetingPreferencesRepository.findByProfileId).toHaveBeenCalledWith(
+      "profile-1"
+    );
+    expect(mocks.envelopeRepository.findAll).toHaveBeenCalledWith("profile-1");
     expect(mocks.billCycleInstanceRepository.findByCycle).toHaveBeenCalledWith(
       "paycheck-1"
     );
     expect(mocks.billCycleInstanceRepository.create).not.toHaveBeenCalled();
+  });
+
+  it("loadDashboardSnapshot_reserves_envelope_remaining_in_safe_to_spend", async () => {
+    const mocks = createMocks();
+    mocks.profileRepository.findActive.mockResolvedValue(profile);
+    mocks.paycheckRepository.findAll.mockResolvedValue([paycheck]);
+    mocks.billRepository.findAll.mockResolvedValue([]);
+    mocks.purchaseRepository.findAll.mockResolvedValue([
+      {
+        ...purchase,
+        envelopeId: "envelope-1",
+      },
+    ]);
+    mocks.budgetingPreferencesRepository.findByProfileId.mockResolvedValue({
+      id: "prefs-1",
+      profileId: "profile-1",
+      envelopesEnabled: true,
+      createdAt: "2026-06-01T12:00:00.000Z",
+      updatedAt: "2026-06-01T12:00:00.000Z",
+      syncStatus: "local",
+    });
+    mocks.envelopeRepository.findAll.mockResolvedValue([
+      {
+        id: "envelope-1",
+        profileId: "profile-1",
+        name: "Groceries",
+        allocationCents: 20000,
+        sortOrder: 0,
+        isPaused: false,
+        createdAt: "2026-06-01T12:00:00.000Z",
+        updatedAt: "2026-06-01T12:00:00.000Z",
+        deletedAt: null,
+        syncStatus: "local",
+      },
+    ]);
+    mocks.billCycleInstanceRepository.findByProfile.mockResolvedValue([]);
+    mocks.billCycleInstanceRepository.findByCycle.mockResolvedValue([]);
+    const service = createService(mocks);
+
+    const snapshot = await service.loadDashboardSnapshot("2026-06-03");
+
+    expect(snapshot.envelopeSnapshot.totalReservedCents).toBe(17500);
+    expect(snapshot.safeToSpend.envelopeReservedCents).toBe(17500);
+    expect(snapshot.safeToSpend.safeToSpendCents).toBe(170000);
+  });
+
+  it("loadDashboardSnapshot_counts_envelope_spent_after_recurrence_boundary", async () => {
+    const mocks = createMocks();
+    mocks.profileRepository.findActive.mockResolvedValue(profile);
+    mocks.paycheckRepository.findAll.mockResolvedValue([paycheck]);
+    mocks.billRepository.findAll.mockResolvedValue([]);
+    mocks.purchaseRepository.findAll.mockResolvedValue([
+      {
+        ...purchase,
+        purchaseDate: "2026-07-04",
+        envelopeId: "envelope-1",
+      },
+    ]);
+    mocks.budgetingPreferencesRepository.findByProfileId.mockResolvedValue({
+      id: "prefs-1",
+      profileId: "profile-1",
+      envelopesEnabled: true,
+      createdAt: "2026-06-01T12:00:00.000Z",
+      updatedAt: "2026-06-01T12:00:00.000Z",
+      syncStatus: "local",
+    });
+    mocks.envelopeRepository.findAll.mockResolvedValue([
+      {
+        id: "envelope-1",
+        profileId: "profile-1",
+        name: "Groceries",
+        allocationCents: 20000,
+        sortOrder: 0,
+        isPaused: false,
+        createdAt: "2026-06-01T12:00:00.000Z",
+        updatedAt: "2026-06-01T12:00:00.000Z",
+        deletedAt: null,
+        syncStatus: "local",
+      },
+    ]);
+    mocks.billCycleInstanceRepository.findByProfile.mockResolvedValue([]);
+    mocks.billCycleInstanceRepository.findByCycle.mockResolvedValue([]);
+    const service = createService(mocks);
+
+    const snapshot = await service.loadDashboardSnapshot("2026-07-04");
+
+    expect(snapshot.envelopeSnapshot.entries[0]?.spentCents).toBe(2500);
+    expect(snapshot.envelopeSnapshot.totalReservedCents).toBe(17500);
   });
 
   it("loadDashboardSnapshot_includes_profile_opening_balance_in_safe_to_spend", async () => {
@@ -214,6 +323,38 @@ describe("DashboardService", () => {
     expect(snapshot.safeToSpend.openingBalanceCents).toBe(75000);
     expect(snapshot.safeToSpend.runningBalanceCents).toBe(275000);
     expect(snapshot.safeToSpend.safeToSpendCents).toBe(265000);
+  });
+
+  it("loadDashboardSnapshot_includes_balance_adjustments_in_safe_to_spend", async () => {
+    const mocks = createMocks();
+    const balanceAdjustments: BalanceAdjustment[] = [
+      {
+        id: "adjustment-1",
+        profileId: "profile-1",
+        previousBalanceCents: 197500,
+        adjustedBalanceCents: 200000,
+        deltaCents: 2500,
+        reason: null,
+        createdAt: "2026-06-02T12:00:00.000Z",
+        deletedAt: null,
+        syncStatus: "local",
+      },
+    ];
+
+    mocks.profileRepository.findActive.mockResolvedValue(profile);
+    mocks.paycheckRepository.findAll.mockResolvedValue([paycheck]);
+    mocks.billRepository.findAll.mockResolvedValue([bill]);
+    mocks.purchaseRepository.findAll.mockResolvedValue([purchase]);
+    mocks.balanceAdjustmentRepository.findAll.mockResolvedValue(balanceAdjustments);
+    mocks.billCycleInstanceRepository.findByCycle.mockResolvedValue([billInstance]);
+    const service = createService(mocks);
+
+    const snapshot = await service.loadDashboardSnapshot("2026-06-03");
+
+    expect(mocks.balanceAdjustmentRepository.findAll).toHaveBeenCalledWith("profile-1");
+    expect(snapshot.safeToSpend.balanceAdjustmentsCents).toBe(2500);
+    expect(snapshot.safeToSpend.runningBalanceCents).toBe(200000);
+    expect(snapshot.safeToSpend.safeToSpendCents).toBe(140000);
   });
 
   it("loadDashboardSnapshot_never_persists_bill_instances_on_read", async () => {
@@ -1102,6 +1243,25 @@ describe("findActivePaycheckCycle", () => {
         "2026-06-10"
       )?.nextStartDate
     ).toBe("2026-07-01");
+  });
+
+  it("extends_received_cycle_past_recurrence_boundary_when_no_overdue_paycheck_row", () => {
+    const receivedPaycheck: Paycheck = {
+      ...paycheck,
+      id: "paycheck-received",
+      expectedDate: "2026-06-01",
+      isReceived: true,
+      receivedAt: "2026-06-01T12:00:00.000Z",
+      recurrenceInterval: "biweekly",
+    };
+
+    expect(findActivePaycheckCycle([receivedPaycheck], "2026-07-04")).toEqual({
+      cycleAnchor: receivedPaycheck,
+      nextCycleAnchor: null,
+      nextStartDate: "9999-12-31",
+      paycheckCycleId: "paycheck-received",
+      startDate: "2026-06-01",
+    });
   });
 
   it("prefers_primary_income_when_choosing_the_active_cycle", () => {

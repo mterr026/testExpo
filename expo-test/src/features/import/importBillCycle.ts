@@ -2,7 +2,15 @@ import {
   OPEN_ENDED_PAYCHECK_CYCLE_DATE,
   type BillCycleWindow,
 } from "@/engine";
+import type { PaycheckRecurrenceInterval } from "@/database/repositories/types";
 import type { DashboardSnapshot } from "@/features/dashboard/services";
+
+type ImportScheduleInterval =
+  | "weekly"
+  | "biweekly"
+  | "monthly"
+  | "quarterly"
+  | "irregular";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -43,7 +51,7 @@ export function getDefaultImportBillDueDate({
   suggestedDate,
   today,
 }: {
-  detectedInterval?: "weekly" | "biweekly" | "monthly" | "quarterly" | "irregular";
+  detectedInterval?: ImportScheduleInterval;
   suggestedDate: string | null | undefined;
   today: string;
 }) {
@@ -55,11 +63,49 @@ export function getDefaultImportIncomeExpectedDate({
   suggestedDate,
   today,
 }: {
-  detectedInterval?: "weekly" | "biweekly" | "monthly" | "quarterly" | "irregular";
+  detectedInterval?: ImportScheduleInterval;
   suggestedDate: string | null | undefined;
   today: string;
 }) {
   return getDefaultImportScheduleDate({ detectedInterval, suggestedDate, today });
+}
+
+export function mapPaycheckRecurrenceIntervalToImportScheduleInterval(
+  interval: PaycheckRecurrenceInterval | null | undefined
+): ImportScheduleInterval | undefined {
+  switch (interval) {
+    case "weekly":
+    case "biweekly":
+    case "monthly":
+      return interval;
+    case "semimonthly":
+      return "monthly";
+    case undefined:
+    case null:
+      return undefined;
+  }
+}
+
+export function getDefaultImportIncomeExpectedDateForRecurrence({
+  detectedInterval = "monthly",
+  recurrenceInterval,
+  suggestedDate,
+  today,
+}: {
+  detectedInterval?: ImportScheduleInterval;
+  recurrenceInterval?: PaycheckRecurrenceInterval | null;
+  suggestedDate: string | null | undefined;
+  today: string;
+}) {
+  const scheduleInterval =
+    mapPaycheckRecurrenceIntervalToImportScheduleInterval(recurrenceInterval) ??
+    detectedInterval;
+
+  return getDefaultImportIncomeExpectedDate({
+    detectedInterval: scheduleInterval,
+    suggestedDate,
+    today,
+  });
 }
 
 export function getDefaultImportScheduleDate({
@@ -67,7 +113,7 @@ export function getDefaultImportScheduleDate({
   suggestedDate,
   today,
 }: {
-  detectedInterval?: "weekly" | "biweekly" | "monthly" | "quarterly" | "irregular";
+  detectedInterval?: ImportScheduleInterval;
   suggestedDate: string | null | undefined;
   today: string;
 }) {
@@ -93,7 +139,7 @@ function isIsoDate(value: string) {
 function advanceDateToTodayOrLater(
   startDate: string,
   today: string,
-  interval: "weekly" | "biweekly" | "monthly" | "quarterly" | "irregular"
+  interval: ImportScheduleInterval
 ) {
   switch (interval) {
     case "weekly":

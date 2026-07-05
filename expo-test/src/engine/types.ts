@@ -131,7 +131,9 @@ export type CreateActivityLogEntryInput = {
 
 export type EnginePaycheck = {
   amountCents: Cents;
+  expectedDate?: string;
   isReceived: boolean;
+  receivedAt?: string | null;
   deletedAt?: string | null;
 };
 
@@ -143,7 +145,9 @@ export type EnginePurchase = {
 
 export type EngineBillInstance = {
   cycleAmountCents: Cents;
+  dueDate?: string;
   isPaid: boolean;
+  paidAt?: string | null;
   deletedAt?: string | null;
 };
 
@@ -158,7 +162,9 @@ export type SafeToSpendInput = {
   billInstances: EngineBillInstance[];
   balanceAdjustments: EngineBalanceAdjustment[];
   openingBalanceCents?: Cents;
+  openingBalanceAsOfDate?: string | null;
   essentialReserveCents: Cents;
+  envelopeReservedCents?: Cents;
 };
 
 export type SafeToSpendBreakdown = {
@@ -171,5 +177,6 @@ export type SafeToSpendBreakdown = {
   balanceAdjustmentsCents: Cents;
   runningBalanceCents: Cents;
   essentialReserveCents: Cents;
+  envelopeReservedCents: Cents;
   safeToSpendCents: Cents;
 };

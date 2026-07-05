@@ -4,13 +4,23 @@ import { parseDollarInputToCents } from "@/shared/currency";
 import type { Purchase } from "@/shared/ui/types";
 import { getAppRuntime } from "@/shared/services/appRuntime";
 
-import { getOrCreateActiveProfile, getTodayIsoDate } from "@/features/app/homeData";
+import { getOrCreateActiveProfile } from "@/shared/services/activeProfile";
+import { getTodayIsoDate } from "@/shared/dates";
+
+const DEFAULT_PURCHASE_DESCRIPTION = "Purchase";
+
+export type PurchaseEntryPrefill = {
+  amountCents?: number;
+  description?: string;
+};
 
 type UsePurchaseEntryControllerInput = {
+  envelopesEnabled?: boolean;
   onPurchasesChanged?: () => void | Promise<void>;
 };
 
 export function usePurchaseEntryController({
+  envelopesEnabled = false,
   onPurchasesChanged,
 }: UsePurchaseEntryControllerInput = {}) {
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
@@ -19,14 +29,19 @@ export function usePurchaseEntryController({
   const [purchaseAmount, setPurchaseAmount] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(getTodayIsoDate());
   const [purchaseStatus, setPurchaseStatus] =
-    useState<Purchase["status"]>("Pending");
+    useState<Purchase["status"]>("Charged");
+  const [purchaseEnvelopeId, setPurchaseEnvelopeId] = useState<string | null>(
+    null
+  );
   const [purchaseError, setPurchaseError] = useState("");
+  const [addFormResetKey, setAddFormResetKey] = useState(0);
 
-  async function savePurchase() {
+  async function savePurchase(options: { addAnother?: boolean } = {}) {
     const amountCents = parseDollarInputToCents(purchaseAmount);
+    const description = purchaseName.trim() || DEFAULT_PURCHASE_DESCRIPTION;
 
-    if (!purchaseName.trim() || amountCents === null) {
-      setPurchaseError("Enter a description and an amount above $0.");
+    if (amountCents === null) {
+      setPurchaseError("Enter an amount above $0.");
       return;
     }
 
@@ -39,13 +54,17 @@ export function usePurchaseEntryController({
       const runtime = await getAppRuntime();
       const state = purchaseStatus === "Pending" ? "pending" : "charged";
 
+      const envelopeId = purchaseEnvelopeId;
+
       if (editingPurchase) {
         await runtime.services.purchaseService.updatePurchase(editingPurchase.id, {
           amountCents,
-          description: purchaseName.trim(),
+          description,
           purchaseDate,
           state,
+          envelopeId,
         });
+        closePurchaseModal();
       } else {
         const profile = await getOrCreateActiveProfile(runtime);
 
@@ -53,35 +72,51 @@ export function usePurchaseEntryController({
           profileId: profile.id,
           amountCents,
           state,
-          description: purchaseName.trim(),
+          description,
           purchaseDate,
+          envelopeId,
         });
+
+        if (options.addAnother) {
+          resetAddForm();
+          setAddFormResetKey((key) => key + 1);
+        } else {
+          closePurchaseModal();
+        }
       }
-      closePurchaseModal();
+
       await onPurchasesChanged?.();
     } catch {
       setPurchaseError("Purchase could not be saved.");
     }
   }
 
-  function closePurchaseModal() {
+  function resetAddForm(prefill?: PurchaseEntryPrefill) {
     setEditingPurchase(null);
-    setPurchaseName("");
-    setPurchaseAmount("");
+    setPurchaseName(prefill?.description ?? "");
+    setPurchaseAmount(
+      prefill?.amountCents != null
+        ? (prefill.amountCents / 100).toFixed(2)
+        : ""
+    );
     setPurchaseDate(getTodayIsoDate());
-    setPurchaseStatus("Pending");
+    setPurchaseStatus("Charged");
+    setPurchaseEnvelopeId(null);
     setPurchaseError("");
+  }
+
+  function closePurchaseModal() {
+    resetAddForm();
     setPurchaseModalOpen(false);
   }
 
-  function openAddPurchase() {
-    setEditingPurchase(null);
-    setPurchaseName("");
-    setPurchaseAmount("");
-    setPurchaseDate(getTodayIsoDate());
-    setPurchaseStatus("Pending");
-    setPurchaseError("");
+  function openAddPurchase(prefill?: PurchaseEntryPrefill) {
+    resetAddForm(prefill);
     setPurchaseModalOpen(true);
+  }
+
+  function openAddPurchaseWithPrefill(prefill?: PurchaseEntryPrefill) {
+    openAddPurchase(prefill);
   }
 
   function openPurchaseEdit(purchase: Purchase) {
@@ -90,6 +125,7 @@ export function usePurchaseEntryController({
     setPurchaseAmount((purchase.amountCents / 100).toFixed(2));
     setPurchaseDate(purchase.purchaseDate);
     setPurchaseStatus(purchase.status);
+    setPurchaseEnvelopeId(purchase.envelopeId);
     setPurchaseError("");
     setPurchaseModalOpen(true);
   }
@@ -132,15 +168,18 @@ export function usePurchaseEntryController({
     markPurchaseCharged,
     markPurchasePending,
     openAddPurchase,
+    openAddPurchaseWithPrefill,
     openPurchaseEdit,
     purchaseEntry: {
+      addFormResetKey,
       amount: purchaseAmount,
       close: closePurchaseModal,
       error: purchaseError,
       date: purchaseDate,
       mode: editingPurchase ? "edit" as const : "add" as const,
       name: purchaseName,
-      save: savePurchase,
+      save: () => savePurchase(),
+      saveAndAddAnother: () => savePurchase({ addAnother: true }),
       setAmount: (text: string) => {
         setPurchaseAmount(text);
         setPurchaseError("");
@@ -157,6 +196,11 @@ export function usePurchaseEntryController({
         setPurchaseStatus(status);
         setPurchaseError("");
       },
+      setEnvelopeId: (envelopeId: string | null) => {
+        setPurchaseEnvelopeId(envelopeId);
+        setPurchaseError("");
+      },
+      envelopeId: purchaseEnvelopeId,
       status: purchaseStatus,
       visible: purchaseModalOpen,
     },

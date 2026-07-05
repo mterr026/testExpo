@@ -25,7 +25,8 @@ import {
 import { mapRepositoryPaycheckToListItem } from "@/features/paychecks/adapters/paycheckViewAdapters";
 import { getPrimaryPaychecks } from "@/features/paychecks/paycheckSchedule";
 import { mapRepositoryPurchaseToPrototype } from "@/features/purchases/adapters/purchaseViewAdapters";
-import { getTodayIsoDate } from "@/features/app/homeData";
+import { formatDashboardCycleLabel } from "@/features/dashboard/dashboardCycleLabel";
+import { getTodayIsoDate } from "@/shared/dates";
 
 type UseHomeDerivedDataInput = {
   balanceCents: number;
@@ -202,17 +203,19 @@ export function useHomeDerivedData({
     return buildDashboardUpcomingBills(activeSnapshot, bills);
   }, [activeSnapshot, bills]);
 
+  const dashboardUpcomingPaychecks = useMemo(() => {
+    return buildDashboardUpcomingPaychecks(activeSnapshot);
+  }, [activeSnapshot]);
+
   const billCycleLabel = useMemo(() => {
-    if (!activeSnapshot?.activeCycleStartDate || !activeSnapshot.activeCycleEndDate) {
+    if (!activeSnapshot?.activeCycleStartDate) {
       return "No active paycheck cycle";
     }
 
-    const startDate = activeSnapshot.activeCycleStartDate;
-    const nextDate = activeSnapshot.activeCycleEndDate;
-
-    return nextDate !== OPEN_ENDED_PAYCHECK_CYCLE_DATE
-      ? `Paycheck cycle ${startDate} to ${nextDate}`
-      : `Paycheck cycle starting ${startDate}`;
+    return formatDashboardCycleLabel(
+      activeSnapshot.activeCycleStartDate,
+      activeSnapshot.activeCycleEndDate
+    );
   }, [activeSnapshot]);
 
   const nextCyclePreview = useMemo<NextCyclePreview>(() => {
@@ -297,11 +300,23 @@ export function useHomeDerivedData({
     nextCyclePreview,
     paycheckBillCoverage,
     dashboardUpcomingBills,
+    dashboardUpcomingPaychecks,
     visibleBills,
     visiblePaychecks,
     visiblePurchases,
     purchaseCycleContext,
   };
+}
+
+export function isDateInActivePaycheckCycle(
+  date: string,
+  startDate: string,
+  endDate: string
+) {
+  return (
+    date >= startDate &&
+    (endDate === OPEN_ENDED_PAYCHECK_CYCLE_DATE || date < endDate)
+  );
 }
 
 export function buildDashboardUpcomingBills(
@@ -310,14 +325,6 @@ export function buildDashboardUpcomingBills(
 ): Bill[] {
   if (!dashboardSnapshot) {
     return fallbackBills;
-  }
-
-  if (dashboardSnapshot.billInstances.length > 0) {
-    return dashboardSnapshot.billInstances
-      .filter((billInstance) => !billInstance.isPaid)
-      .map((billInstance) =>
-        mapRepositoryBillInstanceToPrototype(billInstance, dashboardSnapshot.bills)
-      );
   }
 
   if (
@@ -330,11 +337,18 @@ export function buildDashboardUpcomingBills(
 
   const activeCycleStartDate = dashboardSnapshot.activeCycleStartDate;
   const activeCycleEndDate = dashboardSnapshot.activeCycleEndDate;
-  const activeCycleExistingInstances = dashboardSnapshot.allBillInstances.filter(
+  const dedupedBillInstances = mergeBillInstancesForDisplay(
+    dashboardSnapshot.billInstances,
+    dashboardSnapshot.allBillInstances
+  );
+  const activeCycleExistingInstances = dedupedBillInstances.filter(
     (billInstance) =>
       !billInstance.isPaid &&
-      activeCycleStartDate <= billInstance.dueDate &&
-      billInstance.dueDate < activeCycleEndDate
+      isDateInActivePaycheckCycle(
+        billInstance.dueDate,
+        activeCycleStartDate,
+        activeCycleEndDate
+      )
   );
 
   if (activeCycleExistingInstances.length > 0) {
@@ -359,6 +373,34 @@ export function buildDashboardUpcomingBills(
   );
 
   return generatedBills.length > 0 ? generatedBills : [];
+}
+
+export function buildDashboardUpcomingPaychecks(
+  dashboardSnapshot: DashboardSnapshot | null
+) {
+  if (!dashboardSnapshot) {
+    return [];
+  }
+
+  const unreceivedPaychecks = dashboardSnapshot.paychecks
+    .map(mapRepositoryPaycheckToListItem)
+    .filter((paycheck) => !paycheck.isReceived);
+
+  if (
+    !dashboardSnapshot.activeCyclePaycheckId ||
+    !dashboardSnapshot.activeCycleStartDate ||
+    !dashboardSnapshot.activeCycleEndDate
+  ) {
+    return unreceivedPaychecks;
+  }
+
+  return unreceivedPaychecks.filter((paycheck) =>
+    isDateInActivePaycheckCycle(
+      paycheck.expectedDate,
+      dashboardSnapshot.activeCycleStartDate!,
+      dashboardSnapshot.activeCycleEndDate!
+    )
+  );
 }
 
 function mapSavedBillsForDashboard(

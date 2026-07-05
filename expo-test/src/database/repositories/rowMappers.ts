@@ -4,6 +4,8 @@ import type {
   BackupMetadata,
   Bill,
   BillCycleInstance,
+  BudgetingPreferences,
+  Envelope,
   ImportSuggestion,
   NotificationSettings,
   Paycheck,
@@ -19,6 +21,8 @@ export type ProfileRow = {
   currency_code: string;
   onboarding_complete: number;
   opening_balance_cents: number;
+  opening_balance_as_of_date: string | null;
+  tutorial_complete: number;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -98,6 +102,7 @@ export type PurchaseRow = {
   description: string | null;
   purchase_date: string;
   paycheck_cycle_id: string | null;
+  envelope_id: string | null;
   resolved_at: string | null;
   created_at: string;
   updated_at: string;
@@ -129,6 +134,28 @@ export type NotificationSettingsRow = {
   created_at: string;
   updated_at: string;
   sync_status: NotificationSettings["syncStatus"];
+};
+
+export type BudgetingPreferencesRow = {
+  id: string;
+  profile_id: string;
+  envelopes_enabled: number;
+  created_at: string;
+  updated_at: string;
+  sync_status: BudgetingPreferences["syncStatus"];
+};
+
+export type EnvelopeRow = {
+  id: string;
+  profile_id: string;
+  name: string;
+  allocation_cents: number;
+  sort_order: number;
+  is_paused: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  sync_status: Envelope["syncStatus"];
 };
 
 export type ImportSuggestionRow = {
@@ -175,6 +202,8 @@ export function mapProfileRow(row: ProfileRow): Profile {
     currencyCode: row.currency_code,
     onboardingComplete: row.onboarding_complete === 1,
     openingBalanceCents: row.opening_balance_cents,
+    openingBalanceAsOfDate: row.opening_balance_as_of_date,
+    tutorialComplete: row.tutorial_complete === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,
@@ -266,6 +295,7 @@ export function mapPurchaseRow(row: PurchaseRow): Purchase {
     description: row.description,
     purchaseDate: row.purchase_date,
     paycheckCycleId: row.paycheck_cycle_id,
+    envelopeId: row.envelope_id,
     resolvedAt: row.resolved_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -304,6 +334,34 @@ export function mapNotificationSettingsRow(
     billReminderDaysBefore: row.bill_reminder_days_before,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    syncStatus: row.sync_status,
+  };
+}
+
+export function mapBudgetingPreferencesRow(
+  row: BudgetingPreferencesRow
+): BudgetingPreferences {
+  return {
+    id: row.id,
+    profileId: row.profile_id,
+    envelopesEnabled: row.envelopes_enabled === 1,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    syncStatus: row.sync_status,
+  };
+}
+
+export function mapEnvelopeRow(row: EnvelopeRow): Envelope {
+  return {
+    id: row.id,
+    profileId: row.profile_id,
+    name: row.name,
+    allocationCents: row.allocation_cents,
+    sortOrder: row.sort_order,
+    isPaused: row.is_paused === 1,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    deletedAt: row.deleted_at,
     syncStatus: row.sync_status,
   };
 }

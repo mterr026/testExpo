@@ -72,6 +72,7 @@ export class PurchaseRepository {
       description: normalizeDescription(input.description),
       purchaseDate: input.purchaseDate,
       paycheckCycleId: input.paycheckCycleId ?? null,
+      envelopeId: input.envelopeId ?? null,
       resolvedAt: input.resolvedAt ?? null,
       createdAt,
       updatedAt: createdAt,
@@ -91,12 +92,13 @@ export class PurchaseRepository {
           description,
           purchase_date,
           paycheck_cycle_id,
+          envelope_id,
           resolved_at,
           created_at,
           updated_at,
           deleted_at,
           sync_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         purchaseToParams(purchase)
       );
       await new SyncQueueRepository(transaction, this.idFactory, this.now).enqueue({
@@ -138,6 +140,7 @@ export class PurchaseRepository {
           description = ?,
           purchase_date = ?,
           paycheck_cycle_id = ?,
+          envelope_id = ?,
           resolved_at = ?,
           updated_at = ?
         WHERE id = ? AND deleted_at IS NULL`,
@@ -147,6 +150,7 @@ export class PurchaseRepository {
           updated.description,
           updated.purchaseDate,
           updated.paycheckCycleId,
+          updated.envelopeId,
           updated.resolvedAt,
           updated.updatedAt,
           updated.id,
@@ -218,6 +222,7 @@ function purchaseSelectSql() {
     description,
     purchase_date,
     paycheck_cycle_id,
+    envelope_id,
     resolved_at,
     created_at,
     updated_at,
@@ -235,6 +240,7 @@ function purchaseToParams(purchase: Purchase) {
     purchase.description,
     purchase.purchaseDate,
     purchase.paycheckCycleId,
+    purchase.envelopeId,
     purchase.resolvedAt,
     purchase.createdAt,
     purchase.updatedAt,

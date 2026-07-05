@@ -1,18 +1,22 @@
-import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useState, type ReactElement } from "react";
+import { Pressable, Text, View } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
-  ActionMenu,
   EmptyState,
   money,
-  OverflowButton,
-  StatusPill,
-  type ActionMenuHeader,
-  type ActionMenuItem,
-  type StatusPillTone,
 } from "@/shared/ui/components";
-import { styles } from "@/shared/ui/styles";
+import { CollapseChevron } from "@/shared/ui/CollapseChevron";
+import { CollapsibleSection } from "@/shared/ui/CollapsibleSection";
+import { CycleSummaryCard } from "@/shared/ui/CycleSummaryCard";
+import { ScreenSectionTitle } from "@/shared/ui/ScreenSectionTitle";
+import { ScreenShell } from "@/shared/ui/ScreenShell";
+import { getFabScrollPadding } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type { PaycheckListItem, Purchase } from "@/shared/ui/types";
+
+import { formatDashboardCycleLabel } from "@/features/dashboard/dashboardCycleLabel";
 
 import {
   buildPurchaseCycleOptions,
@@ -23,11 +27,15 @@ import {
 } from "./purchaseCycles";
 import {
   getFilterLabel,
-  getPurchaseSummaryTitle,
   PREVIOUS_PURCHASES_PAGE_SIZE,
   purchaseFilters,
   type PurchaseFilter,
 } from "./purchaseScreenHelpers";
+import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
+import { useTutorialScrollView } from "@/features/tutorial/hooks";
+
+import { PurchaseSwipeableRow } from "./components/PurchaseSwipeableRow";
+import { formatPurchaseCycleHeaderSummary } from "./purchaseCycleHeader";
 
 type PurchasesScreenProps = {
   purchases: Purchase[];
@@ -37,6 +45,7 @@ type PurchasesScreenProps = {
   paychecks: PaycheckListItem[];
   onDeletePurchase: (id: string) => void | Promise<void>;
   onEditPurchase: (purchase: Purchase) => void;
+  onAddPurchase?: () => void;
   onMarkCharged: (id: string) => void | Promise<void>;
   onMarkPending: (id: string) => void | Promise<void>;
 };
@@ -49,9 +58,12 @@ export function PurchasesScreen({
   paychecks: paychecksProp,
   onDeletePurchase,
   onEditPurchase,
+  onAddPurchase,
   onMarkCharged,
   onMarkPending,
 }: PurchasesScreenProps) {
+  const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const purchases = purchasesProp ?? [];
   const paychecks = paychecksProp ?? [];
   const [showPreviousCycles, setShowPreviousCycles] = useState(false);
@@ -61,7 +73,7 @@ export function PurchasesScreen({
   const [cycleVisibleCounts, setCycleVisibleCounts] = useState<
     Record<string, number>
   >({});
-  const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
+  const [openSwipePurchaseId, setOpenSwipePurchaseId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<PurchaseFilter>("All");
   const cycleContext = {
     activeCyclePaycheckId,
@@ -70,36 +82,72 @@ export function PurchasesScreen({
     paychecks,
   };
   const cycleOptions = buildPurchaseCycleOptions(purchases, cycleContext);
-  const activeCycleOption =
-    cycleOptions.find((option) => option.id === activeCyclePaycheckId) ?? null;
   const currentCyclePurchases = activeCyclePaycheckId
     ? filterPurchasesForCycle(purchases, activeCyclePaycheckId, cycleContext)
     : [];
   const unassignedCycleOption =
     cycleOptions.find((option) => option.id === "unassigned") ?? null;
-  const previousCycleOptions = [
-    ...getArchivedPurchaseCycleOptions(cycleOptions),
-    ...(unassignedCycleOption && unassignedCycleOption.transactionCount > 0
-      ? [unassignedCycleOption]
-      : []),
-  ];
-  const purchaseActions = selectedPurchase
-    ? getPurchaseActions({
-        purchase: selectedPurchase,
-        onDeletePurchase,
-        onEditPurchase,
-        onMarkCharged,
-        onMarkPending,
-      })
-    : [];
+  const outsideCyclePurchases = filterPurchasesForCycle(
+    purchases,
+    "unassigned",
+    cycleContext
+  );
+  const hasOutsideCyclePurchases =
+    outsideCyclePurchases.length > 0 ||
+    (unassignedCycleOption?.transactionCount ?? 0) > 0;
+  const previousCycleOptions = getArchivedPurchaseCycleOptions(cycleOptions).filter(
+    (option) => option.id !== "unassigned"
+  );
   const sortedCurrentPurchases = [...currentCyclePurchases].sort(sortPurchasesByMostRecent);
+  const sortedOutsideCyclePurchases = [...outsideCyclePurchases].sort(
+    sortPurchasesByMostRecent
+  );
   const filteredPurchases = sortedCurrentPurchases.filter((purchase) =>
     activeFilter === "All" ? true : purchase.status === activeFilter
+  );
+  const filteredOutsideCyclePurchases = sortedOutsideCyclePurchases.filter(
+    (purchase) => (activeFilter === "All" ? true : purchase.status === activeFilter)
   );
   const purchaseSummary = getPurchaseSummaryForPurchases(currentCyclePurchases);
   const pendingPurchaseCount = currentCyclePurchases.filter(
     (purchase) => purchase.status === "Pending"
   ).length;
+  const cycleLabel = formatDashboardCycleLabel(
+    activeCycleStartDate,
+    activeCycleEndDate
+  );
+  const { onTutorialScroll, tutorialScrollRef } = useTutorialScrollView("Purchases");
+
+  function renderPurchaseSwipeableRow(purchase: Purchase) {
+    return (
+      <PurchaseSwipeableRow
+        key={purchase.id}
+        purchase={purchase}
+        isSwipeOpen={openSwipePurchaseId === purchase.id}
+        onDeletePurchase={onDeletePurchase}
+        onEditPurchase={onEditPurchase}
+        onMarkCharged={onMarkCharged}
+        onMarkPending={onMarkPending}
+        onSwipeClose={() =>
+          setOpenSwipePurchaseId((currentId) =>
+            currentId === purchase.id ? null : currentId
+          )
+        }
+        onSwipeOpen={setOpenSwipePurchaseId}
+      />
+    );
+  }
+
+  function renderPurchaseDateGroups(purchaseList: Purchase[], keyPrefix = "") {
+    return groupPurchasesByDate(purchaseList).map((group) => (
+      <View key={`${keyPrefix}${group.dateKey}`} style={styles.transactionDateGroup}>
+        <ScreenSectionTitle title={group.label} />
+        <View style={styles.purchaseSwipeableList}>
+          {group.purchases.map((purchase) => renderPurchaseSwipeableRow(purchase))}
+        </View>
+      </View>
+    ));
+  }
 
   function togglePreviousCycles() {
     setShowPreviousCycles((expanded) => {
@@ -146,46 +194,39 @@ export function PurchasesScreen({
 
   return (
     <ScrollView
+      ref={tutorialScrollRef}
       style={styles.content}
-      contentContainerStyle={styles.contentInner}
+      contentContainerStyle={{ paddingBottom: getFabScrollPadding(insets.bottom) }}
+      directionalLockEnabled
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
+      scrollEventThrottle={16}
+      onScroll={onTutorialScroll}
+      onScrollBeginDrag={() => setOpenSwipePurchaseId(null)}
     >
-      <View style={styles.screenHeaderRow}>
-        <View style={styles.itemCopy}>
-          <Text style={styles.sectionTitle}>Purchases</Text>
-          <Text style={styles.helpText}>Spending this pay cycle.</Text>
-        </View>
-      </View>
+      <ScreenShell
+        subtitle="Track spending for the current paycheck cycle."
+        title="Purchases"
+      />
 
-      <View style={styles.purchaseSummaryCard}>
-        <Text style={styles.dashboardHeroLabel}>{getPurchaseSummaryTitle()}</Text>
-        {activeCycleOption?.cycleWindowLabel ? (
-          <Text style={styles.purchaseSummaryCycleWindow}>
-            {activeCycleOption.cycleWindowLabel}
-          </Text>
-        ) : null}
-        <View style={styles.purchaseSummaryGrid}>
-          <PurchaseSummaryMetric
-            highlight
-            label="Total Spent"
-            value={money(purchaseSummary.totalSpentCents)}
-          />
-          <PurchaseSummaryMetric
-            label="Pending"
-            value={money(purchaseSummary.pendingAmountCents)}
-          />
-          <PurchaseSummaryMetric
-            label="Transactions"
-            value={String(purchaseSummary.transactionCount)}
-          />
-        </View>
-      </View>
+      <TutorialTarget id="purchases-summary">
+        <CycleSummaryCard
+          summary={formatPurchaseCycleHeaderSummary({
+            cycleWindowLabel: cycleLabel,
+            pendingCount: pendingPurchaseCount,
+            totalSpentCents: purchaseSummary.totalSpentCents,
+          })}
+        />
+      </TutorialTarget>
 
+      <TutorialTarget id="purchases-filters">
       <View style={styles.filterChipRow}>
         {purchaseFilters.map((filter) => (
           <Pressable
             key={filter}
+            accessibilityLabel={getFilterLabel(filter, pendingPurchaseCount)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: activeFilter === filter }}
             style={({ pressed }) => [
               styles.filterChip,
               activeFilter === filter && styles.filterChipActive,
@@ -204,15 +245,25 @@ export function PurchasesScreen({
           </Pressable>
         ))}
       </View>
+      </TutorialTarget>
 
       {purchases.length === 0 && (
-        <EmptyState title="No purchases yet" body="Purchases you add today will appear here." />
+        <EmptyState
+          actionLabel="Add purchase"
+          body="Purchases you add today will appear here."
+          title="No purchases yet"
+          onAction={onAddPurchase}
+        />
       )}
 
       {purchases.length > 0 && currentCyclePurchases.length === 0 && (
         <EmptyState
           title="No purchases in this cycle"
-          body="Add a purchase or browse previous cycles below."
+          body={
+            hasOutsideCyclePurchases
+              ? "Purchases outside this cycle are listed below."
+              : "Add a purchase or browse previous cycles below."
+          }
         />
       )}
 
@@ -225,22 +276,29 @@ export function PurchasesScreen({
           />
         )}
 
-      {filteredPurchases.length > 0 &&
-        groupPurchasesByDate(filteredPurchases).map((group) => (
-          <View key={group.dateKey} style={styles.transactionDateGroup}>
-            <Text style={styles.transactionDateHeader}>{group.label}</Text>
-            <View style={styles.transactionListGroup}>
-              {group.purchases.map((purchase, index) => (
-                <PurchaseTransactionRow
-                  key={purchase.id}
-                  purchase={purchase}
-                  showDivider={index < group.purchases.length - 1}
-                  onOpenActions={setSelectedPurchase}
-                />
-              ))}
-            </View>
-          </View>
-        ))}
+      {filteredPurchases.length > 0 && renderPurchaseDateGroups(filteredPurchases)}
+
+      {hasOutsideCyclePurchases && (
+        <View style={styles.purchaseOutsideCycleSection}>
+          <ScreenSectionTitle title="Outside any paycheck cycle" />
+          <Text style={styles.purchaseOutsideCycleMeta}>
+            {unassignedCycleOption?.transactionCount ?? outsideCyclePurchases.length}{" "}
+            {(unassignedCycleOption?.transactionCount ??
+              outsideCyclePurchases.length) === 1
+              ? "purchase"
+              : "purchases"}{" "}
+            · {money(unassignedCycleOption?.totalSpentCents ?? 0)}
+          </Text>
+
+          {filteredOutsideCyclePurchases.length === 0 ? (
+            <Text style={styles.rowMetaText}>
+              No {activeFilter.toLowerCase()} purchases outside this cycle.
+            </Text>
+          ) : (
+            renderPurchaseDateGroups(filteredOutsideCyclePurchases, "outside-")
+          )}
+        </View>
+      )}
 
       {previousCycleOptions.length > 0 && (
         <View style={styles.purchasePastCycleSection}>
@@ -262,24 +320,16 @@ export function PurchasesScreen({
                     cycleVisibleCounts[option.id] ?? PREVIOUS_PURCHASES_PAGE_SIZE
                   }
                   onLoadMore={() => loadMoreCyclePurchases(option.id)}
-                  onOpenActions={setSelectedPurchase}
                   onToggle={() => toggleCyclePurchases(option.id)}
+                  renderPurchaseDateGroups={(cyclePurchases) =>
+                    renderPurchaseDateGroups(cyclePurchases, `${option.id}-`)
+                  }
                 />
               ))}
             </View>
           )}
         </View>
       )}
-
-      <ActionMenu
-        header={
-          selectedPurchase ? getPurchaseActionHeader(selectedPurchase) : undefined
-        }
-        title={selectedPurchase?.name ?? "Purchase"}
-        visible={!!selectedPurchase}
-        actions={purchaseActions}
-        onClose={() => setSelectedPurchase(null)}
-      />
     </ScrollView>
   );
 }
@@ -294,20 +344,16 @@ function PreviousCyclesSection({
   onToggle: () => void;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.paycheckSectionToggle,
-        pressed && styles.pressed,
-      ]}
-      onPress={onToggle}
-    >
-      <Text style={styles.paycheckCoverageTitle}>Previous cycles</Text>
-      <Text style={styles.paycheckCoverageTotal}>
-        {cycleCount} {cycleCount === 1 ? "cycle" : "cycles"}{" "}
-        {isExpanded ? "⌃" : "⌄"}
-      </Text>
-    </Pressable>
+    <CollapsibleSection
+      accessibilityHint={
+        isExpanded ? "Collapses previous purchase cycles" : "Expands previous purchase cycles"
+      }
+      accessibilityLabel="Previous cycles"
+      detail={`${cycleCount} ${cycleCount === 1 ? "cycle" : "cycles"}`}
+      expanded={isExpanded}
+      title="Previous cycles"
+      onToggle={onToggle}
+    />
   );
 }
 
@@ -316,9 +362,9 @@ function PreviousCycleRow({
   isExpanded,
   option,
   purchases,
+  renderPurchaseDateGroups,
   visibleCount,
   onLoadMore,
-  onOpenActions,
   onToggle,
 }: {
   cycleContext: {
@@ -330,11 +376,12 @@ function PreviousCycleRow({
   isExpanded: boolean;
   option: PurchaseCycleOption;
   purchases: Purchase[];
+  renderPurchaseDateGroups: (purchaseList: Purchase[]) => ReactElement[];
   visibleCount: number;
   onLoadMore: () => void;
-  onOpenActions: (purchase: Purchase) => void;
   onToggle: () => void;
 }) {
+  const styles = useStyles();
   const cyclePurchases = [...filterPurchasesForCycle(purchases, option.id, cycleContext)].sort(
     sortPurchasesByMostRecent
   );
@@ -364,7 +411,12 @@ function PreviousCycleRow({
         </Text>
       </View>
       <Pressable
+        accessibilityHint={
+          isExpanded ? "Hides purchases for this cycle" : "Shows purchases for this cycle"
+        }
+        accessibilityLabel={isExpanded ? "Hide purchases" : "Show purchases"}
         accessibilityRole="button"
+        accessibilityState={{ expanded: isExpanded }}
         style={({ pressed }) => [
           styles.paycheckCoverageToggle,
           pressed && styles.pressed,
@@ -374,11 +426,13 @@ function PreviousCycleRow({
         <Text style={styles.paycheckCoverageTitle}>
           {isExpanded ? "Hide purchases" : "Show purchases"}
         </Text>
-        <Text style={styles.paycheckCoverageTotal}>
-          {option.transactionCount}{" "}
-          {option.transactionCount === 1 ? "purchase" : "purchases"}{" "}
-          {isExpanded ? "⌃" : "⌄"}
-        </Text>
+        <View style={styles.paycheckCoverageTotalRow}>
+          <Text style={styles.paycheckCoverageTotal}>
+            {option.transactionCount}{" "}
+            {option.transactionCount === 1 ? "purchase" : "purchases"}
+          </Text>
+          <CollapseChevron expanded={isExpanded} />
+        </View>
       </Pressable>
       {isExpanded && (
         <View style={styles.purchasePreviousCycleExpanded}>
@@ -386,23 +440,10 @@ function PreviousCycleRow({
             <Text style={styles.rowMetaText}>No purchases in this cycle.</Text>
           ) : (
             <>
-              {groupPurchasesByDate(visiblePurchases).map((group) => (
-                <View key={group.dateKey} style={styles.transactionDateGroup}>
-                  <Text style={styles.transactionDateHeader}>{group.label}</Text>
-                  <View style={styles.transactionListGroup}>
-                    {group.purchases.map((purchase, index) => (
-                      <PurchaseTransactionRow
-                        key={purchase.id}
-                        purchase={purchase}
-                        showDivider={index < group.purchases.length - 1}
-                        onOpenActions={onOpenActions}
-                      />
-                    ))}
-                  </View>
-                </View>
-              ))}
+              {renderPurchaseDateGroups(visiblePurchases)}
               {hasMorePurchases && (
                 <Pressable
+                  accessibilityLabel="Load more purchases"
                   accessibilityRole="button"
                   style={({ pressed }) => [
                     styles.secondaryButton,
@@ -419,94 +460,6 @@ function PreviousCycleRow({
       )}
     </View>
   );
-}
-
-function PurchaseSummaryMetric({
-  highlight = false,
-  label,
-  value,
-}: {
-  highlight?: boolean;
-  label: string;
-  value: string;
-}) {
-  return (
-    <View style={styles.purchaseSummaryMetric}>
-      <Text style={styles.purchaseSummaryLabel}>{label}</Text>
-      <Text
-        style={[
-          styles.purchaseSummaryValue,
-          highlight && styles.purchaseSummaryValueHighlight,
-        ]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-function PurchaseTransactionRow({
-  onOpenActions,
-  purchase,
-  showDivider,
-}: {
-  onOpenActions: (purchase: Purchase) => void;
-  purchase: Purchase;
-  showDivider: boolean;
-}) {
-  const isPending = purchase.status === "Pending";
-
-  return (
-    <View
-      style={[
-        styles.purchaseTransactionRow,
-        showDivider && styles.transactionRowDivider,
-      ]}
-    >
-      <View style={styles.itemCopy}>
-        <View style={styles.purchaseTitleRow}>
-          <Text style={styles.transactionTitle}>{purchase.name}</Text>
-          <StatusPill
-            label={purchase.status}
-            tone={getPurchaseStatusTone(purchase.status)}
-          />
-        </View>
-      </View>
-      <View style={styles.purchaseAmountColumn}>
-        <Text
-          style={[
-            styles.purchaseAmount,
-            isPending && styles.purchaseAmountPending,
-          ]}
-        >
-          -{money(normalizePurchaseAmountCents(purchase.amountCents))}
-        </Text>
-        <OverflowButton onPress={() => onOpenActions(purchase)} />
-      </View>
-    </View>
-  );
-}
-
-function normalizePurchaseAmountCents(amountCents: number | null | undefined): number {
-  return typeof amountCents === "number" && Number.isInteger(amountCents)
-    ? amountCents
-    : 0;
-}
-
-function getPurchaseActionHeader(purchase: Purchase): ActionMenuHeader {
-  return {
-    amount: `-${money(normalizePurchaseAmountCents(purchase.amountCents))}`,
-    meta: formatPurchaseRowDate(purchase.date),
-    status: purchase.status,
-    statusTone: getPurchaseStatusTone(purchase.status),
-    title: purchase.name,
-  };
-}
-
-function getPurchaseStatusTone(status: Purchase["status"]): StatusPillTone {
-  return status === "Pending" ? "warning" : "neutral";
 }
 
 function sortPurchasesByMostRecent(first: Purchase, second: Purchase) {
@@ -594,16 +547,6 @@ function getPurchaseDateKey(date: string | null | undefined) {
   return date.trim();
 }
 
-function formatPurchaseRowDate(date: string) {
-  const dateKey = getPurchaseDateKey(date);
-
-  if (dateKey === "Today" || dateKey === "Yesterday") {
-    return dateKey;
-  }
-
-  return formatPurchaseDateLabel(dateKey);
-}
-
 function formatPurchaseDateLabel(date: string) {
   if (isSameIsoDate(date, 0)) {
     return "Today";
@@ -665,50 +608,4 @@ function formatMonth(month: number) {
     "Nov",
     "Dec",
   ][month - 1] ?? "";
-}
-
-function getPurchaseActions({
-  purchase,
-  onDeletePurchase,
-  onEditPurchase,
-  onMarkCharged,
-  onMarkPending,
-}: {
-  purchase: Purchase;
-  onDeletePurchase: (id: string) => void | Promise<void>;
-  onEditPurchase: (purchase: Purchase) => void;
-  onMarkCharged: (id: string) => void | Promise<void>;
-  onMarkPending: (id: string) => void | Promise<void>;
-}): ActionMenuItem[] {
-  return [
-    purchase.status === "Pending"
-      ? {
-          icon: "✓",
-          label: "Mark Charged",
-          onPress: () => {
-            void onMarkCharged(purchase.id);
-          },
-        }
-      : {
-          icon: "⏳",
-          label: "Mark Pending",
-          onPress: () => {
-            void onMarkPending(purchase.id);
-          },
-        },
-    {
-      icon: "✏️",
-      label: "Edit Purchase",
-      closeBeforeAction: true,
-      onPress: () => onEditPurchase(purchase),
-    },
-    {
-      icon: "🗑",
-      label: "Delete Purchase",
-      destructive: true,
-      onPress: () => {
-        void onDeletePurchase(purchase.id);
-      },
-    },
-  ];
 }

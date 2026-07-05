@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -16,30 +17,26 @@ import {
   type ImportSuggestionConfirmFormProps,
 } from "@/features/import/ImportSuggestionConfirmModal";
 import { ImportReviewSection } from "@/features/import/ImportReviewSection";
+import type { ImportPhase } from "@/features/import/importLoadingStatus";
 import {
-  DatePickerField,
   KeyboardDoneAccessory,
 } from "@/shared/ui/components";
-import { styles } from "@/shared/ui/styles";
-import type { PaycheckRecurrence } from "@/shared/ui/types";
+import { useStyles } from "@/shared/ui/ThemeContext";
 
-export type OnboardingStep =
-  | "balance"
-  | "reserve"
-  | "paycheck"
-  | "bill"
-  | "import";
+export type OnboardingStep = "balance" | "reserve" | "import";
 
 type OnboardingImportReviewProps = {
   error: string;
   importMessage: string;
   isClearing: boolean;
   isImporting: boolean;
+  importPhase: ImportPhase | null;
   isLoading: boolean;
   onClearSuggestions: () => void | Promise<void>;
   onImportFile: () => void | Promise<void>;
   onConfirmSuggestion: (suggestion: ImportSuggestion) => void;
   suggestions: ImportSuggestion[];
+  onRejectAllSuggestions: () => void | Promise<void>;
   onRejectSuggestion: (id: string) => void | Promise<void>;
 };
 
@@ -52,13 +49,6 @@ type OnboardingModalProps = {
   step: OnboardingStep;
   balanceAmount: string;
   reserveAmount: string;
-  paycheckLabel: string;
-  paycheckAmount: string;
-  paycheckExpectedDate: string;
-  paycheckRecurrence: PaycheckRecurrence;
-  billName: string;
-  billAmount: string;
-  billDueDate: string;
   error: string;
   isSaving: boolean;
   amountAccessoryId: string;
@@ -66,39 +56,16 @@ type OnboardingModalProps = {
   confirmSuggestion: OnboardingConfirmSuggestionProps;
   onBalanceAmountChange: (text: string) => void;
   onReserveAmountChange: (text: string) => void;
-  onPaycheckLabelChange: (text: string) => void;
-  onPaycheckAmountChange: (text: string) => void;
-  onPaycheckExpectedDateChange: (text: string) => void;
-  onPaycheckRecurrenceChange: (recurrence: PaycheckRecurrence) => void;
-  onBillNameChange: (text: string) => void;
-  onBillAmountChange: (text: string) => void;
-  onBillDueDateChange: (text: string) => void;
   onContinue: () => void | Promise<void>;
   onSkip: () => void | Promise<void>;
   onDismiss?: () => void;
 };
-
-const onboardingPaycheckRecurrenceOptions: {
-  label: string;
-  value: PaycheckRecurrence;
-}[] = [
-  { label: "Does not repeat", value: "none" },
-  { label: "Biweekly", value: "biweekly" },
-  { label: "Monthly", value: "monthly" },
-];
 
 export function OnboardingModal({
   visible,
   step,
   balanceAmount,
   reserveAmount,
-  paycheckLabel,
-  paycheckAmount,
-  paycheckExpectedDate,
-  paycheckRecurrence,
-  billName,
-  billAmount,
-  billDueDate,
   error,
   isSaving,
   amountAccessoryId,
@@ -106,24 +73,26 @@ export function OnboardingModal({
   confirmSuggestion,
   onBalanceAmountChange,
   onReserveAmountChange,
-  onPaycheckLabelChange,
-  onPaycheckAmountChange,
-  onPaycheckExpectedDateChange,
-  onPaycheckRecurrenceChange,
-  onBillNameChange,
-  onBillAmountChange,
-  onBillDueDateChange,
   onContinue,
   onSkip,
   onDismiss,
 }: OnboardingModalProps) {
+  const styles = useStyles();
   const isBalanceStep = step === "balance";
   const isImportStep = step === "import";
   const isReserveStep = step === "reserve";
-  const isPaycheckStep = step === "paycheck";
-  const isBillStep = step === "bill";
   const isImportConfirmStep =
     isImportStep && confirmSuggestion.visible;
+  const wasVisibleRef = useRef(visible);
+
+  useEffect(() => {
+    if (wasVisibleRef.current && !visible) {
+      onDismiss?.();
+    }
+
+    wasVisibleRef.current = visible;
+  }, [onDismiss, visible]);
+
   const canSkip = !isBalanceStep && !isImportConfirmStep;
   const isBusy =
     isSaving ||
@@ -154,8 +123,9 @@ export function OnboardingModal({
                   What&apos;s your current account balance?
                 </Text>
                 <Text style={styles.helpText}>
-                  Required. This is your one-time starting point — not income.
-                  Paychecks and purchases track changes after this.
+                  Required. Use the balance in your bank app right now. Paychecks
+                  on this same day are treated as already included; later paychecks
+                  add when you confirm them.
                 </Text>
                 <Text style={styles.inputLabel}>Current balance</Text>
                 <TextInput
@@ -192,102 +162,6 @@ export function OnboardingModal({
               </>
             )}
 
-            {isPaycheckStep && (
-              <>
-                <Text style={styles.sectionTitle}>Add your next paycheck</Text>
-                <Text style={styles.helpText}>
-                  Optional. You can add or edit paychecks later from the Paychecks
-                  tab.
-                </Text>
-                <Text style={styles.inputLabel}>Source</Text>
-                <TextInput
-                  style={[styles.input, styles.purchaseInput]}
-                  placeholder="Main job, side work..."
-                  returnKeyType="done"
-                  onSubmitEditing={Keyboard.dismiss}
-                  value={paycheckLabel}
-                  onChangeText={onPaycheckLabelChange}
-                />
-                <Text style={styles.inputLabel}>Amount</Text>
-                <TextInput
-                  style={[styles.input, styles.purchaseInput]}
-                  placeholder="0.00"
-                  keyboardType="decimal-pad"
-                  inputAccessoryViewID={amountAccessoryId}
-                  returnKeyType="done"
-                  onSubmitEditing={Keyboard.dismiss}
-                  value={paycheckAmount}
-                  onChangeText={onPaycheckAmountChange}
-                />
-                <DatePickerField
-                  label="Pay date"
-                  value={paycheckExpectedDate}
-                  onChange={onPaycheckExpectedDateChange}
-                />
-                <Text style={styles.inputLabel}>Repeats</Text>
-                <View style={styles.paycheckRecurrenceChipRow}>
-                  {onboardingPaycheckRecurrenceOptions.map((option) => {
-                    const isSelected = paycheckRecurrence === option.value;
-
-                    return (
-                      <Pressable
-                        key={option.value}
-                        style={({ pressed }) => [
-                          styles.filterChip,
-                          isSelected && styles.filterChipActive,
-                          pressed && styles.pressed,
-                        ]}
-                        onPress={() => onPaycheckRecurrenceChange(option.value)}
-                      >
-                        <Text
-                          style={[
-                            styles.filterChipText,
-                            isSelected && styles.filterChipTextActive,
-                          ]}
-                        >
-                          {option.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </>
-            )}
-
-            {isBillStep && (
-              <>
-                <Text style={styles.sectionTitle}>Add a recurring bill</Text>
-                <Text style={styles.helpText}>
-                  Optional. You can add or edit bills later from the Bills tab.
-                </Text>
-                <Text style={styles.inputLabel}>Name</Text>
-                <TextInput
-                  style={[styles.input, styles.purchaseInput]}
-                  placeholder="Rent, electric, phone..."
-                  returnKeyType="done"
-                  onSubmitEditing={Keyboard.dismiss}
-                  value={billName}
-                  onChangeText={onBillNameChange}
-                />
-                <Text style={styles.inputLabel}>Amount</Text>
-                <TextInput
-                  style={[styles.input, styles.purchaseInput]}
-                  placeholder="0.00"
-                  keyboardType="decimal-pad"
-                  inputAccessoryViewID={amountAccessoryId}
-                  returnKeyType="done"
-                  onSubmitEditing={Keyboard.dismiss}
-                  value={billAmount}
-                  onChangeText={onBillAmountChange}
-                />
-                <DatePickerField
-                  label="Due date"
-                  value={billDueDate}
-                  onChange={onBillDueDateChange}
-                />
-              </>
-            )}
-
             {isImportStep && isImportConfirmStep && (
               <ImportSuggestionConfirmForm
                 {...confirmSuggestion}
@@ -299,15 +173,18 @@ export function OnboardingModal({
               <ImportReviewSection
                 title="Import a statement"
                 helpText="Optional. Choose a CSV or PDF bank statement, then confirm each detected paycheck and bill — check the amount, date, and whether it repeats weekly, biweekly, or monthly. Finish setup once all suggestions are reviewed or ignored."
+                privacyNote="Your statement is scanned once to find bills and paychecks, then deleted from the app. Nothing is uploaded."
                 emptyBody="Choose a statement file to scan for paychecks and bills."
                 error={importReview.error}
                 importMessage={importReview.importMessage}
                 isClearing={importReview.isClearing}
                 isImporting={importReview.isImporting}
+                importPhase={importReview.importPhase}
                 isLoading={importReview.isLoading}
                 onClearSuggestions={importReview.onClearSuggestions}
                 onImportFile={importReview.onImportFile}
                 onConfirmSuggestion={importReview.onConfirmSuggestion}
+                onRejectAllSuggestions={importReview.onRejectAllSuggestions}
                 suggestions={importReview.suggestions}
                 onRejectSuggestion={importReview.onRejectSuggestion}
               />

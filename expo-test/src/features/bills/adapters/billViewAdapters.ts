@@ -2,7 +2,12 @@ import type {
   Bill as RepositoryBill,
   BillCycleInstance,
 } from "@/database/repositories/types";
-import { isProjectedBillCycleInstance } from "@/engine";
+import {
+  isProjectedBillCycleInstance,
+  isProjectedBillListItem,
+} from "@/engine";
+
+export { isProjectedBillListItem };
 import type { Bill } from "@/shared/ui/types";
 
 export function mapRepositoryBillInstanceToPrototype(

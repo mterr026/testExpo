@@ -19,6 +19,33 @@ describe("balance engine", () => {
     ).toBe(200000);
   });
 
+  it("excludes received paychecks on or before the opening balance anchor date", () => {
+    const paychecks = [
+      {
+        amountCents: 398600,
+        expectedDate: "2026-07-03",
+        isReceived: true,
+      },
+      {
+        amountCents: 248675,
+        expectedDate: "2026-07-17",
+        isReceived: true,
+      },
+    ];
+
+    expect(sumConfirmedIncome(paychecks, "2026-07-03")).toBe(248675);
+    expect(
+      computeRunningBalance({
+        openingBalanceCents: 398600,
+        openingBalanceAsOfDate: "2026-07-03",
+        paychecks,
+        purchases: [],
+        billInstances: [],
+        balanceAdjustments: [],
+      })
+    ).toBe(647275);
+  });
+
   it("sums purchases by state and excludes soft-deleted purchases", () => {
     const purchases = [
       { amountCents: 1200, state: "charged" as const },
@@ -81,6 +108,101 @@ describe("balance engine", () => {
         balanceAdjustments: [],
       })
     ).toBe(100000);
+  });
+
+  it("counts_paid_bills_after_the_opening_balance_anchor_instant", () => {
+    const billInstances = [
+      {
+        cycleAmountCents: 8500,
+        dueDate: "2026-07-03",
+        isPaid: true,
+        paidAt: "2026-07-03T19:00:00.000Z",
+      },
+      {
+        cycleAmountCents: 14255,
+        dueDate: "2026-07-03",
+        isPaid: true,
+        paidAt: "2026-07-03T08:00:00.000Z",
+      },
+    ];
+
+    expect(
+      sumBillInstances(billInstances, true, "2026-07-03T14:00:00.000Z")
+    ).toBe(8500);
+    expect(
+      computeRunningBalance({
+        openingBalanceCents: 398600,
+        openingBalanceAsOfDate: "2026-07-03T14:00:00.000Z",
+        paychecks: [],
+        purchases: [],
+        billInstances,
+        balanceAdjustments: [],
+      })
+    ).toBe(390100);
+  });
+
+  it("counts same-day paycheck when receivedAt is after the opening balance anchor", () => {
+    const paychecks = [
+      {
+        amountCents: 248675,
+        expectedDate: "2026-07-03",
+        isReceived: true,
+        receivedAt: "2026-07-03T19:00:00.000Z",
+      },
+      {
+        amountCents: 248675,
+        expectedDate: "2026-07-17",
+        isReceived: true,
+      },
+    ];
+
+    expect(sumConfirmedIncome(paychecks, "2026-07-03T14:00:00.000Z")).toBe(
+      497350
+    );
+  });
+
+  it("excludes paid bills on or before the opening balance anchor date", () => {
+    const billInstances = [
+      { cycleAmountCents: 14255, dueDate: "2026-07-03", isPaid: true },
+      { cycleAmountCents: 50000, dueDate: "2026-07-17", isPaid: true },
+      { cycleAmountCents: 25500, dueDate: "2026-07-20", isPaid: false },
+    ];
+
+    expect(sumBillInstances(billInstances, true, "2026-07-03")).toBe(50000);
+    expect(sumBillInstances(billInstances, false, "2026-07-03")).toBe(25500);
+    expect(
+      computeRunningBalance({
+        openingBalanceCents: 398600,
+        openingBalanceAsOfDate: "2026-07-03",
+        paychecks: [],
+        purchases: [],
+        billInstances,
+        balanceAdjustments: [],
+      })
+    ).toBe(348600);
+  });
+
+  it("counts same-day paid bills when paidAt is recorded after the opening balance anchor", () => {
+    const billInstances = [
+      {
+        cycleAmountCents: 250000,
+        dueDate: "2026-07-03",
+        isPaid: true,
+        paidAt: "2026-07-03T19:00:00.000Z",
+      },
+    ];
+
+    expect(sumBillInstances(billInstances, true, "2026-07-03")).toBe(250000);
+    expect(
+      computeRunningBalance({
+        openingBalanceCents: 398600,
+        openingBalanceAsOfDate: "2026-07-03",
+        paychecks: [],
+        purchases: [],
+        billInstances,
+        balanceAdjustments: [],
+      })
+    ).toBe(148600);
   });
 
   it("deducts paid bills from current balance", () => {

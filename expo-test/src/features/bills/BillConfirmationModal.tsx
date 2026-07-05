@@ -10,7 +10,7 @@ import {
 } from "react-native";
 
 import { KeyboardDoneAccessory } from "@/shared/ui/components";
-import { styles } from "@/shared/ui/styles";
+import { useStyles } from "@/shared/ui/ThemeContext";
 import type { Bill } from "@/shared/ui/types";
 
 type BillConfirmationModalProps = {
@@ -32,6 +32,7 @@ export function BillConfirmationModal({
   onSave,
   onClose,
 }: BillConfirmationModalProps) {
+  const styles = useStyles();
   return (
     <Modal visible={!!bill} transparent animationType="slide">
       <KeyboardAvoidingView

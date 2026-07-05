@@ -15,6 +15,7 @@ const purchaseRow = {
   description: "Coffee",
   purchase_date: "2026-06-01",
   paycheck_cycle_id: "paycheck-1",
+  envelope_id: null,
   resolved_at: null,
   created_at: "2026-06-01T12:00:00.000Z",
   updated_at: "2026-06-01T12:00:00.000Z",
@@ -36,6 +37,7 @@ describe("PurchaseRepository", () => {
       description: "Coffee",
       purchaseDate: "2026-06-01",
       paycheckCycleId: "paycheck-1",
+      envelopeId: null,
       resolvedAt: null,
       createdAt: "2026-06-01T12:00:00.000Z",
       updatedAt: "2026-06-01T12:00:00.000Z",
@@ -114,6 +116,7 @@ describe("PurchaseRepository", () => {
       description: "Coffee",
       purchaseDate: "2026-06-01",
       paycheckCycleId: "paycheck-1",
+      envelopeId: null,
       resolvedAt: null,
       createdAt: "2026-06-01T12:00:00.000Z",
       updatedAt: "2026-06-01T12:00:00.000Z",
@@ -130,6 +133,7 @@ describe("PurchaseRepository", () => {
       "Coffee",
       "2026-06-01",
       "paycheck-1",
+      null,
       null,
       "2026-06-01T12:00:00.000Z",
       "2026-06-01T12:00:00.000Z",
@@ -185,6 +189,7 @@ describe("PurchaseRepository", () => {
       "2026-06-01",
       "paycheck-1",
       null,
+      null,
       "2026-06-01T12:00:00.000Z",
       "purchase-1",
     ]);
@@ -205,7 +210,7 @@ describe("PurchaseRepository", () => {
     expect(charged.state).toBe("charged");
     expect(charged.resolvedAt).toBe("2026-06-01T12:00:00.000Z");
     expect(db.runCalls[0].params?.[1]).toBe("charged");
-    expect(db.runCalls[0].params?.[5]).toBe("2026-06-01T12:00:00.000Z");
+    expect(db.runCalls[0].params?.[6]).toBe("2026-06-01T12:00:00.000Z");
   });
 
   it("markPending_sets_pending_state_and_clears_resolved_timestamp", async () => {
@@ -226,7 +231,7 @@ describe("PurchaseRepository", () => {
     expect(pending.state).toBe("pending");
     expect(pending.resolvedAt).toBeNull();
     expect(db.runCalls[0].params?.[1]).toBe("pending");
-    expect(db.runCalls[0].params?.[5]).toBeNull();
+    expect(db.runCalls[0].params?.[6]).toBeNull();
   });
 
   it("softDelete_sets_deleted_at_and_writes_delete_sync_entry", async () => {

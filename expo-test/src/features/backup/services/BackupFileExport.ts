@@ -1,6 +1,7 @@
 import type * as FileSystemModule from "expo-file-system";
 
 import type { BudgetFlowBackupExportPackage } from "./BackupService";
+import { BUDGET_FLOW_BACKUP_FOLDER_NAME } from "./backupPaths";
 
 type ShareModule = {
   dismissedAction: "dismissedAction";
@@ -30,8 +31,14 @@ export type WrittenBackupFile = {
 export async function writeBackupPackageToDevice(
   exportPackage: BudgetFlowBackupExportPackage
 ): Promise<WrittenBackupFile> {
-  const { File, Paths } = await loadBackupFileSystem();
-  const file = new File(Paths.document, exportPackage.fileName);
+  const { Directory, File, Paths } = await loadBackupFileSystem();
+  const backupDirectory = new Directory(Paths.document, BUDGET_FLOW_BACKUP_FOLDER_NAME);
+
+  if (!backupDirectory.exists) {
+    backupDirectory.create({ intermediates: true, idempotent: true });
+  }
+
+  const file = new File(backupDirectory, exportPackage.fileName);
 
   file.create({ overwrite: true });
   file.write(exportPackage.jsonText);
@@ -82,6 +89,7 @@ async function loadReactNativeShare(): Promise<ShareModule> {
 }
 
 async function loadBackupFileSystem(): Promise<{
+  Directory: typeof FileSystemModule.Directory;
   File: typeof FileSystemModule.File;
   Paths: typeof FileSystemModule.Paths;
 }> {
@@ -89,6 +97,7 @@ async function loadBackupFileSystem(): Promise<{
     const FileSystem = await import("expo-file-system");
 
     return {
+      Directory: FileSystem.Directory,
       File: FileSystem.File,
       Paths: FileSystem.Paths,
     };

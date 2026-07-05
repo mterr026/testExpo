@@ -54,18 +54,24 @@ export const categoryVocabulary: CategoryVocabulary = {
     { token: "PAYCHECK", weight: 45 },
     { token: "SALARY", weight: 40 },
     { token: "WAGES", weight: 35 },
+    { token: "NET PAY", weight: 45 },
+    { token: "EARNINGS", weight: 40 },
     { token: "FED SALARY", weight: 45 },
-    { token: "DIRECT DEPOSIT", weight: 30 },
-    { token: "USPS", weight: 30, aliases: ["UNITED STATES POSTAL SERVICE"] },
+    { token: "DIRECT DEP", weight: 35, aliases: ["DIRECT DEPOSIT", "DIR DEP"] },
+    { token: "USPS", weight: 30, aliases: ["UNITED STATES POSTAL SERVICE", "POSTAL SERVICE"] },
+    { token: "POST OFFICE", weight: 35 },
+    { token: "DFAS", weight: 40 },
+    { token: "OPM", weight: 35, aliases: ["OFFICE OF PERSONNEL"] },
   ],
   government_benefit: [
     { token: "VA CHECK", weight: 90 },
     { token: "VA BENEFIT", weight: 90, aliases: ["VA BENEF"] },
     { token: "VA", weight: 40, aliases: ["V A", "VACP"] },
     { token: "BENEFIT", weight: 35, aliases: ["BENEF", "BENEFITS"] },
-    { token: "TREAS", weight: 20, aliases: ["TREASURY", "US TREASURY"] },
-    { token: "SSA", weight: 40 },
+    { token: "TREAS", weight: 20, aliases: ["TREASURY", "US TREASURY", "VACP TREAS"] },
+    { token: "SSA", weight: 40, aliases: ["SOC SEC", "SOCIAL SECURITY"] },
     { token: "VETERANS", weight: 35, aliases: ["VETERANS AFFAIRS"] },
+    { token: "CIV SERV", weight: 35, aliases: ["CIVIL SERVICE"] },
   ],
   retirement_income: [
     { token: "PENSION", weight: 45 },
@@ -110,6 +116,8 @@ export const categoryVocabulary: CategoryVocabulary = {
     { token: "RENT", weight: 70 },
     { token: "APARTMENTS", weight: 35 },
     { token: "PROPERTY", weight: 30 },
+    { token: "PROPERTY MGMT", weight: 55, aliases: ["PROPERTY MANAGEMENT"] },
+    { token: "LANDLORD", weight: 45 },
   ],
   utility: [
     { token: "FPL", weight: 80, aliases: ["FLORIDA POWER", "FLORIDA POWER AND LIGHT"] },
@@ -118,6 +126,11 @@ export const categoryVocabulary: CategoryVocabulary = {
     { token: "WATER", weight: 35 },
     { token: "POWER", weight: 35 },
     { token: "DUKE ENERGY", weight: 70 },
+    { token: "TECO", weight: 70 },
+    { token: "JEA", weight: 65 },
+    { token: "OUC", weight: 65 },
+    { token: "SECO", weight: 60 },
+    { token: "CITY OF", weight: 35 },
   ],
   phone_internet: [
     { token: "ATT", weight: 65, aliases: ["AT T", "AT&T"] },
@@ -126,6 +139,9 @@ export const categoryVocabulary: CategoryVocabulary = {
     { token: "TMOBILE", weight: 60, aliases: ["T MOBILE"] },
     { token: "WIRELESS", weight: 35 },
     { token: "INTERNET", weight: 40 },
+    { token: "SPECTRUM", weight: 65 },
+    { token: "CRICKET", weight: 60 },
+    { token: "METRO PCS", weight: 55 },
   ],
   insurance: [
     { token: "GEICO", weight: 80 },
@@ -133,9 +149,14 @@ export const categoryVocabulary: CategoryVocabulary = {
     { token: "PROGRESSIVE", weight: 65 },
     { token: "STATE FARM", weight: 65 },
     { token: "ALLSTATE", weight: 65 },
+    { token: "USAA", weight: 70 },
+    { token: "TRAVELERS", weight: 60 },
   ],
   loan: [
     { token: "ROCKETLOANS", weight: 80, aliases: ["ROCKET LOANS"] },
+    { token: "SUNCOAST", weight: 70 },
+    { token: "CREDIT UNION", weight: 65 },
+    { token: "SPI*", weight: 55 },
     { token: "LOAN", weight: 55 },
     { token: "LENDING", weight: 45 },
     { token: "FINANCE", weight: 25 },
@@ -157,11 +178,17 @@ export const categoryVocabulary: CategoryVocabulary = {
     { token: "GYM", weight: 70 },
     { token: "NETFLIX", weight: 80 },
     { token: "SPOTIFY", weight: 80 },
+    { token: "YOUTUBE", weight: 85, aliases: ["YOUTUBE PREMIUM", "YOUTUBEPREMIUM", "GOOGLE YOUTUBE", "GOOGLE YOUTUB"] },
     { token: "PARAMOUNT", weight: 75, aliases: ["PARAMOUNT+"] },
     { token: "APPLE COM BILL", weight: 70, aliases: ["APPLE.COM/BILL"] },
     { token: "OPENAI", weight: 70 },
     { token: "CHATGPT", weight: 70 },
     { token: "UDEMY SUBSCRIPTION", weight: 80 },
+    { token: "FLEXJOBS", weight: 75 },
+    { token: "PLAYSTATION", weight: 75 },
+    { token: "PLUSHCARE", weight: 75 },
+    { token: "ZOTLO", weight: 70 },
+    { token: "PERPLEXITY", weight: 70 },
     { token: "SUBSCRIPTION", weight: 45 },
   ],
   installment: [
@@ -274,3 +301,21 @@ export const categoryVocabulary: CategoryVocabulary = {
   transfer: [{ token: "TRANSFER", weight: 30 }],
   unknown: [],
 };
+
+export function getCanonicalMerchantToken(normalizedDescription: string): string | null {
+  const normalized = normalizedDescription.trim().toUpperCase();
+
+  for (const keywords of Object.values(categoryVocabulary)) {
+    for (const keyword of keywords) {
+      if (normalized === keyword.token) {
+        return keyword.token;
+      }
+
+      if (keyword.aliases?.some((alias) => normalized === alias.toUpperCase())) {
+        return keyword.token;
+      }
+    }
+  }
+
+  return null;
+}

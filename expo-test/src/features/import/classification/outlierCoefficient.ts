@@ -87,6 +87,13 @@ export function calculateOutlierCoefficient(
     score -= 12;
   }
 
+  if (
+    STRUCTURAL_CATEGORIES.has(transaction.category) &&
+    comparableTransactions.length === 1
+  ) {
+    score -= 10;
+  }
+
   if (REVIEW_HEAVY_CATEGORIES.has(transaction.category)) {
     score += 24;
   }

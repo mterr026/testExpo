@@ -378,6 +378,43 @@ describe("ImportService", () => {
     expect(result.suggestion.status).toBe("confirmed");
   });
 
+  it("confirms_pending_suggestion_as_a_variable_bill_when_requested", async () => {
+    const suggestion = importSuggestion();
+    const bill = {
+      ...billRecord(),
+      billType: "variable" as const,
+    };
+    const repository = {
+      findById: vi.fn().mockResolvedValue(suggestion),
+      confirm: vi.fn().mockResolvedValue({
+        ...suggestion,
+        confirmedBillId: bill.id,
+        status: "confirmed",
+      }),
+    };
+    const billService = {
+      createBill: vi.fn().mockResolvedValue(bill),
+    };
+    const service = new ImportService(
+      repository as unknown as ImportSuggestionRepository,
+      billService as unknown as BillService,
+      {
+        createImportSessionId: () => "import-session-1",
+      }
+    );
+
+    await service.confirmSuggestionAsBill("suggestion-1", {
+      billType: "variable",
+      dueDateAbsolute: "2026-07-05",
+    });
+
+    expect(billService.createBill).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billType: "variable",
+      })
+    );
+  });
+
   it("confirms_pending_suggestion_into_the_current_bill_cycle_when_cycle_is_available", async () => {
     const suggestion = importSuggestion();
     const bill = billRecord();
@@ -672,6 +709,94 @@ describe("ImportService", () => {
       expect.objectContaining({
         isRecurring: true,
         recurrenceInterval: "weekly",
+      })
+    );
+  });
+
+  it("confirmed_imported_biweekly_income_generates_next_paycheck_fourteen_days_later", async () => {
+    const suggestion = {
+      ...importSuggestion(),
+      suggestionKind: "income" as const,
+      suggestedName: "USPS Payroll",
+      suggestedAmountCents: 200000,
+      detectedInterval: "monthly" as const,
+      suggestedDate: "2026-06-05",
+    };
+    const repository = {
+      findById: vi.fn().mockResolvedValue(suggestion),
+      confirmIncome: vi.fn().mockResolvedValue({
+        ...suggestion,
+        status: "confirmed",
+      }),
+    };
+    const paycheckService = createPaycheckServiceMock();
+    paycheckService.createPaycheck.mockResolvedValue(paycheckRecord());
+    const service = new ImportService(
+      repository as unknown as ImportSuggestionRepository,
+      createBillServiceMock(),
+      paycheckService
+    );
+
+    await service.confirmSuggestionAsIncome("suggestion-1", {
+      expectedDate: "2026-06-05",
+      recurrenceInterval: "biweekly",
+    });
+
+    expect(paycheckService.createPaycheck).toHaveBeenCalledWith({
+      profileId: "profile-1",
+      label: "USPS Payroll",
+      amountCents: 200000,
+      expectedDate: "2026-06-05",
+      isPrimary: true,
+      isReceived: false,
+      isRecurring: true,
+      recurrenceInterval: "biweekly",
+    });
+  });
+
+  it("uses_selected_biweekly_recurrence_when_defaulting_imported_income_date", async () => {
+    const suggestion = {
+      ...importSuggestion(),
+      suggestionKind: "income" as const,
+      suggestedName: "USPS Payroll",
+      suggestedAmountCents: 200000,
+      detectedInterval: "monthly" as const,
+      suggestedDate: "2026-06-05",
+    };
+    const repository = {
+      findById: vi.fn().mockResolvedValue(suggestion),
+      confirmIncome: vi.fn().mockResolvedValue({
+        ...suggestion,
+        status: "confirmed",
+      }),
+    };
+    const paycheckService = createPaycheckServiceMock();
+    paycheckService.createPaycheck.mockResolvedValue(paycheckRecord());
+    const service = new ImportService(
+      repository as unknown as ImportSuggestionRepository,
+      createBillServiceMock(),
+      paycheckService,
+      {
+        createImportSessionId: () => "import-session-1",
+      }
+    );
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-21T12:00:00.000Z"));
+
+    try {
+      await service.confirmSuggestionAsIncome("suggestion-1", {
+        recurrenceInterval: "biweekly",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(paycheckService.createPaycheck).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedDate: "2026-07-03",
+        recurrenceInterval: "biweekly",
+        isRecurring: true,
       })
     );
   });

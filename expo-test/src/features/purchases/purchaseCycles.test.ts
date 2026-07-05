@@ -11,6 +11,7 @@ import {
   getPaycheckCycleWindow,
   getPurchaseSummaryForPurchases,
   resolvePurchaseCycleId,
+  resolvePurchaseCycleIdFromContext,
 } from "./purchaseCycles";
 
 const paychecks: PaycheckListItem[] = [
@@ -51,6 +52,7 @@ const currentCyclePurchase: Purchase = {
   date: "2026-06-03",
   purchaseDate: "2026-06-03",
   paycheckCycleId: "paycheck-jun",
+  envelopeId: null,
 };
 
 const priorCyclePurchase: Purchase = {
@@ -58,9 +60,21 @@ const priorCyclePurchase: Purchase = {
   name: "Gas",
   amountCents: 3200,
   status: "Pending",
+  date: "2026-05-10",
+  purchaseDate: "2026-05-10",
+  paycheckCycleId: "paycheck-may",
+  envelopeId: null,
+};
+
+const staleCycleIdPurchase: Purchase = {
+  id: "purchase-stale-cycle",
+  name: "Gap purchase",
+  amountCents: 1500,
+  status: "Charged",
   date: "2026-05-20",
   purchaseDate: "2026-05-20",
   paycheckCycleId: "paycheck-may",
+  envelopeId: null,
 };
 
 describe("getPaycheckCycleWindow", () => {
@@ -133,13 +147,16 @@ describe("resolvePurchaseCycleId", () => {
     expect(
       resolvePurchaseCycleId(
         {
-          ...priorCyclePurchase,
-          purchaseDate: "2026-05-20",
+          ...staleCycleIdPurchase,
           paycheckCycleId: null,
         },
         paychecks
       )
     ).toBeNull();
+  });
+
+  it("ignores_stale_paycheck_cycle_id_when_purchase_date_falls_in_a_gap", () => {
+    expect(resolvePurchaseCycleId(staleCycleIdPurchase, paychecks)).toBeNull();
   });
 });
 
@@ -237,7 +254,7 @@ describe("filterPurchasesForCycle", () => {
     ).toEqual(["purchase-current"]);
   });
 
-  it("excludes_a_purchase_from_the_active_cycle_when_paycheck_cycle_id_points_elsewhere", () => {
+  it("includes_a_purchase_in_the_active_cycle_by_date_when_paycheck_cycle_id_is_stale", () => {
     expect(
       filterPurchasesForCycle(
         [
@@ -249,7 +266,23 @@ describe("filterPurchasesForCycle", () => {
         "paycheck-jun",
         cycleContext
       ).map((purchase) => purchase.id)
+    ).toEqual(["purchase-current"]);
+  });
+
+  it("excludes_a_purchase_from_a_prior_cycle_when_paycheck_cycle_id_is_stale", () => {
+    expect(
+      filterPurchasesForCycle([staleCycleIdPurchase], "paycheck-may", cycleContext).map(
+        (purchase) => purchase.id
+      )
     ).toEqual([]);
+  });
+
+  it("includes_gap_purchases_in_the_unassigned_cycle", () => {
+    expect(
+      filterPurchasesForCycle([staleCycleIdPurchase], "unassigned", cycleContext).map(
+        (purchase) => purchase.id
+      )
+    ).toEqual(["purchase-stale-cycle"]);
   });
 
   it("includes_a_purchase_in_the_active_cycle_by_date_when_paycheck_cycle_id_is_missing", () => {
@@ -294,6 +327,7 @@ describe("filterPreviousCyclePurchases", () => {
       date: "2020-01-01",
       purchaseDate: "2020-01-01",
       paycheckCycleId: null,
+      envelopeId: null,
     };
 
     expect(
@@ -332,6 +366,62 @@ describe("getArchivedPurchaseCycleOptions", () => {
     expect(getArchivedPurchaseCycleOptions(options).map((option) => option.id)).toEqual([
       "paycheck-may",
     ]);
+  });
+
+  it("excludes_unassigned_purchases_from_previous_cycles", () => {
+    const unassignedPurchase: Purchase = {
+      id: "purchase-unassigned",
+      name: "Misc",
+      amountCents: 1000,
+      status: "Charged",
+      date: "2020-01-01",
+      purchaseDate: "2020-01-01",
+      paycheckCycleId: null,
+      envelopeId: null,
+    };
+    const options = buildPurchaseCycleOptions(
+      [currentCyclePurchase, priorCyclePurchase, unassignedPurchase],
+      {
+        activeCyclePaycheckId: "paycheck-jun",
+        activeCycleStartDate: "2026-06-01",
+        activeCycleEndDate: "2026-06-15",
+        paychecks,
+      }
+    );
+
+    expect(getArchivedPurchaseCycleOptions(options).map((option) => option.id)).toEqual([
+      "paycheck-may",
+    ]);
+    expect(options.find((option) => option.id === "unassigned")).toMatchObject({
+      cycleWindowLabel: "Outside any paycheck cycle",
+      transactionCount: 1,
+    });
+  });
+
+  it("excludes_stale_cycle_purchases_from_archived_options", () => {
+    const options = buildPurchaseCycleOptions(
+      [currentCyclePurchase, staleCycleIdPurchase],
+      {
+        activeCyclePaycheckId: "paycheck-jun",
+        activeCycleStartDate: "2026-06-01",
+        activeCycleEndDate: "2026-06-15",
+        paychecks,
+      }
+    );
+
+    expect(getArchivedPurchaseCycleOptions(options).map((option) => option.id)).toEqual([]);
+    expect(
+      resolvePurchaseCycleIdFromContext(staleCycleIdPurchase, {
+        activeCyclePaycheckId: "paycheck-jun",
+        activeCycleStartDate: "2026-06-01",
+        activeCycleEndDate: "2026-06-15",
+        paychecks,
+      })
+    ).toBe("unassigned");
+    expect(options.find((option) => option.id === "unassigned")).toMatchObject({
+      cycleWindowLabel: "Outside any paycheck cycle",
+      transactionCount: 1,
+    });
   });
 });
 

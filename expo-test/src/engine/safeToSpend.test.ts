@@ -31,6 +31,7 @@ describe("safe-to-spend engine", () => {
       balanceAdjustmentsCents: 10000,
       runningBalanceCents: 247500,
       essentialReserveCents: 25000,
+      envelopeReservedCents: 0,
       safeToSpendCents: 172500,
     });
   });
@@ -116,6 +117,158 @@ describe("safe-to-spend engine", () => {
     expect(result.safeToSpendCents).toBe(-40000);
   });
 
+  it("keeps_safe_to_spend_stable_when_anchor_day_bill_is_marked_paid", () => {
+    const baseInput = {
+      paychecks: [],
+      purchases: [],
+      balanceAdjustments: [],
+      openingBalanceCents: 398600,
+      openingBalanceAsOfDate: "2026-07-03T14:00:00.000Z",
+      essentialReserveCents: 0,
+    };
+
+    const unpaid = calculateSafeToSpend({
+      ...baseInput,
+      billInstances: [
+        { cycleAmountCents: 8500, dueDate: "2026-07-03", isPaid: false },
+      ],
+    });
+    const paid = calculateSafeToSpend({
+      ...baseInput,
+      billInstances: [
+        {
+          cycleAmountCents: 8500,
+          dueDate: "2026-07-03",
+          isPaid: true,
+          paidAt: "2026-07-03T19:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(unpaid.safeToSpendCents).toBe(390100);
+    expect(paid.safeToSpendCents).toBe(390100);
+    expect(paid.paidBillsCents).toBe(8500);
+    expect(paid.unpaidBillsCents).toBe(0);
+  });
+
+  it("excludes_same_day_paid_bill_from_running_balance_when_opening_balance_is_anchored", () => {
+    const result = calculateSafeToSpend({
+      paychecks: [],
+      purchases: [],
+      billInstances: [
+        { cycleAmountCents: 14255, dueDate: "2026-07-03", isPaid: true },
+        { cycleAmountCents: 8500, dueDate: "2026-07-12", isPaid: false },
+      ],
+      balanceAdjustments: [],
+      openingBalanceCents: 398600,
+      openingBalanceAsOfDate: "2026-07-03",
+      essentialReserveCents: 0,
+    });
+
+    expect(result.paidBillsCents).toBe(0);
+    expect(result.unpaidBillsCents).toBe(8500);
+    expect(result.runningBalanceCents).toBe(398600);
+    expect(result.safeToSpendCents).toBe(390100);
+  });
+
+  it("keeps_safe_to_spend_stable_when_same_day_bill_is_marked_paid_after_opening_balance_anchor", () => {
+    const sharedInput = {
+      paychecks: [],
+      purchases: [],
+      balanceAdjustments: [],
+      openingBalanceCents: 398600,
+      openingBalanceAsOfDate: "2026-07-03",
+      essentialReserveCents: 0,
+    };
+    const unpaid = calculateSafeToSpend({
+      ...sharedInput,
+      billInstances: [
+        {
+          cycleAmountCents: 250000,
+          dueDate: "2026-07-03",
+          isPaid: false,
+        },
+      ],
+    });
+    const paid = calculateSafeToSpend({
+      ...sharedInput,
+      billInstances: [
+        {
+          cycleAmountCents: 250000,
+          dueDate: "2026-07-03",
+          isPaid: true,
+          paidAt: "2026-07-03T19:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(unpaid.paidBillsCents).toBe(0);
+    expect(unpaid.unpaidBillsCents).toBe(250000);
+    expect(unpaid.safeToSpendCents).toBe(148600);
+    expect(paid.paidBillsCents).toBe(250000);
+    expect(paid.unpaidBillsCents).toBe(0);
+    expect(paid.safeToSpendCents).toBe(148600);
+  });
+
+  it("excludes_same_day_paycheck_from_confirmed_income_when_opening_balance_is_anchored", () => {
+    const result = calculateSafeToSpend({
+      paychecks: [
+        {
+          amountCents: 248675,
+          expectedDate: "2026-07-03",
+          isReceived: true,
+        },
+      ],
+      purchases: [],
+      billInstances: [],
+      balanceAdjustments: [],
+      openingBalanceCents: 398600,
+      openingBalanceAsOfDate: "2026-07-03",
+      essentialReserveCents: 0,
+    });
+
+    expect(result.confirmedIncomeCents).toBe(0);
+    expect(result.runningBalanceCents).toBe(398600);
+    expect(result.safeToSpendCents).toBe(398600);
+  });
+
+  it("counts_same_day_paycheck_when_confirmed_after_opening_balance_anchor", () => {
+    const sharedInput = {
+      purchases: [],
+      billInstances: [],
+      balanceAdjustments: [],
+      openingBalanceCents: 398600,
+      openingBalanceAsOfDate: "2026-07-03T14:00:00.000Z",
+      essentialReserveCents: 0,
+    };
+    const beforeConfirm = calculateSafeToSpend({
+      ...sharedInput,
+      paychecks: [
+        {
+          amountCents: 248675,
+          expectedDate: "2026-07-03",
+          isReceived: false,
+        },
+      ],
+    });
+    const afterConfirm = calculateSafeToSpend({
+      ...sharedInput,
+      paychecks: [
+        {
+          amountCents: 248675,
+          expectedDate: "2026-07-03",
+          isReceived: true,
+          receivedAt: "2026-07-03T19:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(beforeConfirm.confirmedIncomeCents).toBe(0);
+    expect(beforeConfirm.safeToSpendCents).toBe(398600);
+    expect(afterConfirm.confirmedIncomeCents).toBe(248675);
+    expect(afterConfirm.safeToSpendCents).toBe(647275);
+  });
+
   it("scenario_f_counts_multiple_income_sources_only_after_each_is_received", () => {
     const baseInput = {
       purchases: [{ amountCents: 12000, state: "charged" as const }],
@@ -152,5 +305,28 @@ describe("safe-to-spend engine", () => {
     expect(afterPrimaryReceived.safeToSpendCents).toBe(98000);
     expect(afterBothReceived.confirmedIncomeCents).toBe(245000);
     expect(afterBothReceived.safeToSpendCents).toBe(163000);
+  });
+
+  it("subtracts_envelope_reserved_cents_from_safe_to_spend", () => {
+    const withoutEnvelopes = calculateSafeToSpend({
+      paychecks: [{ amountCents: 100000, isReceived: true }],
+      purchases: [],
+      billInstances: [],
+      balanceAdjustments: [],
+      essentialReserveCents: 10000,
+    });
+    const withEnvelopes = calculateSafeToSpend({
+      paychecks: [{ amountCents: 100000, isReceived: true }],
+      purchases: [],
+      billInstances: [],
+      balanceAdjustments: [],
+      essentialReserveCents: 10000,
+      envelopeReservedCents: 25000,
+    });
+
+    expect(withoutEnvelopes.envelopeReservedCents).toBe(0);
+    expect(withoutEnvelopes.safeToSpendCents).toBe(90000);
+    expect(withEnvelopes.envelopeReservedCents).toBe(25000);
+    expect(withEnvelopes.safeToSpendCents).toBe(65000);
   });
 });

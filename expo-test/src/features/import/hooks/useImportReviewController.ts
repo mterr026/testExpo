@@ -1,24 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { ImportSuggestion } from "@/database/repositories/types";
+import type { BillType, ImportSuggestion } from "@/database/repositories/types";
 import type { DashboardSnapshot } from "@/features/dashboard/services";
+import type { ImportPhase } from "@/features/import/importLoadingStatus";
 import {
-  pickStatementFileFromDevice,
+  pickStatementFileOnly,
+  readPickedStatementFile,
   type PickedStatementFileResult,
 } from "@/features/import/services/StatementFileImport";
 import { processPickedStatementFile } from "@/features/import/services/processPickedStatementFile";
 import {
   createOverlayDismissalWaiter,
+  waitForImportLoadingPaint,
+  waitForModalPresentationReady,
   waitForNextReactFrame,
 } from "@/features/import/services/waitForOverlayDismissal";
 import { parseDollarInputToNonNegativeCents } from "@/shared/currency";
 import { getAppRuntime } from "@/shared/services/appRuntime";
 import type { PaycheckRecurrence } from "@/shared/ui/types";
 
-import { getTodayIsoDate } from "@/features/app/homeData";
+import { getTodayIsoDate } from "@/shared/dates";
 import {
   getDefaultImportBillDueDate,
-  getDefaultImportIncomeExpectedDate,
+  getDefaultImportIncomeExpectedDateForRecurrence,
   getImportBillCycle,
 } from "@/features/import/importBillCycle";
 import { inferDefaultIncomeIsPrimary } from "@/features/import/importIncomeDefaults";
@@ -43,11 +47,13 @@ export function useImportReviewController({
   const [confirmRecurrence, setConfirmRecurrence] =
     useState<PaycheckRecurrence>("none");
   const [confirmIsPrimary, setConfirmIsPrimary] = useState(true);
+  const [confirmBillType, setConfirmBillType] = useState<BillType>("fixed");
   const [confirmingSuggestion, setConfirmingSuggestion] =
     useState<ImportSuggestion | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [importPhase, setImportPhase] = useState<ImportPhase | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<ImportSuggestion[]>([]);
   const [isFilePickerActive, setIsFilePickerActive] = useState(false);
@@ -97,14 +103,37 @@ export function useImportReviewController({
       return;
     }
 
+    await runStatementImport(async () => {
+      await waitForImportLoadingPaint();
+      setImportPhase("reading");
+
+      const pickedFile = await pickStatementFileOnly();
+
+      if (pickedFile.canceled) {
+        return pickedFile;
+      }
+
+      await waitForImportLoadingPaint();
+      return readPickedStatementFile(pickedFile.file);
+    });
+  }
+
+  async function runStatementImport(
+    pickFile: () => Promise<PickedStatementFileResult>
+  ) {
     try {
       setIsImporting(true);
-      const pickedFile = await pickStatementFileFromDevice();
+      setImportPhase("reading");
+      setError("");
+      await waitForImportLoadingPaint();
+      const pickedFile = await pickFile();
 
       if (pickedFile.canceled) {
         return;
       }
 
+      setImportPhase("analyzing");
+      await waitForImportLoadingPaint();
       await applyImportedStatementFile(pickedFile);
     } catch (error) {
       setError(
@@ -114,6 +143,7 @@ export function useImportReviewController({
       );
     } finally {
       setIsImporting(false);
+      setImportPhase(null);
     }
   }
 
@@ -152,18 +182,31 @@ export function useImportReviewController({
     }
 
     try {
-      setIsFilePickerActive(true);
       setIsImporting(true);
       setError("");
+      setImportPhase("preparing");
+      await waitForImportLoadingPaint();
+      onboardingOverlayDismissalRef.current.reset();
+      await waitForNextReactFrame();
+      setIsFilePickerActive(true);
       await waitForNextReactFrame();
       await onboardingOverlayDismissalRef.current.waitForDismissal();
-      const pickedFile = await pickStatementFileFromDevice();
+      await waitForModalPresentationReady();
+
+      const pickedFile = await pickStatementFileOnly();
+      setIsFilePickerActive(false);
 
       if (pickedFile.canceled) {
         return;
       }
 
-      await applyImportedStatementFile(pickedFile);
+      await waitForImportLoadingPaint();
+      setImportPhase("reading");
+      const readFile = await readPickedStatementFile(pickedFile.file);
+
+      setImportPhase("analyzing");
+      await waitForImportLoadingPaint();
+      await applyImportedStatementFile(readFile);
     } catch (error) {
       setError(
         error instanceof Error
@@ -172,6 +215,7 @@ export function useImportReviewController({
       );
     } finally {
       setIsImporting(false);
+      setImportPhase(null);
       setIsFilePickerActive(false);
     }
   }
@@ -182,14 +226,19 @@ export function useImportReviewController({
 
   function openConfirmSuggestion(suggestion: ImportSuggestion) {
     const today = getTodayIsoDate();
+    const defaultRecurrence = mapImportIntervalToPaycheckRecurrence(
+      suggestion.detectedInterval
+    );
 
     setConfirmingSuggestion(suggestion);
     setConfirmName(suggestion.suggestedName);
     setConfirmAmount((suggestion.suggestedAmountCents / 100).toFixed(2));
     setConfirmDueDate(
       suggestion.suggestionKind === "income"
-        ? getDefaultImportIncomeExpectedDate({
+        ? getDefaultImportIncomeExpectedDateForRecurrence({
             detectedInterval: suggestion.detectedInterval,
+            recurrenceInterval:
+              defaultRecurrence === "none" ? null : defaultRecurrence,
             suggestedDate: suggestion.suggestedDate,
             today,
           })
@@ -199,13 +248,34 @@ export function useImportReviewController({
             today,
           })
     );
-    setConfirmRecurrence(mapImportIntervalToPaycheckRecurrence(suggestion.detectedInterval));
+    setConfirmRecurrence(defaultRecurrence);
     setConfirmIsPrimary(
       suggestion.suggestionKind === "income"
         ? inferDefaultIncomeIsPrimary(suggestion)
         : true
     );
+    setConfirmBillType("fixed");
     setConfirmError("");
+  }
+
+  function handleConfirmRecurrenceChange(recurrence: PaycheckRecurrence) {
+    setConfirmRecurrence(recurrence);
+
+    if (
+      confirmingSuggestion?.suggestionKind !== "income" ||
+      recurrence === "none"
+    ) {
+      return;
+    }
+
+    setConfirmDueDate(
+      getDefaultImportIncomeExpectedDateForRecurrence({
+        detectedInterval: confirmingSuggestion.detectedInterval,
+        recurrenceInterval: recurrence,
+        suggestedDate: confirmingSuggestion.suggestedDate,
+        today: getTodayIsoDate(),
+      })
+    );
   }
 
   function closeConfirmSuggestion() {
@@ -213,6 +283,7 @@ export function useImportReviewController({
     setConfirmError("");
     setConfirmRecurrence("none");
     setConfirmIsPrimary(true);
+    setConfirmBillType("fixed");
   }
 
   async function saveConfirmedSuggestion() {
@@ -259,6 +330,7 @@ export function useImportReviewController({
         await runtime.services.importService.confirmSuggestionAsBill(
           confirmingSuggestion.id,
           {
+            billType: confirmBillType,
             cycle: getImportBillCycle(dashboardSnapshot),
             dueDateAbsolute: confirmDueDate,
             name: normalizedName,
@@ -304,6 +376,26 @@ export function useImportReviewController({
     }
   }
 
+  async function rejectAllPendingSuggestions() {
+    if (!profileId || suggestions.length === 0) {
+      return;
+    }
+
+    try {
+      setIsClearing(true);
+      const runtime = await getAppRuntime();
+
+      await runtime.services.importService.clearPendingSuggestions(profileId);
+      setSuggestions([]);
+      setError("");
+      setImportMessage("");
+    } catch {
+      setError("Import suggestions could not be dismissed.");
+    } finally {
+      setIsClearing(false);
+    }
+  }
+
   async function clearSuggestions() {
     if (!profileId) {
       setError("A profile is required before clearing import suggestions.");
@@ -337,6 +429,7 @@ export function useImportReviewController({
   return {
     confirmSuggestion: {
       amount: confirmAmount,
+      billType: confirmBillType,
       close: closeConfirmSuggestion,
       dueDate: confirmDueDate,
       error: confirmError,
@@ -348,16 +441,18 @@ export function useImportReviewController({
       reject: rejectConfirmingSuggestion,
       save: saveConfirmedSuggestion,
       setAmount: setConfirmAmount,
+      setBillType: setConfirmBillType,
       setDueDate: setConfirmDueDate,
       setIsPrimary: setConfirmIsPrimary,
       setName: setConfirmName,
-      setRecurrence: setConfirmRecurrence,
+      setRecurrence: handleConfirmRecurrenceChange,
       visible: !!confirmingSuggestion,
     },
     clearSuggestions,
     error,
     importFile,
     importMessage,
+    importPhase,
     importStatementFileForOnboarding,
     isClearing,
     isFilePickerActive,
@@ -365,6 +460,7 @@ export function useImportReviewController({
     isLoading,
     notifyOnboardingOverlayDismissed,
     openConfirmSuggestion,
+    rejectAllPendingSuggestions,
     rejectSuggestion,
     suggestions,
   };
