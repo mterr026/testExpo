@@ -5,6 +5,7 @@ import Swipeable from "react-native-gesture-handler/Swipeable";
 import type { Envelope } from "@/database/repositories/types";
 import type { EnvelopeSnapshotEntry } from "@/engine";
 import { money } from "@/shared/ui/components";
+import { SwipeActionIcon } from "@/shared/ui/SwipeActionIcon";
 import { styles } from "@/shared/ui/styles";
 
 import { useSwipeRowGesture } from "@/features/home/SwipeRowGestureContext";
@@ -124,7 +125,12 @@ export function EnvelopeSwipeableRow({
                     action.onPress();
                   }}
                 >
-                  <Text style={styles.purchaseSwipeActionIcon}>{action.icon}</Text>
+                  {action.icon ? (
+                    <SwipeActionIcon
+                      destructive={action.destructive}
+                      name={action.icon}
+                    />
+                  ) : null}
                   <Text
                     style={[
                       styles.purchaseSwipeActionLabel,

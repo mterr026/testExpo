@@ -15,20 +15,20 @@ export function getEnvelopeSwipeActions({
 }: EnvelopeActionHandlers & { envelope: Envelope }): ActionMenuItem[] {
   return [
     {
-      icon: envelope.isPaused ? "▶" : "⏸",
+      icon: envelope.isPaused ? "play" : "pause",
       label: envelope.isPaused ? "Resume envelope" : "Pause envelope",
       onPress: () => {
         void onToggleEnvelopePaused(envelope);
       },
     },
     {
-      icon: "✏️",
+      icon: "pencil",
       label: "Edit Envelope",
       closeBeforeAction: true,
       onPress: () => onEditEnvelope(envelope),
     },
     {
-      icon: "🗑",
+      icon: "trash",
       label: "Delete Envelope",
       destructive: true,
       onPress: () => {

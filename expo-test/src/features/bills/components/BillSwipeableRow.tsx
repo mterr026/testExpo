@@ -7,6 +7,7 @@ import {
   StatusPill,
 } from "@/shared/ui/components";
 import { styles } from "@/shared/ui/styles";
+import { SwipeActionIcon } from "@/shared/ui/SwipeActionIcon";
 import type { Bill } from "@/shared/ui/types";
 
 import { useSwipeRowGesture } from "@/features/home/SwipeRowGestureContext";
@@ -22,6 +23,7 @@ import {
 
 type BillSwipeableRowProps = {
   bill: Bill;
+  isGrouped?: boolean;
   isSwipeOpen: boolean;
   onConfirmBill: (bill: Bill) => void;
   onDeleteBill: (bill: Bill) => void;
@@ -35,6 +37,7 @@ type BillSwipeableRowProps = {
 
 export function BillSwipeableRow({
   bill,
+  isGrouped = false,
   isSwipeOpen,
   onConfirmBill,
   onDeleteBill,
@@ -161,7 +164,9 @@ export function BillSwipeableRow({
         friction={2}
         overshootFriction={8}
         overshootRight={false}
-        containerStyle={styles.billSwipeableCard}
+        containerStyle={
+          isGrouped ? styles.billGroupedSwipeRow : styles.billSwipeableCard
+        }
         onSwipeableClose={onSwipeClose}
         onSwipeableWillOpen={() => onSwipeOpen(bill.id)}
         renderRightActions={() => (
@@ -181,7 +186,12 @@ export function BillSwipeableRow({
                   action.onPress();
                 }}
               >
-                <Text style={styles.purchaseSwipeActionIcon}>{action.icon}</Text>
+                {action.icon ? (
+                  <SwipeActionIcon
+                    destructive={action.destructive}
+                    name={action.icon}
+                  />
+                ) : null}
                 <Text
                   style={[
                     styles.purchaseSwipeActionLabel,

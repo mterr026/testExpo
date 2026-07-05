@@ -25,7 +25,7 @@ function getPrimaryBillActions({
 
   if (bill.status === "Needs confirmation" && !bill.isPaused) {
     primaryActions.push({
-      icon: "$",
+      icon: "dollar",
       label: "Confirm amount",
       closeBeforeAction: true,
       onPress: () => onConfirmBill(bill),
@@ -39,7 +39,7 @@ function getPrimaryBillActions({
     !bill.isPaused
   ) {
     primaryActions.push({
-      icon: "✓",
+      icon: "checkmark",
       label: "Mark paid",
       closeBeforeAction: true,
       onPress: () => {
@@ -50,7 +50,7 @@ function getPrimaryBillActions({
 
   if (bill.status === "Paid") {
     primaryActions.push({
-      icon: "↩",
+      icon: "undo",
       label: "Mark unpaid",
       closeBeforeAction: true,
       onPress: () => {
@@ -91,7 +91,7 @@ function buildBillActions(
       onMarkUnpaid,
     }),
     {
-      icon: "✏️",
+      icon: "pencil",
       label: "Edit Bill",
       closeBeforeAction: true,
       onPress: () => onEditBill(bill),
@@ -99,7 +99,7 @@ function buildBillActions(
     ...(bill.billId
       ? [
           {
-            icon: bill.isPaused ? "▶️" : "⏸",
+            icon: bill.isPaused ? ("play" as const) : ("pause" as const),
             label: bill.isPaused
               ? "Resume Recurring Bill"
               : "Pause Recurring Bill",
@@ -111,7 +111,7 @@ function buildBillActions(
         ]
       : []),
     {
-      icon: "🗑",
+      icon: "trash",
       label: "Delete Bill",
       destructive: true,
       closeBeforeAction: true,

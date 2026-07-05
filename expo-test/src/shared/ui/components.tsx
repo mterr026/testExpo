@@ -12,13 +12,38 @@ import {
 
 import { formatCurrency } from "@/shared/currency";
 
+import { ActionIcon, type ActionIconName } from "./ActionIcon";
 import { styles } from "./styles";
 
-export function EmptyState({ title, body }: { title: string; body: string }) {
+export type { ActionIconName };
+
+export function EmptyState({
+  actionLabel,
+  body,
+  onAction,
+  title,
+}: {
+  actionLabel?: string;
+  body: string;
+  onAction?: () => void;
+  title: string;
+}) {
   return (
     <View style={styles.emptyState}>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.helpText}>{body}</Text>
+      {actionLabel && onAction ? (
+        <Pressable
+          accessibilityRole="button"
+          style={({ pressed }) => [
+            styles.emptyStateButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={onAction}
+        >
+          <Text style={styles.emptyStateButtonText}>{actionLabel}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -89,7 +114,7 @@ function getStatusPillToneStyles(tone: StatusPillTone) {
 }
 
 export type ActionMenuItem = {
-  icon?: string;
+  icon?: ActionIconName;
   label: string;
   closeBeforeAction?: boolean;
   destructive?: boolean;
@@ -188,14 +213,22 @@ export function ActionMenu({
                   action.destructive && styles.actionMenuDangerIcon,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.actionMenuIconText,
-                    action.destructive && styles.actionMenuDangerText,
-                  ]}
-                >
-                  {action.icon ?? "•"}
-                </Text>
+                {action.icon ? (
+                  <ActionIcon
+                    destructive={action.destructive}
+                    name={action.icon}
+                    size={18}
+                  />
+                ) : (
+                  <Text
+                    style={[
+                      styles.actionMenuIconText,
+                      action.destructive && styles.actionMenuDangerText,
+                    ]}
+                  >
+                    •
+                  </Text>
+                )}
               </View>
               <Text
                 style={[

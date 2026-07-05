@@ -11,7 +11,7 @@ import { EnvelopeSwipeableRow } from "@/features/budgeting/components/EnvelopeSw
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useOptionalTutorialContext } from "@/features/tutorial/TutorialContext";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
-import { money } from "@/shared/ui/components";
+import { EmptyState, money } from "@/shared/ui/components";
 import {
   getBillTimelineMetaLabel,
   getPaycheckTimelineMetaLabel,
@@ -212,11 +212,12 @@ export function DashboardScreen({
             </Pressable>
           </View>
           {activeEnvelopes.length === 0 ? (
-            <View style={styles.dashboardBreakdownCard}>
-              <Text style={[styles.rowMetaText, styles.timelineEmptyText]}>
-                Add envelopes like Gas or Groceries to partition Safe to Spend.
-              </Text>
-            </View>
+            <EmptyState
+              actionLabel="Add envelope"
+              body="Add envelopes like Gas or Groceries to partition Safe to Spend."
+              title="No envelopes yet"
+              onAction={onAddEnvelope}
+            />
           ) : (
             <View style={[styles.purchaseSwipeableList, styles.dashboardEnvelopeSwipeList]}>
               {activeEnvelopes.map((envelope) => (
@@ -296,68 +297,99 @@ export function DashboardScreen({
           ]}
         >
           {isBreakdownExpanded && (
-            <>
-              {safeToSpendBreakdown.openingBalanceCents > 0 && (
+            <View style={styles.dashboardBreakdownBody}>
+              <View style={styles.dashboardBreakdownSection}>
+                <Text style={styles.dashboardBreakdownSectionTitle}>In</Text>
+                {safeToSpendBreakdown.openingBalanceCents > 0 && (
+                  <DashboardBreakdownRow
+                    isLastInSection={safeToSpendBreakdown.confirmedIncomeCents <= 0}
+                    label="Starting balance"
+                    tone="credit"
+                    value={`+${money(safeToSpendBreakdown.openingBalanceCents)}`}
+                  />
+                )}
                 <DashboardBreakdownRow
-                  label="Starting balance"
-                  value={`+${money(safeToSpendBreakdown.openingBalanceCents)}`}
+                  isLastInSection
+                  label="Confirmed income"
+                  tone="credit"
+                  value={`+${money(safeToSpendBreakdown.confirmedIncomeCents)}`}
                 />
+              </View>
+
+              {(safeToSpendBreakdown.chargedPurchasesCents > 0 ||
+                safeToSpendBreakdown.pendingPurchasesCents > 0 ||
+                safeToSpendBreakdown.paidBillsCents > 0) && (
+                <View style={styles.dashboardBreakdownSection}>
+                  <Text style={styles.dashboardBreakdownSectionTitle}>
+                    Adjustments
+                  </Text>
+                  {safeToSpendBreakdown.chargedPurchasesCents > 0 && (
+                    <DashboardBreakdownRow
+                      isLastInSection={
+                        safeToSpendBreakdown.pendingPurchasesCents <= 0 &&
+                        safeToSpendBreakdown.paidBillsCents <= 0
+                      }
+                      label="Charged purchases"
+                      tone="deduction"
+                      value={`-${money(safeToSpendBreakdown.chargedPurchasesCents)}`}
+                    />
+                  )}
+                  {safeToSpendBreakdown.pendingPurchasesCents > 0 && (
+                    <DashboardBreakdownRow
+                      isLastInSection={safeToSpendBreakdown.paidBillsCents <= 0}
+                      label="Pending purchases"
+                      tone="deduction"
+                      value={`-${money(safeToSpendBreakdown.pendingPurchasesCents)}`}
+                    />
+                  )}
+                  {safeToSpendBreakdown.paidBillsCents > 0 && (
+                    <DashboardBreakdownRow
+                      isLastInSection
+                      label="Paid bills"
+                      tone="deduction"
+                      value={`-${money(safeToSpendBreakdown.paidBillsCents)}`}
+                    />
+                  )}
+                </View>
               )}
-              <DashboardBreakdownRow
-                label="Confirmed income"
-                tone="credit"
-                value={`+${money(safeToSpendBreakdown.confirmedIncomeCents)}`}
-              />
-              {safeToSpendBreakdown.chargedPurchasesCents > 0 && (
-                <DashboardBreakdownRow
-                  label="Charged purchases"
-                  tone="deduction"
-                  value={`-${money(safeToSpendBreakdown.chargedPurchasesCents)}`}
-                />
-              )}
-              {safeToSpendBreakdown.pendingPurchasesCents > 0 && (
-                <DashboardBreakdownRow
-                  label="Pending purchases"
-                  tone="deduction"
-                  value={`-${money(safeToSpendBreakdown.pendingPurchasesCents)}`}
-                />
-              )}
-              {safeToSpendBreakdown.paidBillsCents > 0 && (
-                <DashboardBreakdownRow
-                  label="Paid bills"
-                  tone="deduction"
-                  value={`-${money(safeToSpendBreakdown.paidBillsCents)}`}
-                />
-              )}
+
               <DashboardBreakdownRow
                 isSubtotal
                 label="Available balance"
                 value={money(safeToSpendBreakdown.runningBalanceCents)}
               />
-              <DashboardBreakdownRow
-                label="Upcoming bills"
-                tone="deduction"
-                value={`-${money(safeToSpendBreakdown.unpaidBillsCents)}`}
-              />
-              <DashboardBreakdownRow
-                label="Reserve"
-                tone="deduction"
-                value={`-${money(safeToSpendBreakdown.essentialReserveCents)}`}
-              />
-              {safeToSpendBreakdown.envelopeReservedCents > 0 && (
+
+              <View style={styles.dashboardBreakdownSection}>
+                <Text style={styles.dashboardBreakdownSectionTitle}>Committed</Text>
                 <DashboardBreakdownRow
-                  label="Envelope reserve"
+                  isLastInSection={safeToSpendBreakdown.envelopeReservedCents <= 0}
+                  label="Upcoming bills"
                   tone="deduction"
-                  value={`-${money(safeToSpendBreakdown.envelopeReservedCents)}`}
+                  value={`-${money(safeToSpendBreakdown.unpaidBillsCents)}`}
                 />
-              )}
+                <DashboardBreakdownRow
+                  isLastInSection={safeToSpendBreakdown.envelopeReservedCents <= 0}
+                  label="Reserve"
+                  tone="deduction"
+                  value={`-${money(safeToSpendBreakdown.essentialReserveCents)}`}
+                />
+                {safeToSpendBreakdown.envelopeReservedCents > 0 && (
+                  <DashboardBreakdownRow
+                    isLastInSection
+                    label="Envelope reserve"
+                    tone="deduction"
+                    value={`-${money(safeToSpendBreakdown.envelopeReservedCents)}`}
+                  />
+                )}
+              </View>
+
               <DashboardBreakdownRow
                 isTotal
                 label="Safe to Spend"
                 tone={isNegative ? "deduction" : "total"}
                 value={money(safeToSpendBreakdown.safeToSpendCents)}
               />
-            </>
+            </View>
           )}
           <Pressable
             accessibilityHint={
@@ -587,12 +619,14 @@ function DashboardCycleChip({
 }
 
 function DashboardBreakdownRow({
+  isLastInSection = false,
   isSubtotal = false,
   isTotal = false,
   label,
   tone = "default",
   value,
 }: {
+  isLastInSection?: boolean;
   isSubtotal?: boolean;
   isTotal?: boolean;
   label: string;
@@ -603,6 +637,7 @@ function DashboardBreakdownRow({
     <View
       style={[
         styles.dashboardBreakdownRow,
+        isLastInSection && styles.dashboardBreakdownRowLast,
         isSubtotal && styles.dashboardBreakdownSubtotalRow,
         isTotal && styles.dashboardBreakdownTotalRow,
       ]}

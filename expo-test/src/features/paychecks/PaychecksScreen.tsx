@@ -5,6 +5,9 @@ import { ScrollView } from "react-native-gesture-handler";
 import {
   EmptyState,
 } from "@/shared/ui/components";
+import { CollapsibleSection } from "@/shared/ui/CollapsibleSection";
+import { ScreenSectionTitle } from "@/shared/ui/ScreenSectionTitle";
+import { ScreenShell } from "@/shared/ui/ScreenShell";
 import { styles } from "@/shared/ui/styles";
 import type {
   NextCyclePreview,
@@ -180,23 +183,23 @@ export function PaychecksScreen({
       onScroll={onTutorialScroll}
       onScrollBeginDrag={() => setOpenSwipePaycheckId(null)}
     >
-      <View style={styles.screenHeaderRow}>
-        <View style={styles.itemCopy}>
-          <Text style={styles.sectionTitle}>Paychecks</Text>
-          <Text style={styles.helpText}>Plan each paycheck cycle.</Text>
-        </View>
-        <Pressable
-          style={({ pressed }) => [
-            styles.inlinePrimaryButton,
-            pressed && styles.pressed,
-          ]}
-          onPress={onAddPaycheck}
-        >
-          <Text style={styles.inlinePrimaryButtonText}>+ Add</Text>
-        </Pressable>
-      </View>
+      <ScreenShell
+        headerAction={
+          <Pressable
+            style={({ pressed }) => [
+              styles.inlinePrimaryButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={onAddPaycheck}
+          >
+            <Text style={styles.inlinePrimaryButtonText}>+ Add</Text>
+          </Pressable>
+        }
+        subtitle="Plan each paycheck cycle."
+        title="Paychecks"
+      />
 
-      <Text style={styles.settingsGroupTitle}>Paycheck Schedule</Text>
+      <ScreenSectionTitle title="Paycheck Schedule" />
 
       {nextExpectedPaycheck ? (
         <TutorialTarget id="paychecks-summary">
@@ -227,8 +230,10 @@ export function PaychecksScreen({
       {paychecks.length === 0 ? (
         <TutorialTarget id="paychecks-upcoming">
         <EmptyState
-          title="No paychecks yet"
+          actionLabel="Add paycheck"
           body="Add an expected paycheck to start building pay cycles."
+          title="No paychecks yet"
+          onAction={onAddPaycheck}
         />
         </TutorialTarget>
       ) : (
@@ -333,7 +338,7 @@ function AdditionalIncomeSection({
   const content =
     expectedPaychecks.length > 0 ? (
       <>
-        <Text style={styles.paycheckSectionTitle}>Additional income</Text>
+        <ScreenSectionTitle title="Additional income" />
         <View style={styles.additionalIncomeGroup}>
           {expectedPaychecks.map((paycheck) => (
             <AdditionalIncomeRow
@@ -352,7 +357,7 @@ function AdditionalIncomeSection({
       </>
     ) : showTutorialTarget ? (
       <>
-        <Text style={styles.paycheckSectionTitle}>Additional income</Text>
+        <ScreenSectionTitle title="Additional income" />
         <View style={styles.additionalIncomeGroup}>
           <Text style={styles.helpText}>
             Side gigs, bonuses, and other deposits that are not your primary
@@ -411,40 +416,35 @@ function PreviousAdditionalIncomeSection({
   }
 
   return (
-    <>
-      <Pressable
-        accessibilityRole="button"
-        style={({ pressed }) => [
-          styles.paycheckSectionToggle,
-          pressed && styles.pressed,
-        ]}
-        onPress={onToggle}
-      >
-        <Text style={styles.paycheckCoverageTitle}>Previous additional income</Text>
-        <Text style={styles.paycheckCoverageTotal}>
-          {paychecks.length} {paychecks.length === 1 ? "payment" : "payments"}{" "}
-          {isExpanded ? "⌃" : "⌄"}
-        </Text>
-      </Pressable>
-      {isExpanded && (
-        <View style={styles.additionalIncomeGroup}>
-          {paychecks.map((paycheck) => (
-            <AdditionalIncomeRow
-              key={paycheck.id}
-              paycheck={paycheck}
-              isSwipeOpen={openSwipePaycheckId === paycheck.id}
-              onConfirmPaycheck={onConfirmPaycheck}
-              onDeletePaycheck={onDeletePaycheck}
-              onEditPaycheck={onEditPaycheck}
-              onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
-              onSwipeClose={() => onSwipeClose(paycheck.id)}
-              onSwipeOpen={onSwipeOpen}
-              received
-            />
-          ))}
-        </View>
-      )}
-    </>
+    <CollapsibleSection
+      accessibilityHint={
+        isExpanded
+          ? "Collapses previous additional income"
+          : "Expands previous additional income"
+      }
+      accessibilityLabel="Previous additional income"
+      detail={`${paychecks.length} ${paychecks.length === 1 ? "payment" : "payments"}`}
+      expanded={isExpanded}
+      title="Previous additional income"
+      onToggle={onToggle}
+    >
+      <View style={styles.additionalIncomeGroup}>
+        {paychecks.map((paycheck) => (
+          <AdditionalIncomeRow
+            key={paycheck.id}
+            paycheck={paycheck}
+            isSwipeOpen={openSwipePaycheckId === paycheck.id}
+            onConfirmPaycheck={onConfirmPaycheck}
+            onDeletePaycheck={onDeletePaycheck}
+            onEditPaycheck={onEditPaycheck}
+            onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+            onSwipeClose={() => onSwipeClose(paycheck.id)}
+            onSwipeOpen={onSwipeOpen}
+            received
+          />
+        ))}
+      </View>
+    </CollapsibleSection>
   );
 }
 
@@ -532,38 +532,31 @@ function PreviousPaychecksSection({
   }
 
   return (
-    <>
-      <Pressable
-        accessibilityRole="button"
-        style={({ pressed }) => [
-          styles.paycheckSectionToggle,
-          pressed && styles.pressed,
-        ]}
-        onPress={onToggle}
-      >
-        <Text style={styles.paycheckCoverageTitle}>Previous paychecks</Text>
-        <Text style={styles.paycheckCoverageTotal}>
-          {paychecks.length} {paychecks.length === 1 ? "paycheck" : "paychecks"}{" "}
-          {isExpanded ? "⌃" : "⌄"}
-        </Text>
-      </Pressable>
-      {isExpanded && (
-        <PaycheckScheduleGroup
-          coverageByPaycheckId={coverageByPaycheckId}
-          expandedCoverageIds={expandedCoverageIds}
-          openSwipePaycheckId={openSwipePaycheckId}
-          onConfirmPaycheck={onConfirmPaycheck}
-          onDeletePaycheck={onDeletePaycheck}
-          onEditPaycheck={onEditPaycheck}
-          onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
-          onSwipeClose={onSwipeClose}
-          onSwipeOpen={onSwipeOpen}
-          onToggleCoverage={onToggleCoverage}
-          paychecks={paychecks}
-          title=""
-        />
-      )}
-    </>
+    <CollapsibleSection
+      accessibilityHint={
+        isExpanded ? "Collapses previous paychecks" : "Expands previous paychecks"
+      }
+      accessibilityLabel="Previous paychecks"
+      detail={`${paychecks.length} ${paychecks.length === 1 ? "paycheck" : "paychecks"}`}
+      expanded={isExpanded}
+      title="Previous paychecks"
+      onToggle={onToggle}
+    >
+      <PaycheckScheduleGroup
+        coverageByPaycheckId={coverageByPaycheckId}
+        expandedCoverageIds={expandedCoverageIds}
+        openSwipePaycheckId={openSwipePaycheckId}
+        onConfirmPaycheck={onConfirmPaycheck}
+        onDeletePaycheck={onDeletePaycheck}
+        onEditPaycheck={onEditPaycheck}
+        onMarkPaycheckUnreceived={onMarkPaycheckUnreceived}
+        onSwipeClose={onSwipeClose}
+        onSwipeOpen={onSwipeOpen}
+        onToggleCoverage={onToggleCoverage}
+        paychecks={paychecks}
+        title=""
+      />
+    </CollapsibleSection>
   );
 }
 
@@ -606,9 +599,7 @@ function PaycheckScheduleGroup({
 
   return (
     <>
-      {!!title && (
-        <Text style={styles.paycheckSectionTitle}>{title}</Text>
-      )}
+      {!!title && <ScreenSectionTitle title={title} />}
       <View style={styles.paycheckTimelineGroup}>
         {paychecks.map((paycheck) => (
           <PaycheckTimelineRow

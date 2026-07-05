@@ -18,27 +18,27 @@ export function getPurchaseActions({
   return [
     purchase.status === "Pending"
       ? {
-          icon: "✓",
+          icon: "checkmark",
           label: "Mark Charged",
           onPress: () => {
             void onMarkCharged(purchase.id);
           },
         }
       : {
-          icon: "⏳",
+          icon: "clock",
           label: "Mark Pending",
           onPress: () => {
             void onMarkPending(purchase.id);
           },
         },
     {
-      icon: "✏️",
+      icon: "pencil",
       label: "Edit Purchase",
       closeBeforeAction: true,
       onPress: () => onEditPurchase(purchase),
     },
     {
-      icon: "🗑",
+      icon: "trash",
       label: "Delete Purchase",
       destructive: true,
       onPress: () => {

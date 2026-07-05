@@ -130,6 +130,7 @@ function renderPagerScreen({
           activeCycleStartDate={controller.purchaseCycleContext.activeCycleStartDate}
           activeCycleEndDate={controller.purchaseCycleContext.activeCycleEndDate}
           paychecks={controller.purchaseCycleContext.paychecks ?? []}
+          onAddPurchase={controller.openAddPurchase}
           onDeletePurchase={controller.deletePurchase}
           onEditPurchase={controller.openPurchaseEdit}
           onMarkCharged={controller.markPurchaseCharged}

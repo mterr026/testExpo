@@ -586,6 +586,22 @@ export const styles = StyleSheet.create({
   billListGroup: {
     gap: spacing.lg,
   },
+  billGroupedList: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    marginBottom: spacing.lg,
+    ...shadows.card,
+  },
+  billGroupedListRowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: surfaces.divider,
+  },
+  billGroupedSwipeRow: {
+    overflow: "hidden",
+    borderRadius: 0,
+    ...shadows.none,
+  },
   billDateBadge: {
     width: 52,
     alignItems: "center",
@@ -964,6 +980,11 @@ export const styles = StyleSheet.create({
     fontSize: fontSize.label,
     lineHeight: lineHeight.tight,
     fontWeight: fontWeight.bold,
+  },
+  paycheckCoverageTotalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
   },
   paycheckCoverageSummaryText: {
     color: colors.accentDark,
@@ -1364,14 +1385,32 @@ export const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
   },
+  dashboardBreakdownBody: {
+    gap: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  dashboardBreakdownSection: {
+    gap: 0,
+  },
+  dashboardBreakdownSectionTitle: {
+    color: colors.muted,
+    fontSize: fontSize.caption,
+    fontWeight: fontWeight.bold,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    lineHeight: lineHeight.tight,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
+  },
   dashboardBreakdownToggleCollapsed: {
     borderTopWidth: 0,
     marginTop: 0,
   },
   dashboardBreakdownRow: {
-    paddingVertical: spacing.md,
+    minHeight: 40,
+    paddingVertical: spacing.sm + 2,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: spacing.lg,
     borderBottomWidth: 1,
@@ -1384,20 +1423,25 @@ export const styles = StyleSheet.create({
     marginTop: spacing.xs,
     paddingTop: spacing.md + 2,
     paddingBottom: spacing.sm,
+    minHeight: 48,
+    alignItems: "center",
   },
   dashboardBreakdownSubtotalRow: {
     borderBottomWidth: 0,
     borderTopWidth: 1,
     borderTopColor: surfaces.divider,
-    marginTop: spacing.xs - 2,
+    marginTop: spacing.xs,
     paddingTop: spacing.md,
+    paddingBottom: spacing.sm + 2,
+    minHeight: 44,
+    alignItems: "center",
   },
   dashboardBreakdownLabel: {
     flex: 1,
     minWidth: 0,
     color: colors.muted,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.regular,
+    fontWeight: fontWeight.medium,
     lineHeight: lineHeight.body,
   },
   dashboardBreakdownTotalLabel: {
@@ -1411,7 +1455,7 @@ export const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   dashboardBreakdownValue: {
-    minWidth: 100,
+    minWidth: 108,
     textAlign: "right",
     color: colors.text,
     fontSize: fontSize.bodyLg,
@@ -1425,7 +1469,7 @@ export const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   dashboardBreakdownValueCredit: {
-    color: colors.accentDark,
+    color: colors.accent,
     fontWeight: fontWeight.semibold,
   },
   dashboardBreakdownValueTotal: {
@@ -1442,6 +1486,7 @@ export const styles = StyleSheet.create({
   },
   dashboardBreakdownRowLast: {
     borderBottomWidth: 0,
+    paddingBottom: spacing.xs,
   },
   purchaseCycleHeaderCard: {
     backgroundColor: surfaces.card,
@@ -1450,6 +1495,45 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.md + 2,
     marginBottom: spacing.md + 2,
     ...shadows.subtle,
+  },
+  cycleSummaryCardCompact: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
+    marginBottom: spacing.md + 2,
+    ...shadows.subtle,
+  },
+  cycleSummaryCardHero: {
+    backgroundColor: surfaces.card,
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.card,
+  },
+  cycleSummaryCardTitle: {
+    color: colors.text,
+    fontSize: fontSize.body,
+    lineHeight: lineHeight.body,
+    fontWeight: fontWeight.semibold,
+    marginBottom: spacing.xs,
+  },
+  cycleSummaryCardSummary: {
+    color: colors.warmText,
+    fontSize: fontSize.label,
+    lineHeight: lineHeight.tight + 2,
+    fontWeight: fontWeight.semibold,
+    fontVariant: ["tabular-nums"],
+  },
+  screenSectionTitle: {
+    color: colors.muted,
+    fontSize: fontSize.meta,
+    fontWeight: fontWeight.bold,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: spacing.sm + 2,
+    paddingHorizontal: spacing.xs,
   },
   purchaseCycleHeaderTitle: {
     color: colors.text,
@@ -2600,6 +2684,21 @@ export const styles = StyleSheet.create({
     fontSize: fontSize.title,
     fontWeight: fontWeight.semibold,
     marginBottom: spacing.sm - 2,
+  },
+  emptyStateButton: {
+    marginTop: spacing.md,
+    alignSelf: "flex-start",
+    minHeight: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    justifyContent: "center",
+  },
+  emptyStateButtonText: {
+    color: "#FFFFFF",
+    fontSize: fontSize.body,
+    fontWeight: fontWeight.semibold,
   },
   bottomNav: {
     flexDirection: "row",

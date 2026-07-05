@@ -5,13 +5,17 @@ import { ScrollView } from "react-native-gesture-handler";
 import {
   EmptyState,
 } from "@/shared/ui/components";
+import { CollapsibleSection } from "@/shared/ui/CollapsibleSection";
+import { CycleSummaryCard } from "@/shared/ui/CycleSummaryCard";
+import { ScreenSectionTitle } from "@/shared/ui/ScreenSectionTitle";
+import { ScreenShell } from "@/shared/ui/ScreenShell";
 import { styles } from "@/shared/ui/styles";
 import type { Bill } from "@/shared/ui/types";
 
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
 
-import { BillCycleSummaryCard } from "./components/BillCycleSummaryCard";
+import { formatBillCycleHeaderSummary } from "./billCycleHeader";
 import { BillSwipeableRow } from "./components/BillSwipeableRow";
 
 export function BillsScreen({
@@ -89,10 +93,15 @@ export function BillsScreen({
     );
   }
 
-  function renderBillRow(bill: Bill, showTutorialSwipeTarget = false) {
+  function renderBillRow(
+    bill: Bill,
+    showTutorialSwipeTarget = false,
+    isGrouped = false
+  ) {
     const row = (
       <BillSwipeableRow
         bill={bill}
+        isGrouped={isGrouped}
         isSwipeOpen={openSwipeBillId === bill.id}
         onConfirmBill={onConfirmBill}
         onDeleteBill={onDeleteBill}
@@ -124,42 +133,46 @@ export function BillsScreen({
         onScroll={onTutorialScroll}
         onScrollBeginDrag={() => setOpenSwipeBillId(null)}
       >
-        <View style={styles.screenHeaderRow}>
-          <View style={styles.itemCopy}>
-            <Text style={styles.sectionTitle}>Bills</Text>
-            <Text style={styles.helpText}>Saved bills and current-cycle obligations.</Text>
-          </View>
-          <TutorialTarget id="bills-add">
-            <Pressable
-              accessibilityHint="Opens the form to add a new bill"
-              accessibilityLabel="Add bill"
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.inlinePrimaryButton,
-                pressed && styles.pressed,
-              ]}
-              onPress={onAddBill}
-            >
-              <Text style={styles.inlinePrimaryButtonText}>+ Add</Text>
-            </Pressable>
-          </TutorialTarget>
-        </View>
+        <ScreenShell
+          headerAction={
+            <TutorialTarget id="bills-add">
+              <Pressable
+                accessibilityHint="Opens the form to add a new bill"
+                accessibilityLabel="Add bill"
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.inlinePrimaryButton,
+                  pressed && styles.pressed,
+                ]}
+                onPress={onAddBill}
+              >
+                <Text style={styles.inlinePrimaryButtonText}>+ Add</Text>
+              </Pressable>
+            </TutorialTarget>
+          }
+          subtitle="Saved bills and current-cycle obligations."
+          title="Bills"
+        />
 
         {!!actionError && <Text style={styles.errorText}>{actionError}</Text>}
 
         {bills.length > 0 && (
-          <BillCycleSummaryCard
-            confirmCount={confirmCount}
-            cycleLabel={cycleLabel}
-            totalDueCents={totalDueCents}
+          <CycleSummaryCard
+            summary={formatBillCycleHeaderSummary({
+              confirmCount,
+              cycleWindowLabel: cycleLabel,
+              totalDueCents,
+            })}
           />
         )}
 
         {bills.length === 0 && (
           <TutorialTarget id="bills-due">
             <EmptyState
-              title="No bills yet"
+              actionLabel="Add bill"
               body="Add upcoming bills to keep Safe to Spend grounded."
+              title="No bills yet"
+              onAction={onAddBill}
             />
           </TutorialTarget>
         )}
@@ -168,10 +181,17 @@ export function BillsScreen({
           <TutorialTarget id="bills-due">
             <View style={styles.plainListGroup}>
               {currentCycleBills.length > 0 ? (
-                <View style={styles.billListGroup}>
+                <View style={styles.billGroupedList}>
                   {currentCycleBills.map((bill, index) => (
-                    <View key={bill.id}>
-                      {renderBillRow(bill, index === 0)}
+                    <View
+                      key={bill.id}
+                      style={
+                        index < currentCycleBills.length - 1
+                          ? styles.billGroupedListRowDivider
+                          : undefined
+                      }
+                    >
+                      {renderBillRow(bill, index === 0, true)}
                     </View>
                   ))}
                 </View>
@@ -185,7 +205,7 @@ export function BillsScreen({
 
               {scheduledBills.length > 0 && (
                 <>
-                  <Text style={styles.paycheckSectionTitle}>Scheduled bills</Text>
+                  <ScreenSectionTitle title="Scheduled bills" />
                   <View style={styles.billListGroup}>
                     {scheduledBills.map((bill) => (
                       <View key={bill.id}>{renderBillRow(bill)}</View>
@@ -195,68 +215,49 @@ export function BillsScreen({
               )}
 
               {pausedBills.length > 0 && (
-                <>
-                  <Pressable
-                    accessibilityHint={
-                      showPausedBills
-                        ? "Collapses the paused bills list"
-                        : "Expands the paused bills list"
-                    }
-                    accessibilityLabel="Paused bills"
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      styles.paycheckSectionToggle,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => setShowPausedBills((isVisible) => !isVisible)}
-                  >
-                    <Text style={styles.paycheckCoverageTitle}>Paused bills</Text>
-                    <Text style={styles.paycheckCoverageTotal}>
-                      {pausedBills.length}{" "}
-                      {pausedBills.length === 1 ? "bill" : "bills"}{" "}
-                      {showPausedBills ? "⌃" : "⌄"}
-                    </Text>
-                  </Pressable>
-                  {showPausedBills && (
-                    <View style={styles.billListGroup}>
-                      {pausedBills.map((bill) => (
-                        <View key={bill.id}>{renderBillRow(bill)}</View>
-                      ))}
-                    </View>
-                  )}
-                </>
+                <CollapsibleSection
+                  accessibilityHint={
+                    showPausedBills
+                      ? "Collapses the paused bills list"
+                      : "Expands the paused bills list"
+                  }
+                  accessibilityLabel="Paused bills"
+                  detail={`${pausedBills.length} ${
+                    pausedBills.length === 1 ? "bill" : "bills"
+                  }`}
+                  expanded={showPausedBills}
+                  title="Paused bills"
+                  onToggle={() => setShowPausedBills((isVisible) => !isVisible)}
+                >
+                  <View style={styles.billListGroup}>
+                    {pausedBills.map((bill) => (
+                      <View key={bill.id}>{renderBillRow(bill)}</View>
+                    ))}
+                  </View>
+                </CollapsibleSection>
               )}
 
               {paidBills.length > 0 && (
-                <>
-                  <Pressable
-                    accessibilityHint={
-                      showPaidBills
-                        ? "Collapses the paid bills list"
-                        : "Expands the paid bills list"
-                    }
-                    accessibilityLabel="Paid bills"
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      styles.paycheckSectionToggle,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => setShowPaidBills((isVisible) => !isVisible)}
-                  >
-                    <Text style={styles.paycheckCoverageTitle}>Paid bills</Text>
-                    <Text style={styles.paycheckCoverageTotal}>
-                      {paidBills.length} {paidBills.length === 1 ? "bill" : "bills"}{" "}
-                      {showPaidBills ? "⌃" : "⌄"}
-                    </Text>
-                  </Pressable>
-                  {showPaidBills && (
-                    <View style={styles.billListGroup}>
-                      {paidBills.map((bill) => (
-                        <View key={bill.id}>{renderBillRow(bill)}</View>
-                      ))}
-                    </View>
-                  )}
-                </>
+                <CollapsibleSection
+                  accessibilityHint={
+                    showPaidBills
+                      ? "Collapses the paid bills list"
+                      : "Expands the paid bills list"
+                  }
+                  accessibilityLabel="Paid bills"
+                  detail={`${paidBills.length} ${
+                    paidBills.length === 1 ? "bill" : "bills"
+                  }`}
+                  expanded={showPaidBills}
+                  title="Paid bills"
+                  onToggle={() => setShowPaidBills((isVisible) => !isVisible)}
+                >
+                  <View style={styles.billListGroup}>
+                    {paidBills.map((bill) => (
+                      <View key={bill.id}>{renderBillRow(bill)}</View>
+                    ))}
+                  </View>
+                </CollapsibleSection>
               )}
             </View>
           </TutorialTarget>

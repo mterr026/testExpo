@@ -1,6 +1,8 @@
 import { Pressable, Text, View } from "react-native";
 
 import { money } from "@/shared/ui/components";
+import { CollapseChevron } from "@/shared/ui/CollapseChevron";
+import { CollapsibleLinkToggle } from "@/shared/ui/CollapsibleLinkToggle";
 import { styles } from "@/shared/ui/styles";
 import type { PaycheckBillCoverage } from "@/shared/ui/types";
 
@@ -73,45 +75,39 @@ export function PaycheckCoveredBills({
             windowText={windowText}
           />
         ))}
-      <Pressable
-        accessibilityHint={
-          isExpanded
-            ? "Collapses the bill breakdown for this paycheck"
-            : "Expands the bill breakdown for this paycheck"
-        }
-        accessibilityLabel={
-          toggleStyle === "link"
-            ? toggleLabel ?? "Toggle bill breakdown"
-            : isExpanded
-            ? "Hide paycheck breakdown"
-            : "Show paycheck breakdown"
-        }
-        accessibilityRole="button"
-        style={({ pressed }) => [
-          toggleStyle === "link"
-            ? styles.paycheckCoverageLinkToggle
-            : styles.paycheckCoveredBillsToggle,
-          toggleStyle !== "link" && pressed && styles.pressed,
-        ]}
-        onPress={onToggle}
-      >
-        {({ pressed }) =>
-          toggleStyle === "link" ? (
-            <Text
-              style={[
-                styles.paycheckCoverageLinkText,
-                pressed && styles.paycheckCoverageLinkTextPressed,
-              ]}
-            >
-              {toggleLabel}
-            </Text>
-          ) : (
-            <Text style={styles.paycheckBreakdownCaret}>
-              {isExpanded ? "⌃" : "⌄"}
-            </Text>
-          )
-        }
-      </Pressable>
+      {toggleStyle === "link" ? (
+        <CollapsibleLinkToggle
+          accessibilityHint={
+            isExpanded
+              ? "Collapses the bill breakdown for this paycheck"
+              : "Expands the bill breakdown for this paycheck"
+          }
+          accessibilityLabel={toggleLabel ?? "Toggle bill breakdown"}
+          expanded={isExpanded}
+          expandedLabel="Hide bill breakdown"
+          collapsedLabel="See how bills fit"
+          onToggle={onToggle}
+        />
+      ) : (
+        <Pressable
+          accessibilityHint={
+            isExpanded
+              ? "Collapses the bill breakdown for this paycheck"
+              : "Expands the bill breakdown for this paycheck"
+          }
+          accessibilityLabel={
+            isExpanded ? "Hide paycheck breakdown" : "Show paycheck breakdown"
+          }
+          accessibilityRole="button"
+          style={({ pressed }) => [
+            styles.paycheckCoveredBillsToggle,
+            pressed && styles.pressed,
+          ]}
+          onPress={onToggle}
+        >
+          <CollapseChevron expanded={isExpanded} />
+        </Pressable>
+      )}
     </View>
   );
 }

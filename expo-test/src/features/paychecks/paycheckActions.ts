@@ -18,20 +18,20 @@ export function getPaycheckActions({
   if (paycheck.isReceived) {
     return [
       {
-        icon: "↩",
+        icon: "undo",
         label: "Mark unreceived",
         onPress: () => {
           void onMarkPaycheckUnreceived(paycheck.id);
         },
       },
       {
-        icon: "✏️",
+        icon: "pencil",
         label: "Edit Paycheck",
         closeBeforeAction: true,
         onPress: () => onEditPaycheck(paycheck),
       },
       {
-        icon: "🗑",
+        icon: "trash",
         label: paycheck.recurrenceInterval
           ? "Delete Recurring Paychecks"
           : "Delete Paycheck",
@@ -45,20 +45,20 @@ export function getPaycheckActions({
 
   return [
     {
-      icon: "✓",
+      icon: "checkmark",
       label: "Confirm received",
       onPress: () => {
         void onConfirmPaycheck(paycheck.id);
       },
     },
     {
-      icon: "✏️",
+      icon: "pencil",
       label: "Edit Paycheck",
       closeBeforeAction: true,
       onPress: () => onEditPaycheck(paycheck),
     },
     {
-      icon: "🗑",
+      icon: "trash",
       label: paycheck.recurrenceInterval
         ? "Delete Recurring Paychecks"
         : "Delete Paycheck",

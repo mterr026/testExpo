@@ -28,7 +28,7 @@ export function getBillRowMeta(bill: Bill) {
 
 export function formatBillDueDateParts(date: string, status?: Bill["status"]) {
   if (status === "Paused") {
-    return { day: "Paused", month: "⏸" };
+    return { day: "Pause", month: "" };
   }
 
   if (date === "Scheduled") {

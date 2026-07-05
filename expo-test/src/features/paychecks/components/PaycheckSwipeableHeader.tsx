@@ -3,6 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
 import { money, StatusPill } from "@/shared/ui/components";
+import { SwipeActionIcon } from "@/shared/ui/SwipeActionIcon";
 import { getPaycheckStatusPresentation } from "@/shared/ui/statusBadges";
 import { styles } from "@/shared/ui/styles";
 import type { PaycheckListItem } from "@/shared/ui/types";
@@ -171,7 +172,12 @@ export function PaycheckSwipeableHeader({
                   action.onPress();
                 }}
               >
-                <Text style={styles.purchaseSwipeActionIcon}>{action.icon}</Text>
+                {action.icon ? (
+                  <SwipeActionIcon
+                    destructive={action.destructive}
+                    name={action.icon}
+                  />
+                ) : null}
                 <Text
                   style={[
                     styles.purchaseSwipeActionLabel,

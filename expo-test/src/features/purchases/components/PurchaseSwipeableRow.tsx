@@ -4,12 +4,13 @@ import Swipeable from "react-native-gesture-handler/Swipeable";
 
 import { getPurchaseStatusPresentation } from "@/shared/ui/statusBadges";
 import { money, StatusPill } from "@/shared/ui/components";
+import { SwipeActionIcon } from "@/shared/ui/SwipeActionIcon";
 import { styles } from "@/shared/ui/styles";
 import type { Purchase } from "@/shared/ui/types";
 
 import { useSwipeRowGesture } from "@/features/home/SwipeRowGestureContext";
 import { getPurchaseSwipeActions } from "../purchaseActions";
-import { formatPurchaseDisplayName } from "../purchaseRowDisplay";
+import { getPurchaseRowMeta, formatPurchaseDisplayName } from "../purchaseRowDisplay";
 
 type PurchaseSwipeableRowProps = {
   isSwipeOpen: boolean;
@@ -68,6 +69,9 @@ export function PurchaseSwipeableRow({
             </Text>
             <StatusPill label={purchaseStatus.label} tone={purchaseStatus.tone} />
           </View>
+          <Text numberOfLines={1} style={styles.billDueMeta}>
+            {getPurchaseRowMeta(purchase)}
+          </Text>
         </View>
 
         <View style={styles.purchaseAmountColumn}>
@@ -126,7 +130,10 @@ export function PurchaseSwipeableRow({
                   action.onPress();
                 }}
               >
-                <Text style={styles.purchaseSwipeActionIcon}>{action.icon}</Text>
+                <SwipeActionIcon
+                  destructive={action.destructive}
+                  name={action.icon ?? "pencil"}
+                />
                 <Text
                   style={[
                     styles.purchaseSwipeActionLabel,

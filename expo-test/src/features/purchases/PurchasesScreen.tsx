@@ -7,6 +7,11 @@ import {
   EmptyState,
   money,
 } from "@/shared/ui/components";
+import { CollapseChevron } from "@/shared/ui/CollapseChevron";
+import { CollapsibleSection } from "@/shared/ui/CollapsibleSection";
+import { CycleSummaryCard } from "@/shared/ui/CycleSummaryCard";
+import { ScreenSectionTitle } from "@/shared/ui/ScreenSectionTitle";
+import { ScreenShell } from "@/shared/ui/ScreenShell";
 import { getFabScrollPadding, styles } from "@/shared/ui/styles";
 import type { PaycheckListItem, Purchase } from "@/shared/ui/types";
 
@@ -28,8 +33,8 @@ import {
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
 
-import { PurchaseCycleSummaryCard } from "./components/PurchaseCycleSummaryCard";
 import { PurchaseSwipeableRow } from "./components/PurchaseSwipeableRow";
+import { formatPurchaseCycleHeaderSummary } from "./purchaseCycleHeader";
 
 type PurchasesScreenProps = {
   purchases: Purchase[];
@@ -39,6 +44,7 @@ type PurchasesScreenProps = {
   paychecks: PaycheckListItem[];
   onDeletePurchase: (id: string) => void | Promise<void>;
   onEditPurchase: (purchase: Purchase) => void;
+  onAddPurchase?: () => void;
   onMarkCharged: (id: string) => void | Promise<void>;
   onMarkPending: (id: string) => void | Promise<void>;
 };
@@ -51,6 +57,7 @@ export function PurchasesScreen({
   paychecks: paychecksProp,
   onDeletePurchase,
   onEditPurchase,
+  onAddPurchase,
   onMarkCharged,
   onMarkPending,
 }: PurchasesScreenProps) {
@@ -132,7 +139,7 @@ export function PurchasesScreen({
   function renderPurchaseDateGroups(purchaseList: Purchase[], keyPrefix = "") {
     return groupPurchasesByDate(purchaseList).map((group) => (
       <View key={`${keyPrefix}${group.dateKey}`} style={styles.transactionDateGroup}>
-        <Text style={styles.paycheckSectionTitle}>{group.label}</Text>
+        <ScreenSectionTitle title={group.label} />
         <View style={styles.purchaseSwipeableList}>
           {group.purchases.map((purchase) => renderPurchaseSwipeableRow(purchase))}
         </View>
@@ -195,17 +202,18 @@ export function PurchasesScreen({
       onScroll={onTutorialScroll}
       onScrollBeginDrag={() => setOpenSwipePurchaseId(null)}
     >
-      <View style={styles.screenHeaderRow}>
-        <View style={styles.itemCopy}>
-          <Text style={styles.sectionTitle}>Purchases</Text>
-        </View>
-      </View>
+      <ScreenShell
+        subtitle="Track spending for the current paycheck cycle."
+        title="Purchases"
+      />
 
       <TutorialTarget id="purchases-summary">
-        <PurchaseCycleSummaryCard
-          cycleLabel={cycleLabel}
-          pendingCount={pendingPurchaseCount}
-          totalSpentCents={purchaseSummary.totalSpentCents}
+        <CycleSummaryCard
+          summary={formatPurchaseCycleHeaderSummary({
+            cycleWindowLabel: cycleLabel,
+            pendingCount: pendingPurchaseCount,
+            totalSpentCents: purchaseSummary.totalSpentCents,
+          })}
         />
       </TutorialTarget>
 
@@ -238,7 +246,12 @@ export function PurchasesScreen({
       </TutorialTarget>
 
       {purchases.length === 0 && (
-        <EmptyState title="No purchases yet" body="Purchases you add today will appear here." />
+        <EmptyState
+          actionLabel="Add purchase"
+          body="Purchases you add today will appear here."
+          title="No purchases yet"
+          onAction={onAddPurchase}
+        />
       )}
 
       {purchases.length > 0 && currentCyclePurchases.length === 0 && (
@@ -265,7 +278,7 @@ export function PurchasesScreen({
 
       {hasOutsideCyclePurchases && (
         <View style={styles.purchaseOutsideCycleSection}>
-          <Text style={styles.paycheckSectionTitle}>Outside any paycheck cycle</Text>
+          <ScreenSectionTitle title="Outside any paycheck cycle" />
           <Text style={styles.purchaseOutsideCycleMeta}>
             {unassignedCycleOption?.transactionCount ?? outsideCyclePurchases.length}{" "}
             {(unassignedCycleOption?.transactionCount ??
@@ -329,25 +342,16 @@ function PreviousCyclesSection({
   onToggle: () => void;
 }) {
   return (
-    <Pressable
+    <CollapsibleSection
       accessibilityHint={
         isExpanded ? "Collapses previous purchase cycles" : "Expands previous purchase cycles"
       }
       accessibilityLabel="Previous cycles"
-      accessibilityRole="button"
-      accessibilityState={{ expanded: isExpanded }}
-      style={({ pressed }) => [
-        styles.paycheckSectionToggle,
-        pressed && styles.pressed,
-      ]}
-      onPress={onToggle}
-    >
-      <Text style={styles.paycheckCoverageTitle}>Previous cycles</Text>
-      <Text style={styles.paycheckCoverageTotal}>
-        {cycleCount} {cycleCount === 1 ? "cycle" : "cycles"}{" "}
-        {isExpanded ? "⌃" : "⌄"}
-      </Text>
-    </Pressable>
+      detail={`${cycleCount} ${cycleCount === 1 ? "cycle" : "cycles"}`}
+      expanded={isExpanded}
+      title="Previous cycles"
+      onToggle={onToggle}
+    />
   );
 }
 
@@ -419,11 +423,13 @@ function PreviousCycleRow({
         <Text style={styles.paycheckCoverageTitle}>
           {isExpanded ? "Hide purchases" : "Show purchases"}
         </Text>
-        <Text style={styles.paycheckCoverageTotal}>
-          {option.transactionCount}{" "}
-          {option.transactionCount === 1 ? "purchase" : "purchases"}{" "}
-          {isExpanded ? "⌃" : "⌄"}
-        </Text>
+        <View style={styles.paycheckCoverageTotalRow}>
+          <Text style={styles.paycheckCoverageTotal}>
+            {option.transactionCount}{" "}
+            {option.transactionCount === 1 ? "purchase" : "purchases"}
+          </Text>
+          <CollapseChevron expanded={isExpanded} />
+        </View>
       </Pressable>
       {isExpanded && (
         <View style={styles.purchasePreviousCycleExpanded}>

@@ -4,6 +4,8 @@ import { Pressable, ScrollView, Switch, Text, TextInput, View } from "react-nati
 
 import { parseDollarInputToNonNegativeCents } from "@/shared/currency";
 import { money } from "@/shared/ui/components";
+import { ScreenSectionTitle } from "@/shared/ui/ScreenSectionTitle";
+import { ScreenShell } from "@/shared/ui/ScreenShell";
 import { colors, styles } from "@/shared/ui/styles";
 
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
@@ -232,18 +234,12 @@ export function SettingsScreen({
       scrollEventThrottle={16}
       onScroll={onTutorialScroll}
     >
-      <View style={styles.screenHeaderRow}>
-        <View style={styles.itemCopy}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <Text style={styles.helpText}>
-            Reconcile your current balance and essential reserve with your bank.
-          </Text>
-        </View>
-      </View>
+      <ScreenShell
+        subtitle="Reconcile your current balance and essential reserve with your bank."
+        title="Settings"
+      />
 
-      <View style={styles.dashboardSectionHeader}>
-        <Text style={styles.sectionTitleCompact}>Profile & Budget</Text>
-      </View>
+      <ScreenSectionTitle title="Profile & Budget" />
 
       <View style={styles.settingsMoneyCard}>
         <View style={styles.settingsMetricRow}>
@@ -349,9 +345,7 @@ export function SettingsScreen({
       </View>
 
       <TutorialTarget id="settings-preferences">
-        <View style={styles.dashboardSectionHeader}>
-          <Text style={styles.sectionTitleCompact}>Notifications</Text>
-        </View>
+        <ScreenSectionTitle title="Notifications" />
         <View style={styles.settingsPreferenceGroup}>
           <View style={styles.settingsPreferenceRow}>
             <View style={styles.itemCopy}>
@@ -388,16 +382,12 @@ export function SettingsScreen({
 
         {afterContent ? (
           <>
-            <View style={styles.dashboardSectionHeader}>
-              <Text style={styles.sectionTitleCompact}>Import</Text>
-            </View>
+            <ScreenSectionTitle title="Import" />
             {afterContent}
           </>
         ) : null}
 
-        <View style={styles.dashboardSectionHeader}>
-          <Text style={styles.sectionTitleCompact}>About</Text>
-        </View>
+        <ScreenSectionTitle title="About" />
         <View style={styles.settingsPreferenceGroup}>
           <View style={styles.settingsPreferenceRow}>
             <View style={styles.itemCopy}>
