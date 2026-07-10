@@ -4,6 +4,7 @@ import { useProfile } from "@/context/ProfileContext";
 import { useFinancialState } from "@/context/FinancialStateContext";
 import type { Bill } from "@/shared/ui/types";
 
+import { useDemoPreviewController } from "@/features/demo/hooks";
 import { useBillEntryController } from "@/features/bills/hooks";
 import {
   useBudgetingSettingsActions,
@@ -58,7 +59,12 @@ export function useHomeScreenController({
     onFinancialDataChanged: refreshDashboardSnapshot,
     profileId: profile?.id ?? dashboardSnapshot?.profile?.id,
   });
+  const { demoPreview } = useDemoPreviewController({
+    onDemoStateChanged: refreshDashboardSnapshot,
+  });
+  const hideOnboardingForDemo = demoPreview.shouldDeferOnboarding;
   const { onboarding } = useOnboardingController({
+    hideWhileDemoActive: hideOnboardingForDemo,
     onOnboardingComplete: refreshDashboardSnapshot,
     clearImportSuggestions: importReview.clearSuggestions,
     getPendingImportSuggestionCount: () => importReview.suggestions.length,
@@ -142,6 +148,7 @@ export function useHomeScreenController({
     dashboardUpcomingBills,
     dashboardUpcomingPaychecks,
     importReview,
+    demoPreview,
     onboarding,
     tutorial,
     deletePurchase,

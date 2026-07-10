@@ -12,6 +12,7 @@ import {
 } from "./createAppServices";
 
 export type AppRuntime = AppServiceContainer & {
+  database: TransactionalDatabaseExecutor;
   eventBus: SimpleFinancialEventBus;
 };
 
@@ -35,6 +36,7 @@ async function createRuntime() {
 
   return {
     ...container,
+    database: createQueuedRepositoryExecutor(db),
     eventBus,
   };
 }

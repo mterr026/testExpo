@@ -2446,6 +2446,7 @@ export function createStyles(theme: AppTheme) {
     paddingVertical: spacing.md - 1,
     fontSize: fontSize.bodyLg,
     marginBottom: spacing.sm - 2,
+    color: colors.text,
     ...fontStyle("regular"),
   },
   purchaseInput: {

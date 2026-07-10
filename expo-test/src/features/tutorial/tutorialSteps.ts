@@ -3,6 +3,7 @@ import type { Screen } from "@/shared/ui/types";
 import type { TutorialTargetId } from "./tutorialTargets";
 
 export type TutorialTooltipPlacement = "above" | "below" | "auto";
+export type TutorialTooltipDock = "top" | "bottom";
 
 export type TutorialStep = {
   screen: Screen;
@@ -10,6 +11,8 @@ export type TutorialStep = {
   title: string;
   body: string;
   placement?: TutorialTooltipPlacement;
+  /** Pin the tooltip to a screen edge so it never covers the highlighted data. */
+  tooltipDock?: TutorialTooltipDock;
 };
 
 export const tutorialSteps: TutorialStep[] = [

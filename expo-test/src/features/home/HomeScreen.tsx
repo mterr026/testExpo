@@ -7,6 +7,7 @@ import { settingsMoneyAccessoryId } from "@/shared/ui/keyboard";
 import { spacing } from "@/shared/ui/styles";
 import { useStyles } from "@/shared/ui/ThemeContext";
 
+import { DemoSampleBanner } from "@/features/demo/DemoSampleBanner";
 import {
   useNotificationNavigation,
   useReminderNotifications,
@@ -56,6 +57,11 @@ export function HomeScreen() {
     >
       <View style={[styles.page, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
         <HomeHeader />
+        <DemoSampleBanner
+          visible={controller.demoPreview.isDemoExploring}
+          isFinishing={controller.demoPreview.isBusy}
+          onSetupPress={controller.demoPreview.finishDemoExplore}
+        />
         <HomePager
           controller={controller}
           notificationTarget={notificationTarget}
@@ -80,6 +86,7 @@ export function HomeScreen() {
         <TutorialOverlay
           visible={controller.tutorial.visible}
           stepIndex={controller.tutorial.stepIndex}
+          steps={controller.tutorial.steps}
           isSaving={controller.tutorial.isSaving}
           onBack={controller.tutorial.previousTutorialStep}
           onNext={controller.tutorial.nextTutorialStep}

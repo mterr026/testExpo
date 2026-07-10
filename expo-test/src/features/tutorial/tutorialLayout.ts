@@ -2,6 +2,13 @@ import type { LayoutRectangle } from "react-native";
 
 export const TUTORIAL_HIGHLIGHT_PADDING = 8;
 export const TUTORIAL_TOOLTIP_GAP = 56;
+export const TUTORIAL_TOOLTIP_ESTIMATED_HEIGHT = 180;
+export const TUTORIAL_SAFE_AREA_TOP = 96;
+export const TUTORIAL_SAFE_AREA_BOTTOM = 110;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
 
 export type DimRegion = {
   left: number;
@@ -117,19 +124,70 @@ export function resolveTooltipPosition({
   tooltipPlacement,
   windowHeight,
   gap = TUTORIAL_TOOLTIP_GAP,
+  tooltipHeight = TUTORIAL_TOOLTIP_ESTIMATED_HEIGHT,
+  safeTop = TUTORIAL_SAFE_AREA_TOP,
+  safeBottom = TUTORIAL_SAFE_AREA_BOTTOM,
 }: {
   highlight: HighlightRect;
   tooltipPlacement: "above" | "below";
   windowHeight: number;
   gap?: number;
-}): { top?: number; bottom?: number } {
-  if (tooltipPlacement === "below") {
-    return {
-      top: Math.min(highlight.y + highlight.height + gap, windowHeight - 220),
-    };
+  tooltipHeight?: number;
+  safeTop?: number;
+  safeBottom?: number;
+}): { top: number; placement: "above" | "below" } {
+  const maxTop = Math.max(safeTop, windowHeight - tooltipHeight - safeBottom);
+  const idealBelow = highlight.y + highlight.height + gap;
+  const idealAbove = highlight.y - gap - tooltipHeight;
+  const belowFits = idealBelow <= maxTop;
+  const aboveFits = idealAbove >= safeTop;
+
+  function overlapsHighlight(top: number) {
+    const bottom = top + tooltipHeight;
+    return top < highlight.y + highlight.height && bottom > highlight.y;
   }
 
-  return {
-    bottom: Math.max(windowHeight - highlight.y + gap, 120),
-  };
+  function overlapAmount(top: number) {
+    const bottom = top + tooltipHeight;
+    const overlapTop = Math.max(top, highlight.y);
+    const overlapBottom = Math.min(bottom, highlight.y + highlight.height);
+    return Math.max(0, overlapBottom - overlapTop);
+  }
+
+  const belowCandidate =
+    belowFits && !overlapsHighlight(idealBelow)
+      ? ({ top: idealBelow, placement: "below" } as const)
+      : null;
+  const aboveCandidate =
+    aboveFits && !overlapsHighlight(idealAbove)
+      ? ({ top: idealAbove, placement: "above" } as const)
+      : null;
+
+  if (tooltipPlacement === "below") {
+    if (belowCandidate) {
+      return belowCandidate;
+    }
+    if (aboveCandidate) {
+      return aboveCandidate;
+    }
+  } else {
+    if (aboveCandidate) {
+      return aboveCandidate;
+    }
+    if (belowCandidate) {
+      return belowCandidate;
+    }
+  }
+
+  const topDock = { top: safeTop, placement: "above" as const };
+  const bottomDock = { top: maxTop, placement: "below" as const };
+
+  if (overlapAmount(bottomDock.top) < overlapAmount(topDock.top)) {
+    return bottomDock;
+  }
+  if (overlapAmount(topDock.top) < overlapAmount(bottomDock.top)) {
+    return topDock;
+  }
+
+  return tooltipPlacement === "below" ? bottomDock : topDock;
 }

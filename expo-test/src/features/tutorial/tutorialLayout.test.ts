@@ -59,7 +59,20 @@ describe("tutorialLayout", () => {
         windowHeight: 800,
         gap: 56,
       })
-    ).toEqual({ top: 236 });
+    ).toEqual({ top: 236, placement: "below" });
+
+    expect(
+      resolveTooltipPosition({
+        highlight: { x: 20, y: 350, width: 200, height: 60 },
+        tooltipPlacement: "above",
+        windowHeight: 800,
+        gap: 56,
+      })
+    ).toEqual({ top: 114, placement: "above" });
+  });
+
+  it("resolveTooltipPosition_falls_back_below_when_above_would_clip", () => {
+    const highlight = { x: 20, y: 80, width: 200, height: 60 };
 
     expect(
       resolveTooltipPosition({
@@ -68,7 +81,35 @@ describe("tutorialLayout", () => {
         windowHeight: 800,
         gap: 56,
       })
-    ).toEqual({ bottom: 736 });
+    ).toEqual({ top: 196, placement: "below" });
+  });
+
+  it("resolveTooltipPosition_flips_above_when_below_would_cover_tall_highlight", () => {
+    const highlight = { x: 20, y: 280, width: 340, height: 360 };
+
+    expect(
+      resolveTooltipPosition({
+        highlight,
+        tooltipPlacement: "below",
+        windowHeight: 800,
+        gap: 56,
+        tooltipHeight: 180,
+      })
+    ).toEqual({ top: 96, placement: "above" });
+  });
+
+  it("resolveTooltipPosition_docks_to_least_overlap_when_neither_side_fits", () => {
+    const highlight = { x: 20, y: 120, width: 340, height: 420 };
+
+    expect(
+      resolveTooltipPosition({
+        highlight,
+        tooltipPlacement: "below",
+        windowHeight: 800,
+        gap: 56,
+        tooltipHeight: 250,
+      })
+    ).toEqual({ top: 440, placement: "below" });
   });
 
   it("buildPointerLayout_connects_tooltip_to_target", () => {

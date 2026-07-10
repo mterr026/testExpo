@@ -19,19 +19,25 @@ import {
   buildPointerLayout,
   resolveTooltipPlacement,
   resolveTooltipPosition,
+  TUTORIAL_SAFE_AREA_BOTTOM,
+  TUTORIAL_SAFE_AREA_TOP,
+  TUTORIAL_TOOLTIP_ESTIMATED_HEIGHT,
 } from "./tutorialLayout";
-import { tutorialSteps } from "./tutorialSteps";
+import type { TutorialStep } from "./tutorialSteps";
+import { tutorialSteps as defaultTutorialSteps } from "./tutorialSteps";
 
 type TutorialOverlayProps = {
   visible: boolean;
   stepIndex: number;
+  steps?: TutorialStep[];
   isSaving: boolean;
   onBack: () => void;
   onNext: () => void | Promise<void>;
   onSkip: () => void | Promise<void>;
 };
 
-const TOOLTIP_ESTIMATED_HEIGHT = 200;
+const TOOLTIP_ESTIMATED_HEIGHT = TUTORIAL_TOOLTIP_ESTIMATED_HEIGHT;
+const TOOLTIP_ESTIMATED_HEIGHT_WITH_BACK = 200;
 
 function TutorialPointer({
   layout,
@@ -75,6 +81,7 @@ function TutorialPointer({
 export function TutorialOverlay({
   visible,
   stepIndex,
+  steps = defaultTutorialSteps,
   isSaving,
   onBack,
   onNext,
@@ -90,9 +97,9 @@ export function TutorialOverlay({
   const [highlightLayout, setHighlightLayout] = useState<LayoutRectangle | null>(
     null
   );
-  const step = tutorialSteps[stepIndex];
+  const step = steps[stepIndex];
   const isFirstStep = stepIndex === 0;
-  const isLastStep = stepIndex === tutorialSteps.length - 1;
+  const isLastStep = stepIndex === steps.length - 1;
   const stepNumber = stepIndex + 1;
   const windowSize = Dimensions.get("window");
 
@@ -136,6 +143,10 @@ export function TutorialOverlay({
   const highlight = highlightLayout
     ? buildHighlightRect(highlightLayout)
     : null;
+  const estimatedTooltipHeight = isFirstStep
+    ? TOOLTIP_ESTIMATED_HEIGHT
+    : TOOLTIP_ESTIMATED_HEIGHT_WITH_BACK;
+  const tooltipDock = step.tooltipDock ?? null;
   const tooltipPlacement = highlight
     ? resolveTooltipPlacement(
         highlight,
@@ -143,27 +154,39 @@ export function TutorialOverlay({
         step.placement ?? "auto"
       )
     : "below";
-  const tooltipPosition = highlight
-    ? resolveTooltipPosition({
-        highlight,
-        tooltipPlacement,
-        windowHeight: windowSize.height,
-      })
-    : null;
-  const tooltipTop =
-    tooltipPosition?.top ??
-    (tooltipPosition?.bottom != null
-      ? windowSize.height - tooltipPosition.bottom - TOOLTIP_ESTIMATED_HEIGHT
-      : windowSize.height * 0.34);
-  const tooltipBottom =
-    tooltipPosition?.bottom != null
-      ? windowSize.height - tooltipPosition.bottom
-      : tooltipTop + TOOLTIP_ESTIMATED_HEIGHT;
-  const pointerLayout =
-    highlight && tooltipPosition
-      ? buildPointerLayout({
+  const tooltipLayout =
+    highlight && !tooltipDock
+      ? resolveTooltipPosition({
           highlight,
           tooltipPlacement,
+          windowHeight: windowSize.height,
+          tooltipHeight: estimatedTooltipHeight,
+        })
+      : null;
+  const resolvedTooltipPlacement =
+    tooltipDock === "bottom"
+      ? "below"
+      : tooltipDock === "top"
+        ? "above"
+        : (tooltipLayout?.placement ?? tooltipPlacement);
+  const tooltipStyle = tooltipDock === "bottom"
+    ? { bottom: TUTORIAL_SAFE_AREA_BOTTOM }
+    : tooltipDock === "top"
+      ? { top: TUTORIAL_SAFE_AREA_TOP }
+      : { top: tooltipLayout?.top ?? windowSize.height * 0.34 };
+  const isDockedTooltip = tooltipDock != null;
+  const tooltipTop =
+    tooltipDock === "bottom"
+      ? windowSize.height - TUTORIAL_SAFE_AREA_BOTTOM - estimatedTooltipHeight
+      : tooltipDock === "top"
+        ? TUTORIAL_SAFE_AREA_TOP
+        : (tooltipLayout?.top ?? windowSize.height * 0.34);
+  const tooltipBottom = tooltipTop + estimatedTooltipHeight;
+  const pointerLayout =
+    highlight && tooltipLayout && !tooltipDock
+      ? buildPointerLayout({
+          highlight,
+          tooltipPlacement: resolvedTooltipPlacement,
           tooltipTop,
           tooltipBottom,
         })
@@ -227,11 +250,12 @@ export function TutorialOverlay({
         <View
           style={[
             tutorialStyles.tooltip,
-            tooltipPosition ?? tutorialStyles.tooltipCentered,
+            isDockedTooltip && tutorialStyles.tooltipCompact,
+            tooltipStyle,
           ]}
         >
           <Text style={tutorialStyles.tooltipEyebrow}>
-            {step.screen} · {stepNumber} of {tutorialSteps.length}
+            {step.screen} · {stepNumber} of {steps.length}
           </Text>
           <Text style={styles.sectionTitle}>{step.title}</Text>
           <Text style={styles.helpText}>{step.body}</Text>
@@ -354,6 +378,10 @@ function createTutorialStyles(colors: ThemeColors, isDark: boolean) {
       shadowRadius: 18,
       elevation: 12,
       gap: spacing.sm,
+    },
+    tooltipCompact: {
+      padding: spacing.md,
+      gap: spacing.xs,
     },
     tooltipCentered: {
       top: "34%" as const,

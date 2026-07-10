@@ -1,4 +1,6 @@
 import { EnvelopeEntryModal } from "@/features/budgeting/EnvelopeEntryModal";
+import { DemoStoryModal } from "@/features/demo/DemoStoryModal";
+import { DemoWelcomeModal } from "@/features/demo/DemoWelcomeModal";
 import { BillConfirmationModal } from "@/features/bills/BillConfirmationModal";
 import { BillEntryModal } from "@/features/bills/BillEntryModal";
 import { ImportSuggestionConfirmModal } from "@/features/import/ImportSuggestionConfirmModal";
@@ -35,6 +37,21 @@ export function HomeModals({ controller }: HomeModalsProps) {
 
   return (
     <>
+      <DemoWelcomeModal
+        visible={controller.demoPreview.showDemoWelcome}
+        error={controller.demoPreview.error}
+        isStarting={controller.demoPreview.isBusy}
+        onStartTour={controller.demoPreview.startDemoStory}
+        onSkip={controller.demoPreview.skipDemoWelcome}
+      />
+      <DemoStoryModal
+        visible={controller.demoPreview.showDemoStory}
+        error={controller.demoPreview.error}
+        isFinishing={controller.demoPreview.isBusy}
+        onBackToWelcome={controller.demoPreview.backToDemoWelcome}
+        onComplete={controller.demoPreview.enterDemoExplore}
+        onSkipToSample={controller.demoPreview.enterDemoExplore}
+      />
       <ImportLoadingModal
         importPhase={controller.importReview.importPhase}
         visible={showOnboardingImportLoading}

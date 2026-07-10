@@ -101,6 +101,15 @@ function remapPayloadToProfileId(
   };
 }
 
+export async function clearProfileFinancialData(
+  db: TransactionalDatabaseExecutor,
+  profileId: string
+): Promise<void> {
+  await db.withExclusiveTransactionAsync(async (transaction) => {
+    await deleteProfileFinancialData(transaction, profileId);
+  });
+}
+
 async function deleteProfileFinancialData(
   transaction: TransactionExecutor,
   profileId: string

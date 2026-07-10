@@ -8,6 +8,7 @@ import { parseDollarInputToCents } from "@/shared/currency";
 import { getAppRuntime } from "@/shared/services/appRuntime";
 
 type UseOnboardingControllerInput = {
+  hideWhileDemoActive?: boolean;
   onOnboardingComplete?: () => void | Promise<void>;
   getPendingImportSuggestionCount?: () => number;
   clearImportSuggestions?: () => void | Promise<void>;
@@ -18,6 +19,7 @@ function formatError(error: unknown) {
 }
 
 export function useOnboardingController({
+  hideWhileDemoActive = false,
   onOnboardingComplete,
   getPendingImportSuggestionCount,
   clearImportSuggestions,
@@ -158,7 +160,7 @@ export function useOnboardingController({
       continueOnboarding,
       skipOnboarding,
       step,
-      visible: isOnboardingRequired,
+      visible: isOnboardingRequired && !hideWhileDemoActive,
     },
   };
 }

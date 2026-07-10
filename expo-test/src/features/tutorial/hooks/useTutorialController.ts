@@ -33,6 +33,12 @@ export function useTutorialController({
   const currentStep = tutorialSteps[stepIndex] ?? null;
 
   useEffect(() => {
+    if (!isTutorialRequired) {
+      setStepIndex(0);
+    }
+  }, [isTutorialRequired]);
+
+  useEffect(() => {
     if (!isTutorialRequired || !changeScreen || !currentStep) {
       return;
     }
@@ -89,12 +95,14 @@ export function useTutorialController({
     tutorial: {
       currentStep,
       error,
+      isDemoTutorial: false,
       isSaving,
       nextTutorialStep,
       previousTutorialStep,
       skipTutorial,
       stepIndex,
       stepCount: tutorialSteps.length,
+      steps: tutorialSteps,
       visible: isTutorialRequired,
     },
   };
