@@ -1,14 +1,9 @@
-import { useState, type ReactElement } from "react";
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import {
-  EmptyState,
-  money,
-} from "@/shared/ui/components";
-import { CollapseChevron } from "@/shared/ui/CollapseChevron";
-import { CollapsibleSection } from "@/shared/ui/CollapsibleSection";
+import { EmptyState, money } from "@/shared/ui/components";
 import { CycleSummaryCard } from "@/shared/ui/CycleSummaryCard";
 import { ScreenSectionTitle } from "@/shared/ui/ScreenSectionTitle";
 import { ScreenShell } from "@/shared/ui/ScreenShell";
@@ -23,7 +18,6 @@ import {
   filterPurchasesForCycle,
   getArchivedPurchaseCycleOptions,
   getPurchaseSummaryForPurchases,
-  type PurchaseCycleOption,
 } from "./purchaseCycles";
 import {
   getFilterLabel,
@@ -35,7 +29,15 @@ import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useTutorialScrollView } from "@/features/tutorial/hooks";
 
 import { PurchaseSwipeableRow } from "./components/PurchaseSwipeableRow";
+import {
+  PreviousCycleRow,
+  PreviousCyclesSection,
+} from "./components/PreviousCyclesSection";
 import { formatPurchaseCycleHeaderSummary } from "./purchaseCycleHeader";
+import {
+  groupPurchasesByDate,
+  sortPurchasesByMostRecent,
+} from "./purchaseDateGrouping";
 
 type PurchasesScreenProps = {
   purchases: Purchase[];
@@ -332,280 +334,4 @@ export function PurchasesScreen({
       )}
     </ScrollView>
   );
-}
-
-function PreviousCyclesSection({
-  cycleCount,
-  isExpanded,
-  onToggle,
-}: {
-  cycleCount: number;
-  isExpanded: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <CollapsibleSection
-      accessibilityHint={
-        isExpanded ? "Collapses previous purchase cycles" : "Expands previous purchase cycles"
-      }
-      accessibilityLabel="Previous cycles"
-      detail={`${cycleCount} ${cycleCount === 1 ? "cycle" : "cycles"}`}
-      expanded={isExpanded}
-      title="Previous cycles"
-      onToggle={onToggle}
-    />
-  );
-}
-
-function PreviousCycleRow({
-  cycleContext,
-  isExpanded,
-  option,
-  purchases,
-  renderPurchaseDateGroups,
-  visibleCount,
-  onLoadMore,
-  onToggle,
-}: {
-  cycleContext: {
-    activeCyclePaycheckId: string | null;
-    activeCycleStartDate: string | null;
-    activeCycleEndDate: string | null;
-    paychecks: PaycheckListItem[];
-  };
-  isExpanded: boolean;
-  option: PurchaseCycleOption;
-  purchases: Purchase[];
-  renderPurchaseDateGroups: (purchaseList: Purchase[]) => ReactElement[];
-  visibleCount: number;
-  onLoadMore: () => void;
-  onToggle: () => void;
-}) {
-  const styles = useStyles();
-  const cyclePurchases = [...filterPurchasesForCycle(purchases, option.id, cycleContext)].sort(
-    sortPurchasesByMostRecent
-  );
-  const visiblePurchases = cyclePurchases.slice(0, visibleCount);
-  const hasMorePurchases = cyclePurchases.length > visibleCount;
-  const isUnassigned = option.id === "unassigned";
-
-  return (
-    <View style={styles.purchasePreviousCycleRow}>
-      <View style={styles.purchasePreviousCycleHeader}>
-        <View style={styles.itemCopy}>
-          <Text style={styles.purchasePreviousCycleTitle}>
-            {option.cycleWindowLabel}
-          </Text>
-          <Text style={styles.purchasePreviousCycleMeta}>
-            {isUnassigned
-              ? `${option.transactionCount} ${
-                  option.transactionCount === 1 ? "purchase" : "purchases"
-                }`
-              : `${option.paycheckDateLabel} paycheck · ${option.transactionCount} ${
-                  option.transactionCount === 1 ? "purchase" : "purchases"
-                }`}
-          </Text>
-        </View>
-        <Text style={styles.purchasePreviousCycleAmount}>
-          {money(option.totalSpentCents)}
-        </Text>
-      </View>
-      <Pressable
-        accessibilityHint={
-          isExpanded ? "Hides purchases for this cycle" : "Shows purchases for this cycle"
-        }
-        accessibilityLabel={isExpanded ? "Hide purchases" : "Show purchases"}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: isExpanded }}
-        style={({ pressed }) => [
-          styles.paycheckCoverageToggle,
-          pressed && styles.pressed,
-        ]}
-        onPress={onToggle}
-      >
-        <Text style={styles.paycheckCoverageTitle}>
-          {isExpanded ? "Hide purchases" : "Show purchases"}
-        </Text>
-        <View style={styles.paycheckCoverageTotalRow}>
-          <Text style={styles.paycheckCoverageTotal}>
-            {option.transactionCount}{" "}
-            {option.transactionCount === 1 ? "purchase" : "purchases"}
-          </Text>
-          <CollapseChevron expanded={isExpanded} />
-        </View>
-      </Pressable>
-      {isExpanded && (
-        <View style={styles.purchasePreviousCycleExpanded}>
-          {cyclePurchases.length === 0 ? (
-            <Text style={styles.rowMetaText}>No purchases in this cycle.</Text>
-          ) : (
-            <>
-              {renderPurchaseDateGroups(visiblePurchases)}
-              {hasMorePurchases && (
-                <Pressable
-                  accessibilityLabel="Load more purchases"
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.secondaryButton,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={onLoadMore}
-                >
-                  <Text style={styles.secondaryButtonText}>Load more</Text>
-                </Pressable>
-              )}
-            </>
-          )}
-        </View>
-      )}
-    </View>
-  );
-}
-
-function sortPurchasesByMostRecent(first: Purchase, second: Purchase) {
-  const dateCompare = getPurchaseDateKey(second.date).localeCompare(
-    getPurchaseDateKey(first.date)
-  );
-
-  if (dateCompare !== 0) {
-    return dateCompare;
-  }
-
-  return second.id.localeCompare(first.id);
-}
-
-function groupPurchasesByDate(purchases: Purchase[]) {
-  const groups: {
-    dateKey: string;
-    label: string;
-    purchases: Purchase[];
-  }[] = [];
-  const purchasesByDate = new Map<string, Purchase[]>();
-
-  for (const purchase of purchases) {
-    const dateKey = getPurchaseDateKey(purchase.date);
-    const existingGroup = purchasesByDate.get(dateKey);
-
-    if (existingGroup) {
-      existingGroup.push(purchase);
-      continue;
-    }
-
-    purchasesByDate.set(dateKey, [purchase]);
-  }
-
-  for (const purchase of purchases) {
-    const dateKey = getPurchaseDateKey(purchase.date);
-
-    if (groups.some((group) => group.dateKey === dateKey)) {
-      continue;
-    }
-
-    groups.push({
-      dateKey,
-      label: formatPurchaseGroupLabel(dateKey),
-      purchases: purchasesByDate.get(dateKey) ?? [],
-    });
-  }
-
-  return groups;
-}
-
-function formatPurchaseGroupLabel(dateKey: string) {
-  if (dateKey === "Today" || isSameIsoDate(dateKey, 0)) {
-    return "Today";
-  }
-
-  if (dateKey === "Yesterday" || isSameIsoDate(dateKey, -1)) {
-    return "Yesterday";
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
-    return formatPurchaseDate(dateKey);
-  }
-
-  return dateKey;
-}
-
-function getPurchaseDateKey(date: string | null | undefined) {
-  if (!date) {
-    return "Unknown";
-  }
-
-  const isoDateMatch = date.match(/\d{4}-\d{2}-\d{2}/);
-
-  if (isoDateMatch) {
-    return isoDateMatch[0];
-  }
-
-  const parsedDate = new Date(date);
-
-  if (!Number.isNaN(parsedDate.getTime())) {
-    return formatIsoDate(parsedDate);
-  }
-
-  return date.trim();
-}
-
-function formatPurchaseDateLabel(date: string) {
-  if (isSameIsoDate(date, 0)) {
-    return "Today";
-  }
-
-  if (isSameIsoDate(date, -1)) {
-    return "Yesterday";
-  }
-
-  return formatPurchaseDate(date);
-}
-
-function formatPurchaseDate(date: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return date;
-  }
-
-  const [, month, day] = date.split("-");
-
-  return `${formatMonth(Number(month))} ${Number(day)}`;
-}
-
-function isSameIsoDate(date: string, dayOffset: number) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return false;
-  }
-
-  return date === formatIsoDate(offsetToday(dayOffset));
-}
-
-function offsetToday(dayOffset: number) {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + dayOffset);
-
-  return date;
-}
-
-function formatIsoDate(date: Date) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function formatMonth(month: number) {
-  return [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ][month - 1] ?? "";
 }
