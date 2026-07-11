@@ -7,7 +7,7 @@ import { settingsMoneyAccessoryId } from "@/shared/ui/keyboard";
 import { spacing } from "@/shared/ui/styles";
 import { useStyles } from "@/shared/ui/ThemeContext";
 
-import { DemoSampleBanner } from "@/features/demo/DemoSampleBanner";
+import { DemoSampleBanner } from "@/features/demo/components/DemoSampleBanner";
 import {
   useNotificationNavigation,
   useReminderNotifications,

@@ -4,9 +4,11 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { Envelope } from "@/database/repositories/types";
-import type { SafeToSpendBreakdown } from "@/engine";
-import type { EnvelopeSnapshotEntry } from "@/engine";
 import { formatDashboardCycleLabel } from "@/features/dashboard/dashboardCycleLabel";
+import type {
+  EnvelopeSnapshotEntry,
+  SafeToSpendBreakdown,
+} from "@/features/dashboard/adapters/dashboardViewAdapters";
 import { EnvelopeSwipeableRow } from "@/features/budgeting/components/EnvelopeSwipeableRow";
 import { TutorialTarget } from "@/features/tutorial/TutorialTarget";
 import { useOptionalTutorialContext } from "@/features/tutorial/TutorialContext";

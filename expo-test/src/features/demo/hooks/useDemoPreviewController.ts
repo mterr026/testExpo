@@ -7,12 +7,12 @@ import { getAppRuntime } from "@/shared/services/appRuntime";
 import {
   clearDemoFinancialData,
   seedDemoFinancialData,
-} from "../DemoSeedService";
+} from "../services/DemoSeedService";
 import {
   loadDemoPreviewState,
   saveDemoPreviewState,
   type DemoPreviewState,
-} from "../demoPreviewStorage";
+} from "../services/demoPreviewStorage";
 
 type UseDemoPreviewControllerInput = {
   onDemoStateChanged?: () => void | Promise<void>;

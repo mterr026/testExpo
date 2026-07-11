@@ -1,6 +1,6 @@
 import { EnvelopeEntryModal } from "@/features/budgeting/EnvelopeEntryModal";
-import { DemoStoryModal } from "@/features/demo/DemoStoryModal";
-import { DemoWelcomeModal } from "@/features/demo/DemoWelcomeModal";
+import { DemoStoryModal } from "@/features/demo/components/DemoStoryModal";
+import { DemoWelcomeModal } from "@/features/demo/components/DemoWelcomeModal";
 import { BillConfirmationModal } from "@/features/bills/BillConfirmationModal";
 import { BillEntryModal } from "@/features/bills/BillEntryModal";
 import { ImportSuggestionConfirmModal } from "@/features/import/ImportSuggestionConfirmModal";

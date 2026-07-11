@@ -4,7 +4,7 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
 import type { Screen } from "@/shared/ui/types";
 
-import { screenOrder } from "@/features/app/homeData";
+import { screenOrder } from "@/features/home/screenOrder";
 
 export function useHomePager() {
   const { width } = useWindowDimensions();

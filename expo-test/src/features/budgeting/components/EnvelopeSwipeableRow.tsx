@@ -3,7 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
 import type { Envelope } from "@/database/repositories/types";
-import type { EnvelopeSnapshotEntry } from "@/engine";
+import type { EnvelopeSnapshotEntry } from "@/features/budgeting/adapters/envelopeViewAdapters";
 import { ActionMenu, money } from "@/shared/ui/components";
 import { hapticForActionLabel, hapticSelection } from "@/shared/ui/haptics";
 import { SwipeActionIcon } from "@/shared/ui/SwipeActionIcon";

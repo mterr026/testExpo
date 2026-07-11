@@ -1,7 +1,7 @@
 import { SymbolView } from "expo-symbols";
 import { Pressable, Text, View } from "react-native";
 
-import { screenOrder } from "@/features/app/homeData";
+import { screenOrder } from "@/features/home/screenOrder";
 import { useStyles, useTheme } from "@/shared/ui/ThemeContext";
 import type { Screen } from "@/shared/ui/types";
 

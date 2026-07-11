@@ -1,11 +1,16 @@
 .DS_Store
 
-# Roblox / Luau scripts (local only — not part of Budget Flow / expo-test)
+# Cursor local rules (workspace-specific; not part of Budget Flow)
+.cursor/
+
+# Roblox / Luau scratch (local only — not part of Budget Flow / expo-test)
+roblox-scratch/
 *.lua
 *.luau
 TerrainImportService*
 tis_*
 mcp_*
+deploy_*.json
 deploy_import_all.lua
 all_parts.lua
 restore_tis_cmd.txt

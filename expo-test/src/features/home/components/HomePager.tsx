@@ -3,14 +3,14 @@ import { View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
-import { screenOrder } from "@/features/app/homeData";
+import { screenOrder } from "@/features/home/screenOrder";
 import { BillsScreen } from "@/features/bills/BillsScreen";
 import { DashboardScreen } from "@/features/dashboard/DashboardScreen";
 import { ImportReviewSection } from "@/features/import/ImportReviewSection";
 import { PaychecksScreen } from "@/features/paychecks/PaychecksScreen";
 import { PurchasesScreen } from "@/features/purchases/PurchasesScreen";
 import { SettingsScreen } from "@/features/settings/SettingsScreen";
-import { createEmptySafeToSpendBreakdown } from "@/engine";
+import { createEmptySafeToSpendBreakdown } from "@/features/dashboard/adapters/dashboardViewAdapters";
 import { settingsMoneyAccessoryId } from "@/shared/ui/keyboard";
 import { useStyles } from "@/shared/ui/ThemeContext";
 import type { Screen } from "@/shared/ui/types";

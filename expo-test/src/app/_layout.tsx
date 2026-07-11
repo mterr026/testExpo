@@ -18,7 +18,7 @@ import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 
-import { AnimatedSplashOverlay } from "@/features/app/AnimatedSplashOverlay";
+import { AnimatedSplashOverlay } from "@/app/AnimatedSplashOverlay";
 import { AppProviders } from "@/context/AppProviders";
 import { ThemeProvider, useTheme } from "@/shared/ui/ThemeContext";
 

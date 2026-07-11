@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { screenOrder } from "@/features/app/homeData";
+import { screenOrder } from "@/features/home/screenOrder";
 
 import { tutorialSteps } from "./tutorialSteps";
 import { tutorialTargetIds } from "./tutorialTargets";
